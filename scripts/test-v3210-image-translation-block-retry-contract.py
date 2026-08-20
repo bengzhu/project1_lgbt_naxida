@@ -86,9 +86,15 @@ class ImageTranslationBlockRetryContractTests(unittest.TestCase):
             self.assertNotIn(forbidden, self.retry)
 
     def test_japanese_retry_preserves_global_numbered_batch_protocol(self) -> None:
+        self.assertTrue(
+            "imageTranslationOriginalBlockOrder[blockID]" in self.retry
+            or "japaneseImageTranslationPrompt(for: blockID)" in self.retry
+        )
+        self.assertTrue(
+            "startIndex: startIndex" in self.retry
+            or "startIndex: prompt.startIndex" in self.retry
+        )
         for marker in [
-            "imageTranslationOriginalBlockOrder[blockID]",
-            "startIndex: startIndex",
             "sourceLanguage: sourceLanguage",
             "targetLanguage: targetLanguage",
             ").first ?? \"\"",

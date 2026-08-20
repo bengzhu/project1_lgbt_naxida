@@ -32,6 +32,11 @@ private struct ImageTranslationBatch {
     let blocks: [ImageTranslationBlock]
 }
 
+private struct ImageTranslationJapanesePrompt {
+    let startIndex: Int
+    let context: TranslationPromptContext
+}
+
 private enum ImageMangaBatchTranslationError: LocalizedError {
     case missingTags
     case unexpectedTags
@@ -2263,11 +2268,29 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationMessage = "正在重新翻译修正后的文字"
 
         do {
-            let correctedTranslation = try await translate(
-                correctedOriginal,
-                sourceLanguage: sourceLanguage,
-                targetLanguage: targetLanguage
-            )
+            let correctedTranslation: String
+            if sourceLanguage == .japanese {
+                var correctedBlock = currentBlock
+                correctedBlock.original = correctedOriginal
+                correctedBlock.translation = ""
+                let prompt = japaneseImageTranslationPrompt(
+                    for: blockID,
+                    textKindOverride: correctedBlock.textKind
+                )
+                correctedTranslation = try await translateJapaneseImageBlockWithQA(
+                    correctedBlock,
+                    expectedID: prompt.startIndex + 1,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage,
+                    translationContext: prompt.context
+                )
+            } else {
+                correctedTranslation = try await translate(
+                    correctedOriginal,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
+            }
             guard imageTranslationCorrectionID == correctionID,
                   imageTranslationTaskID == contentTaskID,
                   let currentIndex = imageTranslationBlocks.firstIndex(where: { $0.id == blockID }),
@@ -2501,18 +2524,13 @@ final class TranslationSessionStore: ObservableObject {
             do {
                 let translation: String
                 if sourceLanguage == .japanese {
-                    let startIndex = self.imageTranslationOriginalBlockOrder[blockID]
-                        ?? self.imageTranslationBlocks.firstIndex(where: { $0.id == blockID })
-                        ?? 0
+                    let prompt = self.japaneseImageTranslationPrompt(for: blockID)
                     translation = try await self.translateJapaneseImageBatch(
                         [block],
-                        startIndex: startIndex,
+                        startIndex: prompt.startIndex,
                         sourceLanguage: sourceLanguage,
                         targetLanguage: targetLanguage,
-                        translationContext: TranslationPromptContext(
-                            confirmedTerms: self.translationTermMemory,
-                            textKind: block.textKind ?? .dialogue
-                        )
+                        translationContext: prompt.context
                     ).first ?? ""
                 } else {
                     translation = try await self.translate(
@@ -2669,18 +2687,17 @@ final class TranslationSessionStore: ObservableObject {
                     translationBlock.translation = ""
                     let translation: String
                     if sourceLanguage == .japanese {
-                        let startIndex = self.imageTranslationOriginalBlockOrder[blockID]
-                            ?? blockIndex
-                        translation = try await self.translateJapaneseImageBatch(
-                            [translationBlock],
-                            startIndex: startIndex,
+                        let prompt = self.japaneseImageTranslationPrompt(
+                            for: blockID,
+                            textKindOverride: translationBlock.textKind
+                        )
+                        translation = try await self.translateJapaneseImageBlockWithQA(
+                            translationBlock,
+                            expectedID: prompt.startIndex + 1,
                             sourceLanguage: sourceLanguage,
                             targetLanguage: targetLanguage,
-                            translationContext: TranslationPromptContext(
-                                confirmedTerms: self.translationTermMemory,
-                                textKind: translationBlock.textKind ?? .dialogue
-                            )
-                        ).first ?? ""
+                            translationContext: prompt.context
+                        )
                     } else {
                         translation = try await self.translate(
                             recognizedOriginal,
@@ -5208,6 +5225,76 @@ final class TranslationSessionStore: ObservableObject {
             throw ImageMangaBatchTranslationError.qualityFailure([expectedID])
         }
         return cleanCandidate
+    }
+
+    /// Rebuilds the same bounded, read-only context used by the full-page
+    /// Japanese image pipeline for a single-block operation. The current block
+    /// is addressed by its original page ordinal; only the immediately
+    /// preceding batch is eligible for a summary, and only after every block in
+    /// that batch already has a completed translation. This context is
+    /// transient prompt metadata and is never written into a block snapshot.
+    private func japaneseImageTranslationPrompt(
+        for blockID: UUID,
+        textKindOverride: TranslationTextKind? = nil
+    ) -> ImageTranslationJapanesePrompt {
+        let blockIndex = imageTranslationBlocks.firstIndex { $0.id == blockID } ?? 0
+        let block = imageTranslationBlocks.indices.contains(blockIndex)
+            ? imageTranslationBlocks[blockIndex]
+            : nil
+        let startIndex = imageTranslationOriginalBlockOrder[blockID] ?? blockIndex
+        let batches = Self.imageTranslationBatches(imageTranslationBlocks)
+        let currentBatchIndex = batches.firstIndex { batch in
+            batch.blocks.contains { $0.id == blockID }
+        }
+
+        let previousBatchSummary: TranslationReadOnlyBatchSummary?
+        if let currentBatchIndex,
+           currentBatchIndex > 0 {
+            let previousBatch = batches[currentBatchIndex - 1]
+            let previousBatchComplete = !previousBatch.blocks.isEmpty
+                && previousBatch.blocks.allSatisfy {
+                    !$0.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                }
+            if previousBatchComplete {
+                let previousStartIndex: Int
+                if let firstBlockID = previousBatch.blocks.first?.id {
+                    previousStartIndex = imageTranslationOriginalBlockOrder[firstBlockID]
+                        ?? previousBatch.startIndex
+                } else {
+                    previousStartIndex = previousBatch.startIndex
+                }
+                let contextSourceLanguage = imageTranslationContentSourceLanguage ?? sourceLanguage
+                let contextTargetLanguage = imageTranslationContentTargetLanguage ?? targetLanguage
+                previousBatchSummary = TranslationReadOnlyBatchSummary(
+                    batchID: "image-\(imageTranslationTaskID.uuidString)-\(previousStartIndex)",
+                    sourceLanguage: contextSourceLanguage,
+                    targetLanguage: contextTargetLanguage,
+                    items: previousBatch.blocks.enumerated().map { offset, previousBlock in
+                        TranslationReadOnlyBatchItem(
+                            ordinal: imageTranslationOriginalBlockOrder[previousBlock.id]
+                                ?? previousStartIndex + offset,
+                            sourceExcerpt: previousBlock.original,
+                            targetExcerpt: previousBlock.translation,
+                            kind: previousBlock.textKind ?? .dialogue
+                        )
+                    }
+                )
+            } else {
+                previousBatchSummary = nil
+            }
+        } else {
+            previousBatchSummary = nil
+        }
+
+        return ImageTranslationJapanesePrompt(
+            startIndex: startIndex,
+            context: TranslationPromptContext(
+                confirmedTerms: translationTermMemory,
+                previousBatchSummary: previousBatchSummary,
+                textKind: textKindOverride ?? block?.textKind ?? .dialogue,
+                batchStartIndex: startIndex
+            )
+        )
     }
 
     private static func imageTranslationBatches(

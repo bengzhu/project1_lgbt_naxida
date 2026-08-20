@@ -1,3 +1,11 @@
+## v3.303：日语人工修正与单块重试的 context/QA 收口（2026-08-20）
+
+v3.288 已为整页日语 batch 建立 confirmed terminology、上一完整 batch 摘要、逐块类型和全局 ordinal 的只读 context，并让批量 fallback 复用 block-level QA；本轮审计发现人工 OCR 修正仍直接调用普通 `translate`，单块翻译重试也只传术语和当前类型，可能绕过 QA 或丢失上一批 context。
+
+新增 Store 内部 transient `japaneseImageTranslationPrompt` helper：按当前 block 的原始全局 ordinal 重建 prompt，只读取前一个且所有译文非空的 batch 生成 `TranslationReadOnlyBatchSummary`，携带 confirmed terms、textKind 和 `batchStartIndex`。日语人工修正改用临时 corrected block + `translateJapaneseImageBlockWithQA`；单块 retry 与 scoped OCR reread translation 复用同一 context，只有 QA 与既有 content/correction/retry guard 通过后才提交。非日语修正路径、OCR candidate、detector/layout/owner/geometry、8 blocks/1,800 chars、tag、取消、reviewed 状态、UI、renderer/export 和持久化边界保持不变。
+
+新增 `scripts/test-v3303-japanese-correction-translation-qa-contract.py`，工程版本推进至 `3.303`，CI Japanese benchmark contract route 已接入。本轮本地只做无进程 Python 合同、AST、JSON/YAML/shell/plist 静态检查和 `git diff --check`；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，不读取 ground truth，不声称真实 OCR/CER、翻译盲评、目标设备证据或 v3.289 holdout。云端 full、PR/merge 与 post-merge receipt 待候选 SHA 后补记。
+
 ## v3.301：普通日语 OCR 保守拟声词类型提示（2026-08-20）
 
 v3.299/v3.300 已建立逐块类型 metadata 与全局 `[N]` 序号对齐，但 `ImageTranslationBlock.textKind` 过去明确不由 OCR 推断，普通图片新建 block 实际全部回落为对白提示；拟声词因此无法稳定得到适合的短译/语气策略。本轮只修复这一主路径缺口。

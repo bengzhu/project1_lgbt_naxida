@@ -1,3 +1,10 @@
+### v3.303 日语人工修正与单块重试 context/QA 合同
+
+- 日语人工 OCR 修正、单块翻译重试和 scoped OCR 复读重译统一重建当前页全局 block ordinal、confirmed terminology、文字类型和上一完整 batch 的只读摘要；上一批未全部完成时不注入摘要。
+- 人工修正使用临时 corrected block 经过 `translateJapaneseImageBlockWithQA`，只有 QA 通过且 content/correction guard 仍有效才提交；取消、质量失败或过期结果保留既有 block/译文与复查进度。非日语继续使用普通单块 `translate`。
+- context 只存在当前请求，不写入 `ImageTranslationBlock`、snapshot、Store 或导出；OCR geometry、layout、owner、请求预算、tag、UI、renderer 和持久化边界不变。
+- 新合同：`scripts/test-v3303-japanese-correction-translation-qa-contract.py`；工程版本为 `3.303`。只证明普通路径接线与 fail-closed QA，不声称真实 OCR/CER、翻译盲评、目标设备或 v3.289 holdout 证据。
+
 ### v3.302 日语 OCR 类型提示复读收口合同
 
 - 弱块恢复或 scoped 日语 OCR 复读产生新文字后，重新通过既有保守 classifier 更新可选 `.sfx`；低信号结果清除旧的自动 hint，旁白/标题/对白不自动推断。
