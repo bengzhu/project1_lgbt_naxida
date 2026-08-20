@@ -47,6 +47,12 @@ struct VisionOCRService: Sendable {
     /// the fallback when the bundled model is unavailable.
     private static let maximumJapaneseMangaLineOCRRequests = 8
 
+    /// A weak page/layout block may still have usable geometry while its first
+    /// text read is too short or too non-Japanese to translate safely. Reuse
+    /// the existing scoped crop reread for only a small, deterministic number
+    /// of such blocks; strong blocks and non-Japanese paths are not reissued.
+    private static let maximumJapaneseWeakBlockRecoveryRequests = 4
+
     /// Read-only runtime evidence for the bounded Japanese pixel-first
     /// supplement. This is intentionally separate from the production OCR
     /// request path so a fixture can show which geometry gates admitted or
@@ -240,7 +246,7 @@ struct VisionOCRService: Sendable {
                 )
             }
             let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
-            let blocks = { () -> [ImageTranslationBlock] in
+            let laidOutBlocks = { () -> [ImageTranslationBlock] in
                 return ImageOCRLayoutEngine.layout(
                     layoutObservations,
                     allowsVerticalText: allowsVerticalText,
@@ -262,6 +268,12 @@ struct VisionOCRService: Sendable {
                     )
                 }
             }()
+            let blocks = sourceLanguage == .japanese
+                ? try await Self.recoverWeakJapaneseBlocks(
+                    in: ocrImage,
+                    blocks: laidOutBlocks
+                )
+                : laidOutBlocks
             return ImageOCRRecognitionOutput(
                 blocks: blocks,
                 shadowLedger: Self.makeShadowLedger(
@@ -300,6 +312,19 @@ struct VisionOCRService: Sendable {
         block: ImageTranslationBlock
     ) async throws -> ImageTranslationBlock? {
         let image = try Self.makeOCRImage(from: imageData)
+        return try await Self.recognizeTextBlockDetached(
+            image: image,
+            sourceLanguage: sourceLanguage,
+            block: block
+        )
+    }
+
+    private static func recognizeTextBlockDetached(
+        image: CGImage,
+        sourceLanguage: SupportedLanguage,
+        block: ImageTranslationBlock,
+        selectionReason: ImageOCRSelectionReason = .scopedRerecognition
+    ) async throws -> ImageTranslationBlock? {
         guard let rect = ImageOCRLayoutRect(
             x: block.boundingBox.x,
             y: block.boundingBox.y,
@@ -357,7 +382,8 @@ struct VisionOCRService: Sendable {
                             detectorConfidence: result.detectorConfidence,
                             rotationApplied: koharuPreferredJapaneseVerticalLineOrientation(),
                             verticalTextRegionOwner: result.verticalTextRegionOwner
-                        )
+                        ),
+                        selectionReason: selectionReason
                     )
                 }
             } catch is CancellationError {
@@ -427,7 +453,8 @@ struct VisionOCRService: Sendable {
             block,
             text: text,
             confidence: best.confidence,
-            candidateProvenance: best.candidateProvenance
+            candidateProvenance: best.candidateProvenance,
+            selectionReason: selectionReason
         )
     }
 
@@ -559,7 +586,8 @@ struct VisionOCRService: Sendable {
         _ block: ImageTranslationBlock,
         text: String,
         confidence: Float,
-        candidateProvenance: ImageOCRCandidateProvenance
+        candidateProvenance: ImageOCRCandidateProvenance,
+        selectionReason: ImageOCRSelectionReason = .scopedRerecognition
     ) -> ImageTranslationBlock {
         var recognized = block
         var retainedProvenance = candidateProvenance
@@ -575,9 +603,107 @@ struct VisionOCRService: Sendable {
             : block.confidence
         recognized.ocrProvenance = ImageOCRBlockProvenance.make(
             from: [retainedProvenance],
-            selectionReason: .scopedRerecognition
+            selectionReason: selectionReason
         )
         return recognized
+    }
+
+    /// Re-read only weak Japanese blocks after the normal page/layout pass.
+    /// This is a product-path recovery for ordinary image OCR: it does not
+    /// change detector geometry, block order, translation batching, or any
+    /// external/reference artifact policy. A candidate must pass the same
+    /// scoped reread quality gates and demonstrate a measurable improvement
+    /// before it can replace the existing block text.
+    private static func recoverWeakJapaneseBlocks(
+        in image: CGImage,
+        blocks: [ImageTranslationBlock]
+    ) async throws -> [ImageTranslationBlock] {
+        let candidates = blocks.enumerated()
+            .filter { needsJapaneseWeakBlockRecovery($0.element) }
+            .sorted { lhs, rhs in
+                if lhs.element.confidence != rhs.element.confidence {
+                    return lhs.element.confidence < rhs.element.confidence
+                }
+                return lhs.offset < rhs.offset
+            }
+            .prefix(Self.maximumJapaneseWeakBlockRecoveryRequests)
+        guard !candidates.isEmpty else { return blocks }
+
+        var recovered = blocks
+        for candidate in candidates {
+            try Task.checkCancellation()
+            do {
+                guard let reread = try await Self.recognizeTextBlockDetached(
+                    image: image,
+                    sourceLanguage: .japanese,
+                    block: candidate.element,
+                    selectionReason: .existingLayoutFusion
+                ),
+                      Self.isBetterJapaneseWeakBlockRecovery(
+                          reread,
+                          than: candidate.element
+                      ) else {
+                    continue
+                }
+                recovered[candidate.offset] = reread
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                // A bounded recovery failure must leave the original page
+                // block intact; the ordinary OCR result remains usable.
+                continue
+            }
+        }
+        return recovered
+    }
+
+    private static func needsJapaneseWeakBlockRecovery(
+        _ block: ImageTranslationBlock
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(block.original)
+        guard !text.isEmpty else { return false }
+        let direction = block.effectiveSourceDirection
+        let directionIsWeak = direction == nil
+            || direction == .unknown
+            || (block.directionConfidence ?? 1) < 0.45
+        let letters = japaneseLetterCountForRecovery(text)
+        return !block.confidence.isFinite
+            || block.confidence < 0.60
+            || japaneseScriptDensity(in: text) < 0.5
+            || (directionIsWeak && letters <= 3)
+            || (direction == .vertical && letters <= 2)
+    }
+
+    private static func isBetterJapaneseWeakBlockRecovery(
+        _ candidate: ImageTranslationBlock,
+        than original: ImageTranslationBlock
+    ) -> Bool {
+        let candidateText = postProcessJapaneseOCRText(candidate.original)
+        guard !candidateText.isEmpty,
+              candidate.confidence.isFinite,
+              candidate.confidence >= 0.55,
+              japaneseScriptDensity(in: candidateText) >= 0.5 else {
+            return false
+        }
+
+        let originalText = postProcessJapaneseOCRText(original.original)
+        let candidateLetters = japaneseLetterCountForRecovery(candidateText)
+        let originalLetters = japaneseLetterCountForRecovery(originalText)
+        let originalDensity = japaneseScriptDensity(in: originalText)
+        let originalConfidence = original.confidence.isFinite
+            ? original.confidence
+            : 0
+
+        if originalDensity < 0.5,
+           candidateLetters >= max(originalLetters, 1) {
+            return true
+        }
+        if candidateLetters > originalLetters,
+           candidate.confidence >= max(originalConfidence - 0.02, 0.55) {
+            return true
+        }
+        return candidate.confidence >= max(originalConfidence + 0.04, 0.55)
+            && candidateLetters >= max(originalLetters, 1)
     }
 
     private static func cleanRecognizedBlockText(_ text: String) -> String? {

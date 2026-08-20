@@ -43,7 +43,7 @@ class JapaneseDirectionalKoharuPaddingContractTests(unittest.TestCase):
         ]
         self.block_retry = braced_body(
             self.vision,
-            "private static func recognizeTextBlockDetached(",
+            "private static func recognizeTextBlockDetached(\n        image: CGImage,",
         )
         self.store = read("AITRANS/Services/TranslationSessionStore.swift")
         self.restore = braced_body(

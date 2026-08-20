@@ -1,3 +1,11 @@
+## v3.295：普通图片 OCR 的有界弱日语文字块恢复（2026-08-20）
+
+将普通图片日语 OCR 的真实产品路径向前推进：页级 Vision／bundled Manga OCR／布局完成后，针对已有但置信度偏低、日语脚本密度不足或短且方向不可靠的弱日语 block，最多按稳定顺序复读 4 个 block。复读复用现有 scoped crop reader；只有非空、confidence `>=.55`、日语脚本密度 `>=.5` 且文字数量或 confidence 确实改善的结果才替换原 block。
+
+失败、取消、模型不可用或质量不达标时保留原 block；detector/layout geometry、block ID/order、翻译批次、持久化、UI、非日语路径和原有页级 detector/layout/batch 请求边界不被恢复流程改写；新增恢复预算显式封顶为最多 4 个 block crop reread。新增 `scripts/test-v3295-image-japanese-weak-block-recovery-contract.py`，工程版本为 `3.295`；本轮不依赖 Koharu artifact、外部语料或 GGUF，Koharu 对比继续作为可选研究/质量证明，不再阻塞 `test/jap.jpg` 的普通 OCR 修复。CI 的 `koharu_parity_required` 默认 `false`，只有显式研究任务才把旁路 parity 纳入 gate。
+
+本地安全回归与 exact-SHA 云端验收完成：v3.295 合同 `9/9`；全量 `294` 个无进程入口合同通过，`27` 个实际导入 `subprocess` 的历史合同按约束跳过；`341` 个 tracked Python AST、JSON/YAML/shell/plist 与 `git diff --check` 均通过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。SHA `8350f99e5087f17e3fcb6c79d451c2f151c969ff` 的 full [32323220706](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32323220706) 成功：Japanese benchmark `96289399016`、主 bundle `96289456475`、Xcode 26.6、static/UI/Speech/Home/Paste、simulator、manga probe 与 JUnit `10/10`（0 failures）全部通过并发布 `AITRANS CI/full-validation=success`；Koharu parity `96289399590` 按 `koharu_parity_required=false` 正确 skip。云端 `test/1.png` probe 仅作现有产品回归诊断，13 blocks 的 `overallPassed=false`、clean-text `5/11` 反映当前 GGUF/翻译质量 floor，不构成通用 OCR/CER 或翻译质量声明；Koharu artifact、授权 corpus 与目标设备证据仍未提供，main 未修改。
+
 ## v3.294：共享语料 artifact intake 完整性与 fail-closed 闸门（2026-08-20）
 
 v3.293 只核验 readiness manifest 的 canonical 12-row matrix 声明；本轮继续沿证据路线收口，要求外部 dataset、source manifest 和 prediction artifact 在显式 `artifactRoot` 内真实物化，并验证实际 SHA-256 与 prediction envelope 身份，避免“manifest 声称 available、文件实际错配”误触发 readiness 晋级。

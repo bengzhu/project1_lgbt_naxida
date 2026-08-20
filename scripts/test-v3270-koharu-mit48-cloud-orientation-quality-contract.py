@@ -55,7 +55,7 @@ class KoharuMit48CloudOrientationQualityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.294", "3.294"],
+            ["3.295", "3.295"],
         )
 
 

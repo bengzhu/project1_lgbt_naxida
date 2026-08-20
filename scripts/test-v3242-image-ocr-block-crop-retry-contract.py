@@ -40,7 +40,11 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
         )
         self.recognize_detached = braced_body(
             self.ocr,
-            "private static func recognizeTextBlockDetached(",
+            "private static func recognizeTextBlockDetached(\n        imageData: Data,",
+        )
+        self.recognize_detached_image = braced_body(
+            self.ocr,
+            "private static func recognizeTextBlockDetached(\n        image: CGImage,",
         )
         self.gate = braced_body(
             self.store,
@@ -68,6 +72,10 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
             self.assertIn(marker, self.recognize)
         for marker in [
             "let image = try Self.makeOCRImage(from: imageData)",
+            "return try await Self.recognizeTextBlockDetached(",
+        ]:
+            self.assertIn(marker, self.recognize_detached)
+        for marker in [
             "MangaOCRRequest(",
             "MangaOCRService.shared",
             ".recognize(image: image, requests: [request])",
@@ -79,14 +87,14 @@ class ImageOCRBlockCropRetryContractTests(unittest.TestCase):
             "usesLanguageCorrection: !japanese",
             "observationRole: .crop",
         ]:
-            self.assertIn(marker, self.recognize_detached)
+            self.assertIn(marker, self.recognize_detached_image)
         for forbidden in [
             "recognizeTextBlocks(",
             "ImageOCRLayoutEngine.layout(",
             "RTDETR",
             "detectJapanese",
         ]:
-            self.assertNotIn(forbidden, self.recognize_detached)
+            self.assertNotIn(forbidden, self.recognize_detached_image)
 
     def test_gate_requires_existing_content_and_terminal_session(self) -> None:
         for marker in [

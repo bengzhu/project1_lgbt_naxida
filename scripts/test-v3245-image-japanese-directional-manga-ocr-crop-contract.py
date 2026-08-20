@@ -49,7 +49,7 @@ class JapaneseDirectionalMangaOCRCropContractTests(unittest.TestCase):
         )
         self.rerecognition = braced_body(
             self.vision,
-            "private static func recognizeTextBlockDetached(",
+            "private static func recognizeTextBlockDetached(\n        image: CGImage,",
         )
 
     def test_request_has_a_safe_natural_default_and_koharu_vertical_mode(self) -> None:
