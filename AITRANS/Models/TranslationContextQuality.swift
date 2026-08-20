@@ -34,6 +34,76 @@ enum TranslationTextKind: String, Codable, Sendable, Hashable {
     }
 }
 
+/// Infers only a high-signal sound-effect hint from a newly recognized
+/// Japanese image block. Narration, title, and dialogue remain caller-provided
+/// because geometry alone cannot distinguish them safely. Returning `nil` is
+/// intentional: an ambiguous block keeps the historical dialogue default.
+enum TranslationTextKindClassifier {
+    static func inferJapaneseKind(
+        text: String,
+        boundingBox: NormalizedImageRect
+    ) -> TranslationTextKind? {
+        guard boundingBox.normalizedToUnit() != nil else { return nil }
+
+        let compact = text.filter { !$0.isWhitespace }
+        guard (2...12).contains(compact.count) else { return nil }
+
+        let scalars = Array(compact.unicodeScalars)
+        let japaneseLetters = scalars.filter { scalar in
+            switch scalar.value {
+            case 0x3040...0x30FA, 0x3400...0x4DBF,
+                 0x4E00...0x9FFF, 0xF900...0xFAFF,
+                 0xFF66...0xFF9D:
+                true
+            default:
+                false
+            }
+        }
+        guard japaneseLetters.count >= 2 else { return nil }
+
+        let katakanaLetters = japaneseLetters.filter { scalar in
+            switch scalar.value {
+            case 0x30A1...0x30FA, 0xFF66...0xFF9D:
+                true
+            default:
+                false
+            }
+        }
+        let katakanaRatio = Double(katakanaLetters.count)
+            / Double(japaneseLetters.count)
+        guard katakanaRatio >= 0.65 else { return nil }
+
+        let hasDialogueQuote = scalars.contains { scalar in
+            switch scalar.value {
+            case 0x300C, 0x300D, 0x300E, 0x300F:
+                true
+            default:
+                false
+            }
+        }
+        guard !hasDialogueQuote else { return nil }
+
+        let hasSoundEffectMarker = scalars.contains { scalar in
+            switch scalar.value {
+            case 0x30FC, 0x301C, 0xFF5E, 0x2605,
+                 0x2606, 0x266A:
+                true
+            default:
+                false
+            }
+        }
+
+        var letterCounts: [UInt32: Int] = [:]
+        for scalar in katakanaLetters {
+            letterCounts[scalar.value, default: 0] += 1
+        }
+        let hasRepeatedKatakana = katakanaLetters.count >= 3
+            && letterCounts.values.contains { $0 >= 2 }
+        guard hasSoundEffectMarker || hasRepeatedKatakana else { return nil }
+        return .sfx
+    }
+}
+
 enum TranslationTermKind: String, Codable, Sendable {
     case terminology
     case personName

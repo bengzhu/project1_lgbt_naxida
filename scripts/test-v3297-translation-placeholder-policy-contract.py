@@ -126,12 +126,12 @@ class TranslationPlaceholderPolicyContractTests(unittest.TestCase):
             "scripts/test-v3297-translation-placeholder-policy-contract.py",
             "v3.297",
             "TranslationOutputPolicy",
-            "japanese-benchmark-v3.300-",
+            "japanese-benchmark-v3.301-",
         ):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.300", "3.300"],
+            ["3.301", "3.301"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:

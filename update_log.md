@@ -1,3 +1,11 @@
+## v3.301：普通日语 OCR 保守拟声词类型提示（2026-08-20）
+
+v3.299/v3.300 已建立逐块类型 metadata 与全局 `[N]` 序号对齐，但 `ImageTranslationBlock.textKind` 过去明确不由 OCR 推断，普通图片新建 block 实际全部回落为对白提示；拟声词因此无法稳定得到适合的短译/语气策略。本轮只修复这一主路径缺口。
+
+新增 `TranslationTextKindClassifier.inferJapaneseKind`：只有文本长度 2–12、至少两个日语字母、片假名占比 `>=.65`，并同时具备拟声词标记或重复片假名时才返回 `.sfx`。旁白、标题和普通对白不由模糊文字/几何猜测，任一门控不通过都返回 `nil`，沿用 dialogue fallback。新日语 page block 在 layout 后接收该只读 hint；旧 block/recovery、OCR geometry、reading order、模型、请求预算、tag/QA、取消、翻译结果和持久化边界不变。`ImageTranslationBlock` equality 也纳入持久化的 `textKind`，避免类型变化被静默忽略。
+
+新增 `scripts/test-v3301-japanese-sfx-kind-inference-contract.py`，工程版本推进至 `3.301`。本地安全回归：v3.301 `6/6`、v3.300 `6/6`、v3.299 `6/6`、v3.295 `9/9`；327 个 Python 合同均 AST 解析成功，300 个无进程入口合同共 1,499 个测试通过，27 个实际含进程入口的历史合同按约束跳过；144 个 JSON、3 个 workflow YAML、32 个 shell、4 个 plist、工程版本两处 `3.301` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。本轮只证明保守类型提示边界与主路径接线，不声称真实 OCR/CER、翻译质量、盲评、Koharu parity、授权语料、目标设备证据或 v3.289 holdout。
+
 ## v3.300：混合文字块提示与全局标签序号对齐（2026-08-20）
 
 v3.299 已按 batch 顺序传递对白、旁白、拟声词和标题提示，但第二批输入的标签会从 `[9]` 开始，提示仍从“第 1 块”计数，存在类型提示与实际 tagged block 错配的风险。本轮让 `TranslationPromptContext` 传递有界的 `batchStartIndex`，混合类型提示按真实全局 block 序号生成；例如标签 `[9]` 对应“第 9 块”，仍明确是只读 metadata，不是待翻译输入或输出标签。

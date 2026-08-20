@@ -161,12 +161,12 @@ class JapaneseTranslationFallbackQAContractTests(unittest.TestCase):
             "v3.296",
             "逐块安全回退并复用质量检查",
             "placeholderOutput",
-            "japanese-benchmark-v3.300-",
+            "japanese-benchmark-v3.301-",
         ):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.300", "3.300"],
+            ["3.301", "3.301"],
         )
 
     def test_contract_has_no_process_entry(self) -> None:

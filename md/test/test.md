@@ -1,3 +1,10 @@
+### v3.301 普通日语 OCR 保守拟声词类型提示合同
+
+- 修复普通 OCR 新建 block 的 `textKind` 始终为空、翻译因此统一按对白处理的缺口；仅对 2–12 个字符、至少两个日语字母、片假名占比 `>=.65` 且带拟声词标记或重复片假名的高信号文本自动标记 `.sfx`。
+- 旁白、标题和普通对白不由模糊文字/几何猜测；门控不通过时保持旧的 `.dialogue` fallback。只读类型提示不改变 OCR 文本、geometry、reading order、请求预算、tag/QA、取消、结果或持久化边界。
+- 新合同：`scripts/test-v3301-japanese-sfx-kind-inference-contract.py`；工程版本为 `3.301`。本合同只证明保守分类与主路径接线，不声称真实 OCR/CER、翻译盲评或设备证据。
+- 本地回归：v3.301 `6/6`；全量安全合同 `300` 个通过、`27` 个含进程入口的历史合同跳过，共 `1,499` 个测试通过；`327` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist、工程版本与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，云端 full 与真实外部证据仍待后续。
+
 ### v3.300 混合文字块提示全局序号合同
 
 - 第二批标签从 `[9]` 开始时，类型提示同步使用“第 9 块”等全局序号；类型 metadata 仍只读，不成为待翻译输入或输出标签。
