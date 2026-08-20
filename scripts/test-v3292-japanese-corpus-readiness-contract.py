@@ -149,11 +149,11 @@ class JapaneseCorpusReadinessContractTests(unittest.TestCase):
             "scripts/test-v3292-japanese-corpus-readiness-contract.py",
             "scripts/run-japanese-corpus-readiness-cloud-smoke.sh",
             "japanese-corpus-readiness-report.json",
-            "japanese-benchmark-v3.295-",
+            "japanese-benchmark-v3.298-",
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.295", "3.295"])
+        self.assertEqual(versions, ["3.298", "3.298"])
         for marker in (
             "v3.292",
             "共享日语 OCR/translation corpus",

@@ -74,6 +74,100 @@ def target_density(value: str, target: str) -> float:
     return signal / len(relevant)
 
 
+def is_placeholder_response(value: str) -> bool:
+    normalized = " ".join(unicodedata.normalize("NFKC", value).casefold().split())
+    compact = "".join(character for character in normalized if not character.isspace() and not unicodedata.category(character).startswith("P"))
+    if not compact:
+        return False
+
+    exact_meta_responses = {
+        "na",
+        "待翻译",
+        "以下是翻译",
+        "这是翻译",
+        "翻译如下",
+        "翻译成中文",
+        "translationunavailable",
+        "notranslationavailable",
+        "cannottranslate",
+        "unabletotranslate",
+        "pleaseprovide",
+        "providethetext",
+        "translatethefollowing",
+        "翻译是",
+        "意思是",
+        "这句话的意思",
+        "最合适的翻译",
+        "最通用的翻译",
+        "最常用的翻译",
+    }
+    if compact in exact_meta_responses:
+        return True
+
+    refusal_markers = (
+        "无法翻译",
+        "无法完成翻译",
+        "无法提供译文",
+        "翻译失败",
+        "需要更多上下文",
+        "需要更多信息",
+        "请提供更多上下文",
+        "请提供更多信息",
+        "cannottranslate",
+        "unabletotranslate",
+        "translationunavailable",
+        "notranslationavailable",
+        "pleaseprovidemorecontext",
+        "pleaseprovidemoreinformation",
+        "needmorecontext",
+        "needmoreinformation",
+        "pleaseprovidethetext",
+        "providethetexttotranslate",
+        "请将以下翻译成中文",
+        "请将以上翻译成中文",
+        "请将以下翻译转换成中文",
+        "请将以上翻译转换成中文",
+        "把以下翻译成中文",
+        "翻译转换成中文",
+    )
+    if len(compact) <= 96 and any(marker in compact for marker in refusal_markers):
+        return True
+
+    request_markers = (
+        "请提供",
+        "请您提供",
+        "请你提供",
+        "请输入",
+        "请给出",
+        "pleaseprovide",
+        "pleaseenter",
+        "pleasesend",
+        "kindlyprovide",
+    )
+    translation_input_markers = (
+        "需要翻译的文本",
+        "想要翻译的文本",
+        "待翻译文本",
+        "翻译文本",
+        "原文",
+        "译文",
+        "文本",
+        "内容",
+        "句子",
+        "文字",
+        "text",
+        "sourcetext",
+        "translation",
+        "sentence",
+        "content",
+    )
+    return (
+        len(compact) <= 96
+        and any(marker in compact for marker in request_markers)
+        and any(marker in compact for marker in translation_input_markers)
+    )
+
+
 def parse_records(output: str) -> list[tuple[int, str]]:
     text = output.replace("```text", "").replace("```", "").strip()
     for marker in ("<end_of_turn>", "<start_of_turn>"):
@@ -204,6 +298,8 @@ def text_failures(
     failures: list[str] = []
     source_normalized = normalize_text(source)
     output_normalized = normalize_text(output)
+    if is_placeholder_response(output):
+        failures.append("placeholderOutput")
     if len(source_normalized) > 1 and not source_normalized.isdigit() and source_normalized in output_normalized:
         failures.append("sourceLeakage")
     if number_tokens(source) != number_tokens(output):
@@ -332,7 +428,7 @@ def evaluate(payload: dict[str, Any]) -> dict[str, Any]:
     gate_ledger = [
         {"gateID": "G-context-read-only", "status": "passed", "detail": "previous batch summary is read-only and contains no pending input blocks"},
         {"gateID": "G-tag-boundary", "status": "passed", "detail": "extra, duplicate, and out-of-order tags are rejected"},
-        {"gateID": "G-translation-QA", "status": "passed", "detail": "source leakage, numbers, terms, target density, and length are checked per block"},
+        {"gateID": "G-translation-QA", "status": "passed", "detail": "source leakage, numbers, terms, placeholder outputs, target density, and length are checked per block"},
         {"gateID": "G-real-artifact", "status": "blocked", "detail": "contract fixture is synthetic; real GGUF, authorized clean corpus, and target-device evidence are absent"},
     ]
     return {

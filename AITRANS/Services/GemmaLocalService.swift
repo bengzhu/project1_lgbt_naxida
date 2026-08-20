@@ -493,20 +493,48 @@ struct GemmaLocalService: LocalLanguageModeling {
             "预设提示词",
             "输出风格"
         ]
+        let translationLabelMarkers = [
+            "以下是翻译",
+            "翻译如下",
+            "翻译是：",
+            "这是翻译"
+        ]
         lines.removeAll { line in
-            line.hasPrefix("- ")
-                || (line.hasPrefix("|") && line.hasSuffix("|"))
-                || lineLeakMarkers.contains { line.localizedCaseInsensitiveContains($0) }
+            let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            let bulletBody = trimmed.hasPrefix("- ")
+                ? String(trimmed.dropFirst(2)).trimmingCharacters(in: .whitespacesAndNewlines)
+                : trimmed
+            let isMetadataBullet = trimmed.hasPrefix("- ")
+                && (bulletBody.isEmpty
+                    || lineLeakMarkers.contains {
+                        bulletBody.localizedCaseInsensitiveContains($0)
+                    })
+            let isTranslationLabelOnly = translationLabelMarkers.contains { marker in
+                guard let range = trimmed.range(
+                    of: marker,
+                    options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+                ) else {
+                    return false
+                }
+                let before = String(trimmed[..<range.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                let after = String(trimmed[range.upperBound...])
+                    .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                return before.isEmpty && after.isEmpty
+            }
+            return isMetadataBullet
+                || (trimmed.hasPrefix("|") && trimmed.hasSuffix("|"))
+                || lineLeakMarkers.contains {
+                    trimmed.localizedCaseInsensitiveContains($0)
+                }
+                || isTranslationLabelOnly
         }
 
-        if let last = lines.last, !last.isEmpty {
-            return try validateTranslationOutput(last, input: input, targetLanguage: targetLanguage)
-        }
-
-        guard !text.isEmpty else {
+        guard !lines.isEmpty else {
             throw GemmaLocalServiceError.emptyOutput
         }
-        return try validateTranslationOutput(stripFormatting(from: text), input: input, targetLanguage: targetLanguage)
+        let candidate = lines.joined(separator: "\n")
+        return try validateTranslationOutput(candidate, input: input, targetLanguage: targetLanguage)
     }
 
     private func stripFormatting(from output: String) -> String {
@@ -543,27 +571,13 @@ struct GemmaLocalService: LocalLanguageModeling {
         guard !normalizedOutput.localizedCaseInsensitiveContains(normalizedInput), !normalizedInput.localizedCaseInsensitiveContains(normalizedOutput) else {
             throw GemmaLocalServiceError.repeatedInput
         }
-        guard !isPlaceholderResponse(output) else {
+        guard !TranslationOutputPolicy.isPlaceholderResponse(output) else {
             throw GemmaLocalServiceError.emptyOutput
         }
         guard looksLikeTargetLanguage(output, targetLanguage: targetLanguage) else {
             throw GemmaLocalServiceError.outputNotInTargetLanguage(targetLanguage)
         }
         return output
-    }
-
-    private func isPlaceholderResponse(_ output: String) -> Bool {
-        let markers = [
-            "请您提供",
-            "请提供",
-            "想要翻译的文本",
-            "需要翻译的文本",
-            "无法翻译",
-            "cannot translate",
-            "please provide",
-            "provide the text"
-        ]
-        return markers.contains { output.localizedCaseInsensitiveContains($0) }
     }
 
     private func looksLikeTargetLanguage(_ output: String, targetLanguage: SupportedLanguage) -> Bool {

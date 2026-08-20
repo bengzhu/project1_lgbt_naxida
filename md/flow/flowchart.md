@@ -1,4 +1,10 @@
 # 项目流程图
+v3.298 翻译多行保真：`raw output -> metadata-line filtering -> newline-preserving candidate -> existing validation/QA`；不再用 `last line` 截断合法对白，明确提示/表格元信息仍被移除。
+
+v3.297 翻译输出策略：`raw model output -> shared explicit-refusal/meta-only classifier -> existing batch/single-block QA -> accept/reject`；不再用宽泛 substring 把合法对白误判为占位答复，真实拒答仍 fail closed。
+
+v3.296 日语翻译 fallback：`tagged batch -> per-block QA -> batch-format failure -> bounded single-block fallback -> same per-block QA -> accept/reject`；占位答复、泄漏、数字/术语不一致、低目标语言密度和超长结果 fail closed，取消向上传播，不重跑 OCR/layout。
+
 v3.292 共享语料 readiness：`corpus manifest -> authorization/annotation/split/prediction/holdout gate -> blocked/readyForHoldout report -> no product path`；缺少授权语料、分层标注、同 crop 预测或冻结协议时不进入产品 OCR/翻译选择，也不打开 holdout 后调参。
 
 v3.293 readiness 完整性：`canonical 4-engine × 3-crop dev matrix -> row status/dataset accounting/policy flags -> blocked/readyForHoldout`；缩小 required matrix、failed/missing row、分割计数不覆盖 dataset 或 holdout/product-selection flag 违反均 fail closed，不改变产品路径。

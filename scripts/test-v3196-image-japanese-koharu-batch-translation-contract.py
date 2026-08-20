@@ -94,8 +94,9 @@ class JapaneseKoharuBatchTranslationContractTests(unittest.TestCase):
         for marker in [
             "if error is CancellationError",
             "manga-batch-result state=fallback",
-            "for block in blocks",
-            "fallbackTranslations.append(try await translate(",
+            "for (offset, block) in blocks.enumerated()",
+            "let candidate = try await translateJapaneseImageBlockWithQA(",
+            "fallbackTranslations.append(candidate)",
             "try Task.checkCancellation()",
         ]:
             self.assertIn(marker, self.batch)

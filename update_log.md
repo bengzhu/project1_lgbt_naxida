@@ -1,3 +1,31 @@
+## v3.298：普通翻译多行输出保真（2026-08-20，已完成实现与本地安全回归）
+
+在 v3.297 占位答复策略统一基础上继续修复普通日语图片翻译输出边界。审计发现标准 Local translation cleaner 会把清洗后的多行候选直接取最后一行，合法的两行对白或以 `- ` 开头的对白会被截断；这不是模型能力问题，而是候选归一化丢失内容。
+
+本轮让 `GemmaLocalService.cleanTranslationOutput` 保留所有通过清洗的译文行并以换行连接，只移除明确的 prompt/instruction 元信息、表格行和明确的元信息 bullet；合法的多行对白与普通 `- ` 行不再被无条件丢弃。纯 `以下是翻译`、`翻译如下`、`翻译是：`、`这是翻译` 标签会移除，但带实际内容的整行（如 `翻译是：你好`）保留。随后仍由既有 `validateTranslationOutput`、v3.297 共享 placeholder policy 和图片 block-level QA 继续校验；OCR、detector、layout、prompt、模型、请求预算、context、持久化、UI、renderer 与非图片路径不变。
+
+新增 `scripts/test-v3298-translation-multiline-output-contract.py`，工程版本为 `3.298`。本轮只证明清洗边界不截断多行候选，不声称真实模型翻译质量、CER、盲评或设备证据。
+
+本轮本地安全回归：v3.298 `5/5`、v3.297 `5/5`、v3.296 `8/8`、v3.288 `9/9`；`297` 个无进程入口合同共 `1,481` 个测试通过，`27` 个实际含 `subprocess` 入口的历史合同跳过；`344` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`5` 个 plist／工程文件与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；真实 GGUF、授权语料、目标设备证据、翻译盲评和 v3.289 holdout 仍未由本轮本地检查证明。
+
+## v3.297：普通翻译占位答复判定收紧并统一（2026-08-20）
+
+在 v3.296 逐块 fallback QA 基础上继续修复普通日语图片翻译的误拒问题。Gemma 输出校验、图片 block-level QA 和 Manga probe 过去各自维护占位答复 marker，旧规则会把合法对白“谢谢”“Thank you”或“请提供证件”误判为模型占位答复，导致可用译文被丢弃。
+
+新增共享 `TranslationOutputPolicy.isPlaceholderResponse`：只有明确的翻译拒答、缺少待翻译输入的请求或没有实际内容的翻译元标签才 fail closed；带有真实内容的句子和普通对白不因包含“谢谢”“请提供”等词被拒绝。Gemma、`TranslationBatchQualityEvaluator` 与 `TranslationSessionStore` 的探针/质量路径统一复用该策略，Python cloud-only QA evaluator 同步同一边界。OCR、detector、layout、翻译模型、请求预算、上下文内容、持久化、UI、renderer 与非图片路径不变；Koharu、GGUF、授权语料和目标设备证据不参与产品选择。
+
+新增 `scripts/test-v3297-translation-placeholder-policy-contract.py`，工程版本为 `3.297`。本轮只验证策略一致性、合法对白不误杀和 fail-closed 拒答边界，不把 synthetic contract 当作真实翻译质量或盲评证据。
+
+本地安全回归：v3.297 `5/5`、v3.296 `8/8`、v3.288 `9/9`；全量 `296` 个无进程入口合同通过，`27` 个实际含外部进程入口的历史合同跳过；`343` 个 Python AST、`144` 个 tracked JSON、`3` 个 workflow YAML、`31` 个 shell、`5` 个 plist／工程文件与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
+## v3.296：普通日语图片翻译逐块 fallback 统一 QA（2026-08-20）
+
+沿普通 OCR/翻译主路径继续优化，不依赖 Koharu、外部授权语料、GGUF 或目标设备证据。审计发现：标签批翻译格式失败后虽然会逐块回退，但回退结果没有复用批量结果的同一 block-level QA，可能让占位答复、原文/上下文泄漏或目标语言密度不足的结果覆盖翻译状态。
+
+本轮让所有日语图片逐块 fallback 与批量 QA 共用 `TranslationBatchQualityEvaluator.singleOutputFailures`，继续检查原文泄漏、数字、confirmed 术语、只读上一批 context 泄漏、目标语言密度与长度，并新增 `placeholderOutput` 门。候选只有通过 QA 后才进入局部结果；失败立即 fail closed，不返回或持久化不合格译文。QA 重试显式传播 `CancellationError`，不把取消误报成质量失败；不重跑 OCR、detector、layout 或整页翻译，已完成的其它 batch/block 保持不变。
+
+新增 `scripts/test-v3296-japanese-translation-fallback-qa-contract.py`，工程版本为 `3.296`；本地安全回归为 v3.296 合同 `8/8`、v3.288 合同 `9/9`，`295` 个无进程入口 Python 合同通过、`27` 个实际导入 `subprocess` 的历史合同跳过，`342` 个 Python AST、`144` 个 tracked JSON、`3` 个 workflow YAML、`110` 个 shell、`2` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；Koharu 仍是可选研究/质量证明，不阻塞普通图片 OCR/翻译优化。
+
 ## v3.295：普通图片 OCR 的有界弱日语文字块恢复（2026-08-20）
 
 将普通图片日语 OCR 的真实产品路径向前推进：页级 Vision／bundled Manga OCR／布局完成后，针对已有但置信度偏低、日语脚本密度不足或短且方向不可靠的弱日语 block，最多按稳定顺序复读 4 个 block。复读复用现有 scoped crop reader；只有非空、confidence `>=.55`、日语脚本密度 `>=.5` 且文字数量或 confidence 确实改善的结果才替换原 block。

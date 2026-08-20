@@ -54,7 +54,8 @@ class JapaneseKoharuTolerantBatchTranslationContractTests(unittest.TestCase):
             "var translations = Array(repeating: \"\", count: blocks.count)",
             "var missingOffsets: [Int] = []",
             "if let translation = parsedTranslations[offset]",
-            "translations[offset] = try await translate(",
+            "let candidate = try await translateJapaneseImageBlockWithQA(",
+            "translations[offset] = candidate",
             "missing=\\(missingOffsets.count)",
         ]:
             self.assertIn(marker, self.batch)
@@ -89,8 +90,9 @@ class JapaneseKoharuTolerantBatchTranslationContractTests(unittest.TestCase):
         for marker in [
             "if error is CancellationError",
             "manga-batch-result state=fallback",
-            "for block in blocks",
-            "fallbackTranslations.append(try await translate(",
+            "for (offset, block) in blocks.enumerated()",
+            "let candidate = try await translateJapaneseImageBlockWithQA(",
+            "fallbackTranslations.append(candidate)",
             "try Task.checkCancellation()",
         ]:
             self.assertIn(marker, self.batch)

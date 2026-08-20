@@ -5065,11 +5065,9 @@ final class TranslationSessionStore: ObservableObject {
                         kind: block.textKind ?? translationContext.textKind
                     )
                 },
-                configuration: TranslationBatchQAConfiguration(
+                configuration: japaneseTranslationQAConfiguration(
                     targetLanguage: targetLanguage,
-                    confirmedTerms: translationContext.confirmedTerms,
-                    previousBatchSummary: translationContext.previousBatchSummary,
-                    maximumOutputCharacters: translationContext.maxOutputCharacters
+                    translationContext: translationContext
                 )
             )
             var translations = Array(repeating: "", count: blocks.count)
@@ -5091,29 +5089,16 @@ final class TranslationSessionStore: ObservableObject {
                 for offset in retryOffsets.sorted() {
                     try Task.checkCancellation()
                     do {
-                        translations[offset] = try await translate(
-                            blocks[offset].original,
+                        let candidate = try await translateJapaneseImageBlockWithQA(
+                            blocks[offset],
+                            expectedID: expectedIDs[offset],
                             sourceLanguage: sourceLanguage,
                             targetLanguage: targetLanguage,
                             translationContext: translationContext
                         )
-                        let candidate = translations[offset]
-                        let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
-                            output: candidate,
-                            sourceText: blocks[offset].original,
-                            kind: blocks[offset].textKind ?? translationContext.textKind,
-                            configuration: TranslationBatchQAConfiguration(
-                                targetLanguage: targetLanguage,
-                                confirmedTerms: translationContext.confirmedTerms,
-                                previousBatchSummary: translationContext.previousBatchSummary,
-                                maximumOutputCharacters: translationContext.maxOutputCharacters
-                            )
-                        )
-                        guard failures.isEmpty else {
-                            failedOffsets.insert(offset)
-                            continue
-                        }
                         translations[offset] = candidate
+                    } catch is CancellationError {
+                        throw CancellationError()
                     } catch {
                         failedOffsets.insert(offset)
                     }
@@ -5150,21 +5135,71 @@ final class TranslationSessionStore: ObservableObject {
                 "manga-batch-result state=fallback error=\(Self.probeField(error.localizedDescription)) " +
                 "ids=\(expectedIDs.map(String.init).joined(separator: ","))"
             )
-            imageTranslationMessage = "漫画文本组格式不完整，正在逐块安全回退"
+            imageTranslationMessage = "漫画文本组格式不完整，正在逐块安全回退并复用质量检查"
 
             var fallbackTranslations: [String] = []
             fallbackTranslations.reserveCapacity(blocks.count)
-            for block in blocks {
+            for (offset, block) in blocks.enumerated() {
                 try Task.checkCancellation()
-                fallbackTranslations.append(try await translate(
-                    block.original,
+                let candidate = try await translateJapaneseImageBlockWithQA(
+                    block,
+                    expectedID: expectedIDs[offset],
                     sourceLanguage: sourceLanguage,
                     targetLanguage: targetLanguage,
                     translationContext: translationContext
-                ))
+                )
+                fallbackTranslations.append(candidate)
             }
             return fallbackTranslations
         }
+    }
+
+    private func japaneseTranslationQAConfiguration(
+        targetLanguage: SupportedLanguage,
+        translationContext: TranslationPromptContext
+    ) -> TranslationBatchQAConfiguration {
+        TranslationBatchQAConfiguration(
+            targetLanguage: targetLanguage,
+            confirmedTerms: translationContext.confirmedTerms,
+            previousBatchSummary: translationContext.previousBatchSummary,
+            maximumOutputCharacters: translationContext.maxOutputCharacters
+        )
+    }
+
+    private func translateJapaneseImageBlockWithQA(
+        _ block: ImageTranslationBlock,
+        expectedID: Int,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage,
+        translationContext: TranslationPromptContext
+    ) async throws -> String {
+        let candidate = try await translate(
+            block.original,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            translationContext: translationContext
+        )
+        try Task.checkCancellation()
+
+        let cleanCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
+            output: cleanCandidate,
+            sourceText: block.original,
+            kind: block.textKind ?? translationContext.textKind,
+            configuration: japaneseTranslationQAConfiguration(
+                targetLanguage: targetLanguage,
+                translationContext: translationContext
+            )
+        )
+        guard failures.isEmpty else {
+            writeLaunchLLMSmokeProbe(
+                "manga-single-result state=qa-failure id=\(expectedID) " +
+                "reasons=\(failures.joined(separator: "+")) " +
+                "output=\(Self.probeField(cleanCandidate))"
+            )
+            throw ImageMangaBatchTranslationError.qualityFailure([expectedID])
+        }
+        return cleanCandidate
     }
 
     private static func imageTranslationBatches(
@@ -28415,39 +28450,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private static func isPlaceholderTranslationOutput(_ output: String) -> Bool {
-        let markers = [
-            "请您提供",
-            "请提供",
-            "请你提供",
-            "想要翻译的文本",
-            "需要翻译的文本",
-            "更多上下文",
-            "更好地理解",
-            "请将以下翻译成中文",
-            "请将以上翻译成中文",
-            "请将以下翻译转换成中文",
-            "请将以上翻译转换成中文",
-            "翻译转换成中文",
-            "翻译成中文",
-            "以下是翻译成中文",
-            "把以下翻译成中文",
-            "最合适的翻译",
-            "最通用的",
-            "最常用的翻译",
-            "我个人觉得",
-            "这句话的意思",
-            "意思是：",
-            "翻译是：",
-            "translation:",
-            "translate the following",
-            "谢谢",
-            "thank you",
-            "无法翻译",
-            "cannot translate",
-            "please provide",
-            "provide the text"
-        ]
-        return markers.contains { output.localizedCaseInsensitiveContains($0) }
+        TranslationOutputPolicy.isPlaceholderResponse(output)
     }
 
     private func logLaunchLLMSmokeTestResult(_ test: LLMInterfaceSmokeTest) {

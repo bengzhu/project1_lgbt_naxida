@@ -1,3 +1,24 @@
+### v3.298 普通翻译多行输出保真合同
+
+- `GemmaLocalService.cleanTranslationOutput` 保留所有清洗后的译文行并以换行连接，不再只取 `lines.last`；普通 `- ` 对白行保留，明确 prompt/instruction bullet 和表格元信息继续移除。
+- 纯 `以下是翻译`、`翻译如下`、`翻译是：`、`这是翻译` 标签会移除；带实际内容的整行（例如 `翻译是：你好`）保留，Swift cleaner 与 Python 合同保持同一边界。
+- 候选仍经过既有 output validation、共享 placeholder policy、图片 block-level QA；不改变 OCR、detector、layout、模型、prompt、请求预算、context、持久化、UI、renderer 或 Koharu 旁路。
+- 新合同：`scripts/test-v3298-translation-multiline-output-contract.py`；合同 `5/5` 通过。本轮只证明普通 Local cleaner 的多行保真与元信息过滤，不声称真实翻译质量、CER、盲评或目标设备证据。
+- 随后完成全量本地安全回归：`297` 个无进程入口合同共 `1,481` 个测试通过，`27` 个实际含 `subprocess` 入口的历史合同按约束跳过；Python AST `344`、JSON `144`、workflow YAML `3`、shell `32`、plist／工程文件 `5` 与 `git diff --check` 均通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；真实 GGUF、授权语料、目标设备证据、翻译盲评和 v3.289 holdout 仍未提供。
+
+### v3.297 普通翻译占位答复策略合同
+
+- Gemma 输出校验、图片逐块 QA 和 Manga probe 共用 `TranslationOutputPolicy.isPlaceholderResponse`；只拒绝明确翻译拒答、缺少待翻译输入的请求和 meta-only 标签。
+- 合法对白“谢谢”“Thank you”“请提供证件”以及带真实内容的句子不再被旧的宽泛 marker 误杀；明确“无法翻译/请提供需要翻译的文本”等仍 fail closed。
+- 新合同：`scripts/test-v3297-translation-placeholder-policy-contract.py`；不改变 OCR、detector、layout、模型、请求预算、持久化、UI、renderer 或 Koharu 旁路。
+
+### v3.296 普通日语图片翻译逐块 fallback QA 合同
+
+- 标签批格式失败后的逐块回退统一调用 `TranslationBatchQualityEvaluator.singleOutputFailures`；空结果、原文/上一批 context 泄漏、数字或 confirmed 术语不一致、目标语言密度不足、超长和占位答复均 fail closed。
+- 候选通过同一 QA 后才写入局部结果；质量失败不返回不合格译文，取消显式向上传播，不重跑 OCR、detector、layout 或整页，既有成功 batch/block 不变。
+- 新合同：`scripts/test-v3296-japanese-translation-fallback-qa-contract.py`；Koharu、真实 GGUF、授权语料和设备证据不参与本轮产品路径。
+- 本地结果：v3.296 `8/8`、v3.288 `9/9`；`295` 个无进程入口合同通过、`27` 个实际导入 `subprocess` 的历史合同跳过；`342` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`110` 个 shell、`2` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
 ### v3.295 普通图片 OCR 弱日语文字块恢复合同
 
 - 页级日语 OCR 与布局完成后，只对已有弱日语 block 做最多 4 个有界复读；候选按原 confidence 稳定排序，复用现有 block crop reader，不重新跑 detector/layout，也不重新编码图片。

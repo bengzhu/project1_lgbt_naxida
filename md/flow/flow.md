@@ -1,6 +1,12 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.298 日语图片翻译输出流程：`raw model output -> remove explicit prompt metadata -> preserve all remaining lines -> shared validation/QA -> accept or fail closed`。标准 Local translation 不再只取最后一行；合法多行对白和普通 bullet 行保持原顺序，拒答/泄漏/目标语言等既有质量门仍生效。
+
+当前 v3.297 日语图片翻译质量流程：`model output -> shared placeholder policy -> batch/per-block QA -> accept or fail closed`。Gemma、本地探针与图片逐块 QA 共用同一明确拒答判定；合法“谢谢”“请提供证件”等对白不因宽泛 marker 被误拒，拒答仍不进入结果或持久化。
+
+当前 v3.296 日语图片翻译流程：`OCR/layout blocks -> bounded tagged batch -> batch QA -> failed block single fallback with the same QA -> accept only QA-passed candidates -> partial persistence/scoped cancel`。fallback 不再绕过 placeholder、泄漏、数字、术语、目标语言密度和长度检查；取消不被吞成质量失败。
+
 当前 v3.290 图片翻译结果流程：`completed image session -> existing rectangle overlay renderer/export -> report-only ImageTranslationRenderSafety.analyze -> accessible warning only`。预检只读检查 invalid geometry、空文字、旁贴裁切／覆盖、源块重叠和跨块碰撞；它不参与 OCR、翻译、候选选择、renderer、export、持久化或复查状态。
 
 当前 v3.292 证据 readiness 流程：`shared corpus manifest -> split/annotation/prediction/holdout freeze gate -> blocked/readyForHoldout report -> no product-path change`；共享授权语料、四引擎同 crop 预测矩阵或 holdout 冻结条件缺失时只生成 cloud-only report，不读取 ground truth 做产品决策、不进入 OCR/翻译模型选择。

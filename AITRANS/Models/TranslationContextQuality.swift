@@ -255,6 +255,119 @@ struct TranslationBatchQAConfiguration: Equatable, Sendable {
     }
 }
 
+/// Shared, conservative classifier for model meta-responses.
+///
+/// A translated sentence may legitimately contain words such as “谢谢” or
+/// “请提供证件”.  Treating those words as placeholders rejects real dialogue
+/// before it reaches the user.  Only an explicit refusal, an input-request
+/// tied to translation, or a meta-only label is classified as a placeholder.
+enum TranslationOutputPolicy {
+    static func isPlaceholderResponse(_ text: String) -> Bool {
+        let normalized = normalize(text)
+        guard !normalized.isEmpty else { return false }
+        let compact = normalized.filter { !$0.isWhitespace && !$0.isPunctuation }
+
+        let exactMetaResponses = [
+            "na",
+            "待翻译",
+            "以下是翻译",
+            "这是翻译",
+            "翻译如下",
+            "翻译成中文",
+            "translationunavailable",
+            "notranslationavailable",
+            "cannottranslate",
+            "unabletotranslate",
+            "pleaseprovide",
+            "providethetext",
+            "translate the following".replacingOccurrences(of: " ", with: ""),
+            "翻译是",
+            "意思是",
+            "这句话的意思",
+            "最合适的翻译",
+            "最通用的翻译",
+            "最常用的翻译"
+        ]
+        if exactMetaResponses.contains(compact) {
+            return true
+        }
+
+        let refusalMarkers = [
+            "无法翻译",
+            "无法完成翻译",
+            "无法提供译文",
+            "翻译失败",
+            "需要更多上下文",
+            "需要更多信息",
+            "请提供更多上下文",
+            "请提供更多信息",
+            "cannottranslate",
+            "unabletotranslate",
+            "translationunavailable",
+            "notranslationavailable",
+            "pleaseprovidemorecontext",
+            "pleaseprovidemoreinformation",
+            "needmorecontext",
+            "needmoreinformation",
+            "pleaseprovidethetext",
+            "providethetexttotranslate",
+            "请将以下翻译成中文",
+            "请将以上翻译成中文",
+            "请将以下翻译转换成中文",
+            "请将以上翻译转换成中文",
+            "把以下翻译成中文",
+            "翻译转换成中文"
+        ]
+        if compact.count <= 96,
+           refusalMarkers.contains(where: { compact.contains($0.filter { !$0.isWhitespace && !$0.isPunctuation }) }) {
+            return true
+        }
+
+        let requestMarkers = [
+            "请提供",
+            "请您提供",
+            "请你提供",
+            "请输入",
+            "请给出",
+            "pleaseprovide",
+            "pleaseenter",
+            "pleasesend",
+            "kindlyprovide"
+        ]
+        let translationInputMarkers = [
+            "需要翻译的文本",
+            "想要翻译的文本",
+            "待翻译文本",
+            "翻译文本",
+            "原文",
+            "译文",
+            "文本",
+            "内容",
+            "句子",
+            "文字",
+            "text",
+            "sourcetext",
+            "translation",
+            "sentence",
+            "content"
+        ]
+        guard compact.count <= 96,
+              requestMarkers.contains(where: { compact.contains($0.filter { !$0.isWhitespace && !$0.isPunctuation }) }),
+              translationInputMarkers.contains(where: { compact.contains($0.filter { !$0.isWhitespace && !$0.isPunctuation }) }) else {
+            return false
+        }
+        return true
+    }
+
+    private static func normalize(_ text: String) -> String {
+        text
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
+            .lowercased()
+            .split(whereSeparator: { $0.isWhitespace })
+            .joined(separator: " ")
+    }
+}
+
 struct TranslationBatchQualityReport: Equatable, Sendable {
     var values: [String?]
     var failedOffsets: [Int]
@@ -427,6 +540,9 @@ enum TranslationBatchQualityEvaluator {
         var failures: [String] = []
         let normalizedSource = comparableText(sourceText)
         let normalizedOutput = comparableText(translatedText)
+        if TranslationOutputPolicy.isPlaceholderResponse(translatedText) {
+            failures.append("placeholderOutput")
+        }
         if normalizedSource.count > 1,
            !isOnlyDigits(normalizedSource),
            normalizedOutput.contains(normalizedSource) {

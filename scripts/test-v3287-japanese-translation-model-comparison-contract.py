@@ -170,7 +170,7 @@ class JapaneseTranslationModelComparisonContractTests(unittest.TestCase):
             "scripts/test-v3287-japanese-translation-model-comparison-contract.py",
             "scripts/run-japanese-translation-model-comparison-cloud-smoke.sh",
             "japanese-translation-model-comparison-report.json",
-            "japanese-benchmark-v3.295-",
+            "japanese-benchmark-v3.298-",
         ):
             self.assertIn(marker, self.workflow)
         self.assertIn("GITHUB_ACTIONS", self.wrapper)
@@ -179,7 +179,7 @@ class JapaneseTranslationModelComparisonContractTests(unittest.TestCase):
         self.assertNotIn("xcodebuild", self.wrapper)
         self.assertNotIn("swiftc", self.wrapper)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.295", "3.295"])
+        self.assertEqual(versions, ["3.298", "3.298"])
         self.assertIn("v3.287", self.route)
         self.assertIn("v3.287", self.update_log)
         self.assertNotIn("qwen-1.5b-candidate", self.service)
