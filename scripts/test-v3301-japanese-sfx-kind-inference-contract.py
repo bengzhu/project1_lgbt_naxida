@@ -113,6 +113,10 @@ class JapaneseSFXKindInferenceContractTests(unittest.TestCase):
             '"$repo_root/AITRANS/Models/TranslationContextQuality.swift"',
             self.runtime,
         )
+        self.assertIn(
+            "scripts/fixtures/v3214-manga-ocr-runtime-harness",
+            self.workflow,
+        )
         for marker in (
             "enum SupportedLanguage: String, CaseIterable, Identifiable, Codable, Sendable",
             'case englishUS = "英语(美国)"',
