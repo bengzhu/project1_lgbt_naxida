@@ -4,6 +4,8 @@
 - 复读结果必须非空、confidence `>=.55`、日语脚本密度 `>=.5`，并以更多日语文字或至少 `+.04` confidence 证明优于原结果；失败、取消、模型不可用或不满足 gate 时保留原 block。
 - 该路径服务普通 `test/jap.jpg` 图片 OCR，不读取 Koharu artifact、授权 corpus、ground truth 或 GGUF，不改翻译、持久化、UI、renderer、非日语路径或 block geometry。Koharu 仅是可选研究/质量证明；CI `koharu_parity_required` 默认 `false`，本合同称“弱日语 block”恢复，不把静态合同当作通用 OCR/CER 证据。
 - 新合同：`scripts/test-v3295-image-japanese-weak-block-recovery-contract.py`；本地只做该纯 Python 合同、静态 AST/YAML/shell/plist 与 diff 检查，未运行本地 Xcode、Swift、Core ML、Rust、GGUF 或 App/runtime。
+- 本轮明确保留原有 detector/layout/batch 预算，并另设最多 4 个 block crop reread 恢复预算；不把新增恢复次数伪装为“请求预算不变”。
+- exact-SHA full [32323220706](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32323220706) 精确对应 `8350f99e5087f17e3fcb6c79d451c2f151c969ff`：Japanese benchmark `96289399016`、主 bundle `96289456475` 成功，Xcode 26.6、static/UI/Speech/Home/Paste、simulator、manga probe、JUnit `10/10`（0 failures）和 `AITRANS CI/full-validation=success` receipt 成立；Koharu parity 按默认 opt-in policy skip。`test/1.png` probe 诊断为 13 blocks、`overallPassed=false`，clean-text `5/11`；这只是当前模型/翻译 floor 的 report-only 回归，不是通用质量证据。
 
 ### v3.294 共享语料 artifact intake 完整性合同
 
