@@ -32,6 +32,15 @@ private struct ImageTranslationBatch {
     let blocks: [ImageTranslationBlock]
 }
 
+/// Transient identity-only plan for one Japanese image page. The block values
+/// remain mutable (correction, scoped reread, ignore/restore), but the batch
+/// boundaries used by read-only translation context stay anchored to the
+/// original page until a structural edit deliberately invalidates the plan.
+private struct ImageTranslationBatchPlan {
+    let startIndex: Int
+    let blockIDs: [UUID]
+}
+
 private struct ImageTranslationJapanesePrompt {
     let startIndex: Int
     let context: TranslationPromptContext
@@ -211,6 +220,7 @@ final class TranslationSessionStore: ObservableObject {
     private var imageTranslationVisionOriginalBlocks: [UUID: ImageTranslationBlock] = [:]
     private var imageTranslationIgnoredBlockSnapshots: [UUID: ImageTranslationIgnoredBlockSnapshot] = [:]
     private var imageTranslationOriginalBlockOrder: [UUID: Int] = [:]
+    private var imageTranslationJapaneseBatchPlan: [ImageTranslationBatchPlan] = []
     private var imageTranslationTranscriptLineID: UUID?
     private var imageTranslationFileSelectionID: UUID?
     private var imageTranslationOwnedExportURLs: Set<URL> = []
@@ -1254,6 +1264,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationVisionOriginalBlocks = [:]
         imageTranslationIgnoredBlockSnapshots = [:]
         imageTranslationOriginalBlockOrder = [:]
+        imageTranslationJapaneseBatchPlan = []
         imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
         imageTranslationSourceURL = nil
@@ -1316,6 +1327,7 @@ final class TranslationSessionStore: ObservableObject {
         var translatedBlocks = recognizedBlocks
         if sourceLanguage == .japanese {
             let batches = Self.imageTranslationBatches(recognizedBlocks)
+            imageTranslationJapaneseBatchPlan = Self.imageTranslationBatchPlans(from: batches)
             var translatedCount = 0
             var previousBatchSummary: TranslationReadOnlyBatchSummary?
             for batch in batches {
@@ -1702,6 +1714,7 @@ final class TranslationSessionStore: ObservableObject {
         imageTranslationVisionOriginalBlocks = [:]
         imageTranslationIgnoredBlockSnapshots = [:]
         imageTranslationOriginalBlockOrder = [:]
+        imageTranslationJapaneseBatchPlan = []
         imageTranslationTranscriptLineID = nil
         imageTranslationData = nil
         imageTranslationFilename = ""
@@ -5242,26 +5255,32 @@ final class TranslationSessionStore: ObservableObject {
             ? imageTranslationBlocks[blockIndex]
             : nil
         let startIndex = imageTranslationOriginalBlockOrder[blockID] ?? blockIndex
-        let batches = Self.imageTranslationBatches(imageTranslationBlocks)
-        let currentBatchIndex = batches.firstIndex { batch in
-            batch.blocks.contains { $0.id == blockID }
+        let contextBlocks = imageTranslationContextBlocks()
+        let contextBlocksByID = Dictionary(
+            uniqueKeysWithValues: contextBlocks.map { ($0.id, $0) }
+        )
+        let batchPlan = currentJapaneseImageTranslationBatchPlan()
+        let currentBatchIndex = batchPlan.firstIndex { plan in
+            plan.blockIDs.contains(blockID)
         }
 
         let previousBatchSummary: TranslationReadOnlyBatchSummary?
         if let currentBatchIndex,
            currentBatchIndex > 0 {
-            let previousBatch = batches[currentBatchIndex - 1]
-            let previousBatchComplete = !previousBatch.blocks.isEmpty
-                && previousBatch.blocks.allSatisfy {
+            let previousPlan = batchPlan[currentBatchIndex - 1]
+            let previousBlocks = previousPlan.blockIDs.compactMap { contextBlocksByID[$0] }
+            let previousBatchComplete = previousBlocks.count == previousPlan.blockIDs.count
+                && !previousBlocks.isEmpty
+                && previousBlocks.allSatisfy {
                     !$0.translation.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 }
             if previousBatchComplete {
                 let previousStartIndex: Int
-                if let firstBlockID = previousBatch.blocks.first?.id {
+                if let firstBlockID = previousPlan.blockIDs.first {
                     previousStartIndex = imageTranslationOriginalBlockOrder[firstBlockID]
-                        ?? previousBatch.startIndex
+                        ?? previousPlan.startIndex
                 } else {
-                    previousStartIndex = previousBatch.startIndex
+                    previousStartIndex = previousPlan.startIndex
                 }
                 let contextSourceLanguage = imageTranslationContentSourceLanguage ?? sourceLanguage
                 let contextTargetLanguage = imageTranslationContentTargetLanguage ?? targetLanguage
@@ -5269,7 +5288,7 @@ final class TranslationSessionStore: ObservableObject {
                     batchID: "image-\(imageTranslationTaskID.uuidString)-\(previousStartIndex)",
                     sourceLanguage: contextSourceLanguage,
                     targetLanguage: contextTargetLanguage,
-                    items: previousBatch.blocks.enumerated().map { offset, previousBlock in
+                    items: previousBlocks.enumerated().map { offset, previousBlock in
                         TranslationReadOnlyBatchItem(
                             ordinal: imageTranslationOriginalBlockOrder[previousBlock.id]
                                 ?? previousStartIndex + offset,
@@ -5295,6 +5314,60 @@ final class TranslationSessionStore: ObservableObject {
                 batchStartIndex: startIndex
             )
         )
+    }
+
+    /// Returns the current page's active and ignored blocks in their stable
+    /// original order. Ignored blocks remain eligible as completed context
+    /// observations; omitting them would renumber later batches and could put
+    /// a current-batch translation into the previous-batch summary.
+    private func imageTranslationContextBlocks() -> [ImageTranslationBlock] {
+        var blocksByID: [UUID: ImageTranslationBlock] = [:]
+        for block in imageTranslationBlocks {
+            blocksByID[block.id] = block
+        }
+        for snapshot in imageTranslationIgnoredBlockSnapshots.values {
+            blocksByID[snapshot.block.id] = snapshot.block
+        }
+
+        let orderedIDs = imageTranslationOriginalBlockOrder
+            .sorted { lhs, rhs in
+                if lhs.value == rhs.value {
+                    return lhs.key.uuidString < rhs.key.uuidString
+                }
+                return lhs.value < rhs.value
+            }
+            .map(\.key)
+        var seenIDs = Set<UUID>()
+        let orderedBlocks = orderedIDs.compactMap { blockID -> ImageTranslationBlock? in
+            guard let block = blocksByID[blockID], seenIDs.insert(blockID).inserted else {
+                return nil
+            }
+            return block
+        }
+        let untrackedBlocks = blocksByID.values
+            .filter { !seenIDs.contains($0.id) }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+        return orderedBlocks + untrackedBlocks
+    }
+
+    /// Keeps the initial Japanese page batch boundaries across mutable block
+    /// values. A restored session has no transient plan, so it is rebuilt from
+    /// the authenticated active/ignored block set; a structural edit clears
+    /// the plan and intentionally starts a new context epoch.
+    private func currentJapaneseImageTranslationBatchPlan() -> [ImageTranslationBatchPlan] {
+        let contextBlocks = imageTranslationContextBlocks()
+        guard !contextBlocks.isEmpty else { return [] }
+        let contextBlockIDs = contextBlocks.map(\.id)
+        let plannedBlockIDs = imageTranslationJapaneseBatchPlan.flatMap(\.blockIDs)
+        guard plannedBlockIDs != contextBlockIDs else {
+            return imageTranslationJapaneseBatchPlan
+        }
+
+        let rebuilt = Self.imageTranslationBatchPlans(
+            from: Self.imageTranslationBatches(contextBlocks)
+        )
+        imageTranslationJapaneseBatchPlan = rebuilt
+        return rebuilt
     }
 
     private static func imageTranslationBatches(
@@ -5330,6 +5403,17 @@ final class TranslationSessionStore: ObservableObject {
         }
         flush()
         return batches
+    }
+
+    private static func imageTranslationBatchPlans(
+        from batches: [ImageTranslationBatch]
+    ) -> [ImageTranslationBatchPlan] {
+        batches.map { batch in
+            ImageTranslationBatchPlan(
+                startIndex: batch.startIndex,
+                blockIDs: batch.blocks.map(\.id)
+            )
+        }
     }
 
     private static func mangaBatchSampling(
@@ -26801,6 +26885,10 @@ final class TranslationSessionStore: ObservableObject {
     /// contiguous order for every active and ignored identity.
     private func rebuildImageTranslationOriginalBlockOrder() {
         let previousOrder = imageTranslationOriginalBlockOrder
+        // A structural edit creates a new block identity/order epoch. Do not
+        // let a pre-edit batch plan attach a previous-batch summary to the new
+        // structure; the next single-block operation will rebuild it.
+        imageTranslationJapaneseBatchPlan = []
         var orderedIDs = imageTranslationBlocks.map(\.id)
         let ignoredSnapshots = imageTranslationIgnoredBlockSnapshots.values.sorted { lhs, rhs in
             let lhsOrder = previousOrder[lhs.block.id] ?? lhs.originalOrder
@@ -28201,6 +28289,9 @@ final class TranslationSessionStore: ObservableObject {
                 (blockID, index)
             }
         )
+        // Batch membership is intentionally transient and is reconstructed on
+        // demand from the authenticated active/ignored block set after restore.
+        imageTranslationJapaneseBatchPlan = []
         imageTranslationIgnoredBlockSnapshots = Dictionary(
             uniqueKeysWithValues: snapshot.ignoredBlockSnapshots.map { persisted in
                 (

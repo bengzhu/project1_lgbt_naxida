@@ -1,3 +1,13 @@
+## v3.304：稳定日语图片 batch identity，收紧忽略/修正后的跨批次 context（2026-08-20）
+
+v3.303 已让日语人工修正、单块翻译重试和 scoped OCR 复读重译统一重建只读 context，但 helper 仍按当前可见 block 数组和可变原文重新切 batch。忽略一个已完成块会把后续 block 前移，人工修正增长原文也可能改变 1,800 字符边界，导致第 9 块重试拿到错误的上一批摘要或把当前批内容带入 context。
+
+本轮在日语整页翻译开始前建立仅含 `startIndex` 与 `blockIDs` 的 transient `ImageTranslationBatchPlan`。单块 prompt 现在合并 active blocks 与 ignored snapshots，按原始 page order 找到 plan 的紧邻前一批，并要求该批每个 block 都存在且译文非空；人工修正、scoped reread、ignore/restore 不清除 identity plan，split/merge/move 等结构 mutation 清除 plan，恢复会话后按认证 block 集合按需重建。plan、原文/译文 context 均不写入 block、snapshot、Store、transcript 或导出；OCR geometry/layout、预算、tag、QA、取消、partial persistence 和非日语路径不变。
+
+新增 `scripts/test-v3304-japanese-translation-batch-boundary-contract.py`，工程版本推进至 `3.304`，并接入 Japanese benchmark contract route。本地安全回归：v3.304、v3.303、v3.288 合同通过；`330` 个 `scripts/test-v*.py` 完成 AST 解析，`303` 个无实际进程入口合同通过、`27` 个实际含进程入口的历史合同按约束跳过；`349` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，不读取 ground truth，不声称真实 OCR/CER、翻译盲评、授权语料、目标设备或 v3.289 holdout 证据。
+
+当前候选仍在 `codex/v3.304-stable-image-translation-context` 工作树；`.git` 写权限和 GitHub DNS 不可用，尚未产生 v3.304 commit，因此 exact-SHA full、PR、`smalldata_test` 合入及合入后 receipt 均待权限恢复后执行。不得把本地合同结果当作云端或合入证据。
+
 ## v3.303：日语人工修正与单块重试的 context/QA 收口（2026-08-20）
 
 v3.288 已为整页日语 batch 建立 confirmed terminology、上一完整 batch 摘要、逐块类型和全局 ordinal 的只读 context，并让批量 fallback 复用 block-level QA；本轮审计发现人工 OCR 修正仍直接调用普通 `translate`，单块翻译重试也只传术语和当前类型，可能绕过 QA 或丢失上一批 context。

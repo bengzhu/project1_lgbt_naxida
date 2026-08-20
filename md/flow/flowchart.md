@@ -1,4 +1,6 @@
 # 项目流程图
+v3.304 日语图片 batch 边界收口：`page/layout -> transient identity batch plan -> active+ignored stable order -> previous completed batch context -> correction/retry QA -> scoped commit`；忽略/恢复和原文修正不重编号 batch，结构 split/merge/move 才清除并重建 plan；context 仍只读，不进入 block、snapshot、OCR、tag、取消或持久化边界。
+
 v3.303 日语单块翻译 context/QA 收口：`page/layout -> read-only ordinal/context rebuild -> Japanese correction/retry QA -> scoped commit`；上一 batch 仅在完整翻译后进入只读摘要，失败、取消或过期 guard 不写回，不改变 OCR 候选、geometry、预算、tag、取消或持久化边界。
 
 v3.301 保守拟声词类型提示：`new Japanese OCR block -> high-signal katakana/repetition/marker gate -> optional .sfx metadata -> bounded tagged translation -> QA/retry`；不满足门控时保持历史 dialogue fallback，不推断 narration/title，不改变 OCR geometry、预算或持久化。

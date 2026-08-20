@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-当前 v3.303 日语图片翻译流程：`OCR/layout blocks -> bounded Japanese OCR recovery -> reconcile conservative SFX kind hint -> global-ordinal read-only kind hints -> strict tagged translation -> per-block QA/retry -> correction/retry context parity`。人工修正、单块重试和 scoped OCR 复读重译只读取当前页全局 ordinal、confirmed terms 与上一完整 batch 摘要；context 不进入 block、持久化或取消边界，日语候选仍统一经过 block-level QA。
+当前 v3.304 日语图片翻译流程：`OCR/layout blocks -> bounded Japanese OCR recovery -> reconcile conservative SFX kind hint -> stable identity batch plan -> global-ordinal read-only context -> strict tagged translation -> per-block QA/retry -> correction/retry context parity`。人工修正、单块重试、scoped OCR 复读和忽略/恢复只更新 block 值；active + ignored identity 按原始 page order 生成上一完整 batch 摘要，context 不进入 block、持久化或取消边界。split/merge/move 结构 mutation 会清除 plan 并按新结构重建，日语候选仍统一经过 block-level QA。
 
 当前 v3.300 日语图片翻译流程：`OCR/layout blocks -> bounded batch -> global-ordinal read-only kind hints -> strict tagged translation -> per-block QA/retry`。类型提示与跨 batch 的 `[N]` 输入序号对齐，不进入待翻译文本、输出标签、OCR/layout、持久化或取消边界。
 

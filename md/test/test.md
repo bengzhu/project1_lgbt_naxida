@@ -1,3 +1,10 @@
+### v3.304 稳定日语图片 batch identity 与跨批次 context 合同
+
+- 日语图片页在首次识别后建立仅含 `startIndex`/`blockIDs` 的 transient batch plan；人工修正、scoped OCR 复读、忽略/恢复不因可见数组变化而重编号，active + ignored block 按原始 page order 重建只读 context。
+- 上一批摘要只接受 plan 紧邻前一批且每个 block 都有非空译文；缺 block 或 pending translation 时 fail closed。split/merge/move 结构 mutation 清除 plan，恢复持久化会从当前认证 block 集合按需重建；plan 不进入 block、snapshot、Store、transcript 或导出。
+- 新合同：`scripts/test-v3304-japanese-translation-batch-boundary-contract.py`；工程版本为 `3.304`。只证明 batch identity/context 边界与已有 QA 接线，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+- 本地安全回归：v3.304、v3.303、v3.288 合同通过；`330` 个 `scripts/test-v*.py` 完成 AST 解析，`303` 个无实际进程入口合同通过、`27` 个实际含进程入口的历史合同按约束跳过；`349` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
 ### v3.303 日语人工修正与单块重试 context/QA 合同
 
 - 日语人工 OCR 修正、单块翻译重试和 scoped OCR 复读重译统一重建当前页全局 block ordinal、confirmed terminology、文字类型和上一完整 batch 的只读摘要；上一批未全部完成时不注入摘要。
