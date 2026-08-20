@@ -113,6 +113,14 @@ class JapaneseSFXKindInferenceContractTests(unittest.TestCase):
             '"$repo_root/AITRANS/Models/TranslationContextQuality.swift"',
             self.runtime,
         )
+        for marker in (
+            "enum SupportedLanguage: String, CaseIterable, Identifiable, Codable, Sendable",
+            'case englishUS = "英语(美国)"',
+            'case french = "法语"',
+            'case german = "德语"',
+            "var id: String { rawValue }",
+        ):
+            self.assertIn(marker, self.runtime_harness)
         self.assertIn("func normalizedToUnit() -> Self?", self.runtime_harness)
         self.assertIn("var textKind: TranslationTextKind? = nil", self.runtime_harness)
 
