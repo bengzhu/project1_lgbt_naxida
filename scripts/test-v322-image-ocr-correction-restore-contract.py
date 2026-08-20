@@ -42,7 +42,7 @@ class ImageOCRCorrectionRestoreContractTests(unittest.TestCase):
         self.assertIn("imageTranslationVisionOriginalBlocks[blockID] = currentBlock", correction)
         self.assertLess(
             correction.index(capture),
-            correction.index("correctedBlock.original = correctedOriginal"),
+            correction.index("imageTranslationBlocks[currentIndex] = correctedBlock"),
         )
 
     def test_new_image_and_clear_forget_the_nonpersistent_baselines(self) -> None:
