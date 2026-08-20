@@ -6,6 +6,8 @@
 
 本地安全回归与 exact-SHA 云端验收完成：v3.295 合同 `9/9`；全量 `294` 个无进程入口合同通过，`27` 个实际导入 `subprocess` 的历史合同按约束跳过；`341` 个 tracked Python AST、JSON/YAML/shell/plist 与 `git diff --check` 均通过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。SHA `8350f99e5087f17e3fcb6c79d451c2f151c969ff` 的 full [32323220706](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32323220706) 成功：Japanese benchmark `96289399016`、主 bundle `96289456475`、Xcode 26.6、static/UI/Speech/Home/Paste、simulator、manga probe 与 JUnit `10/10`（0 failures）全部通过并发布 `AITRANS CI/full-validation=success`；Koharu parity `96289399590` 按 `koharu_parity_required=false` 正确 skip。云端 `test/1.png` probe 仅作现有产品回归诊断，13 blocks 的 `overallPassed=false`、clean-text `5/11` 反映当前 GGUF/翻译质量 floor，不构成通用 OCR/CER 或翻译质量声明；Koharu artifact、授权 corpus 与目标设备证据仍未提供，main 未修改。
 
+PR [#365](https://github.com/bengzhu/project1_lgbt_naxida/pull/365) fast CI [32325386050](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32325386050) 成功后，以 merge SHA `d69e7de20b761b71ca6d6a909220358aec7ab44b` 合入 `smalldata_test`；合入后 push CI [32325468871](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32325468871) 的 benchmark `96295709370`、主 bundle `96295782507`、Xcode build、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 全部成功，Koharu parity 按默认 opt-in policy skip。当前工作树与远端均为 `smalldata_test` / `d69e7de2`，`main` 未修改。
+
 ## v3.294：共享语料 artifact intake 完整性与 fail-closed 闸门（2026-08-20）
 
 v3.293 只核验 readiness manifest 的 canonical 12-row matrix 声明；本轮继续沿证据路线收口，要求外部 dataset、source manifest 和 prediction artifact 在显式 `artifactRoot` 内真实物化，并验证实际 SHA-256 与 prediction envelope 身份，避免“manifest 声称 available、文件实际错配”误触发 readiness 晋级。
