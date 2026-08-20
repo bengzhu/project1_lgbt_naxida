@@ -2,7 +2,7 @@
 
 将普通图片日语 OCR 的真实产品路径向前推进：页级 Vision／bundled Manga OCR／布局完成后，针对已有但置信度偏低、日语脚本密度不足或短且方向不可靠的弱日语 block，最多按稳定顺序复读 4 个 block。复读复用现有 scoped crop reader；只有非空、confidence `>=.55`、日语脚本密度 `>=.5` 且文字数量或 confidence 确实改善的结果才替换原 block。
 
-失败、取消、模型不可用或质量不达标时保留原 block；detector/layout geometry、block ID/order、翻译批次、持久化、UI、非日语路径和请求边界不被恢复流程改写。新增 `scripts/test-v3295-image-japanese-weak-block-recovery-contract.py`，工程版本为 `3.295`；本轮不依赖 Koharu artifact、外部语料或 GGUF，Koharu 对比继续作为可选研究/质量证明，不再阻塞 `test/jap.jpg` 的普通 OCR 修复。
+失败、取消、模型不可用或质量不达标时保留原 block；detector/layout geometry、block ID/order、翻译批次、持久化、UI、非日语路径和请求边界不被恢复流程改写。新增 `scripts/test-v3295-image-japanese-weak-block-recovery-contract.py`，工程版本为 `3.295`；本轮不依赖 Koharu artifact、外部语料或 GGUF，Koharu 对比继续作为可选研究/质量证明，不再阻塞 `test/jap.jpg` 的普通 OCR 修复。CI 的 `koharu_parity_required` 默认 `false`，只有显式研究任务才把旁路 parity 纳入 gate。
 
 ## v3.294：共享语料 artifact intake 完整性与 fail-closed 闸门（2026-08-20）
 

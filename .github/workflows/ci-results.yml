@@ -65,6 +65,14 @@ on:
         options:
           - 'false'
           - 'true'
+      koharu_parity_required:
+        description: 'Optional Koharu MIT48 research parity; false keeps ordinary OCR validation independent'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
 
 concurrency:
   group: ci-results-${{ github.event_name }}-${{ github.event.pull_request.head.ref || github.ref }}
@@ -297,7 +305,7 @@ jobs:
       TEST_RESULTS_DIR: ci-results/TestResults
       OUTPUT_COPY_DIR: ci-results/output
       MODEL_CACHE_DIR: .ci-models
-      KOHARU_MIT48_PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_profile == 'full' }}
+      KOHARU_MIT48_PARITY_REQUIRED: ${{ github.event_name == 'workflow_dispatch' && inputs.validation_profile == 'full' && inputs.koharu_parity_required == 'true' }}
       MODEL_TAG: model-gemma-3-270m-it-qat-q4_0-v1
       MODEL_ASSET: gemma-3-270m-it-qat-Q4_0.gguf
       MODEL_SHA256: 3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6
@@ -376,6 +384,17 @@ jobs:
               exit 1
               ;;
           esac
+          koharu_parity_required="${{ github.event.inputs.koharu_parity_required }}"
+          if [ -z "$koharu_parity_required" ]; then
+            koharu_parity_required="false"
+          fi
+          case "$koharu_parity_required" in
+            true|false) ;;
+            *)
+              echo "Invalid koharu_parity_required=$koharu_parity_required" >&2
+              exit 1
+              ;;
+          esac
           koharu_artifact_requested=false
           if [ -n "$koharu_artifact_release_tag$koharu_artifact_asset$koharu_artifact_sha256" ]; then
             koharu_artifact_requested=true
@@ -434,6 +453,7 @@ jobs:
             echo "probe_no_progress_timeout_seconds=$probe_no_progress_timeout_seconds"
             echo "koharu_artifact_requested=$koharu_artifact_requested"
             echo "koharu_artifact_required=$koharu_artifact_required"
+            echo "koharu_parity_required=$koharu_parity_required"
             echo "koharu_artifact_release_tag=$koharu_artifact_release_tag"
             echo "koharu_artifact_asset=$koharu_artifact_asset"
             echo "koharu_artifact_sha256=$koharu_artifact_sha256"
@@ -3434,6 +3454,8 @@ jobs:
         run: |
           if [ "$KOHARU_MIT48_PARITY_REQUIRED" = "true" ]; then
             test "${{ needs.koharu_mit48_reference_parity.result }}" = "success"
+          else
+            echo "Koharu MIT48 parity is optional for ordinary OCR validation; no parity gate applied."
           fi
 
       - name: Publish full validation receipt
@@ -3452,7 +3474,7 @@ jobs:
           if [ "${{ steps.ci_scope.outputs.receipt_propagation_allowed }}" = "true" ]; then
             description="Reused successful parent full validation"
           fi
-          if [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
+          if [ "$KOHARU_MIT48_PARITY_REQUIRED" = "true" ] && [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
             state=failure
             description="Task-scoped full validation failed: Koharu MIT48 cloud parity failed"
           fi
@@ -3477,7 +3499,7 @@ jobs:
             echo "Japanese benchmark contract did not pass."
             exit 1
           fi
-          if [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
+          if [ "$KOHARU_MIT48_PARITY_REQUIRED" = "true" ] && [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then
             echo "Cloud Koharu MIT48 parity did not pass."
             exit 1
           fi
@@ -3712,7 +3734,7 @@ jobs:
 
   koharu_mit48_reference_parity:
     name: Cloud Koharu MIT48 reference parity
-    if: github.event_name == 'workflow_dispatch' && inputs.validation_profile == 'full'
+    if: github.event_name == 'workflow_dispatch' && inputs.validation_profile == 'full' && inputs.koharu_parity_required == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:

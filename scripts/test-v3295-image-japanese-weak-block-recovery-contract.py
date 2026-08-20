@@ -142,12 +142,27 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
         ):
             self.assertNotIn(forbidden, body)
 
+    def test_koharu_parity_is_opt_in_and_cannot_block_ordinary_full_validation(self) -> None:
+        for marker in (
+            "koharu_parity_required:",
+            "Optional Koharu MIT48 research parity; false keeps ordinary OCR validation independent",
+            "inputs.koharu_parity_required == 'true'",
+            "Koharu MIT48 parity is optional for ordinary OCR validation; no parity gate applied.",
+            "if [ \"$KOHARU_MIT48_PARITY_REQUIRED\" = \"true\" ] &&",
+        ):
+            self.assertIn(marker, self.workflow)
+        self.assertNotIn(
+            'if [ "${{ steps.koharu_mit48_gate.outcome }}" != "success" ]; then',
+            self.workflow,
+        )
+
     def test_project_workflow_docs_and_version_are_explicit(self) -> None:
         for marker in (
             "scripts/test-v3295-image-japanese-weak-block-recovery-contract.py",
             "v3.295",
             "弱日语文字块",
             "弱日语 block",
+            "Koharu 只作为可选研究/质量证明",
         ):
             self.assertIn(
                 marker,

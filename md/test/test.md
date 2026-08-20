@@ -2,7 +2,7 @@
 
 - 页级日语 OCR 与布局完成后，只对已有弱日语 block 做最多 4 个有界复读；候选按原 confidence 稳定排序，复用现有 block crop reader，不重新跑 detector/layout，也不重新编码图片。
 - 复读结果必须非空、confidence `>=.55`、日语脚本密度 `>=.5`，并以更多日语文字或至少 `+.04` confidence 证明优于原结果；失败、取消、模型不可用或不满足 gate 时保留原 block。
-- 该路径服务普通 `test/jap.jpg` 图片 OCR，不读取 Koharu artifact、授权 corpus、ground truth 或 GGUF，不改翻译、持久化、UI、renderer、非日语路径或 block geometry。Koharu 仅是可选研究/质量证明；本合同称“弱日语 block”恢复，不把静态合同当作通用 OCR/CER 证据。
+- 该路径服务普通 `test/jap.jpg` 图片 OCR，不读取 Koharu artifact、授权 corpus、ground truth 或 GGUF，不改翻译、持久化、UI、renderer、非日语路径或 block geometry。Koharu 仅是可选研究/质量证明；CI `koharu_parity_required` 默认 `false`，本合同称“弱日语 block”恢复，不把静态合同当作通用 OCR/CER 证据。
 - 新合同：`scripts/test-v3295-image-japanese-weak-block-recovery-contract.py`；本地只做该纯 Python 合同、静态 AST/YAML/shell/plist 与 diff 检查，未运行本地 Xcode、Swift、Core ML、Rust、GGUF 或 App/runtime。
 
 ### v3.294 共享语料 artifact intake 完整性合同
