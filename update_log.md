@@ -4,7 +4,9 @@ v3.288 已为整页日语 batch 建立 confirmed terminology、上一完整 batc
 
 新增 Store 内部 transient `japaneseImageTranslationPrompt` helper：按当前 block 的原始全局 ordinal 重建 prompt，只读取前一个且所有译文非空的 batch 生成 `TranslationReadOnlyBatchSummary`，携带 confirmed terms、textKind 和 `batchStartIndex`。日语人工修正改用临时 corrected block + `translateJapaneseImageBlockWithQA`；单块 retry 与 scoped OCR reread translation 复用同一 context，只有 QA 与既有 content/correction/retry guard 通过后才提交。非日语修正路径、OCR candidate、detector/layout/owner/geometry、8 blocks/1,800 chars、tag、取消、reviewed 状态、UI、renderer/export 和持久化边界保持不变。
 
-新增 `scripts/test-v3303-japanese-correction-translation-qa-contract.py`，工程版本推进至 `3.303`，CI Japanese benchmark contract route 已接入。本轮本地只做无进程 Python 合同、AST、JSON/YAML/shell/plist 静态检查和 `git diff --check`；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，不读取 ground truth，不声称真实 OCR/CER、翻译盲评、目标设备证据或 v3.289 holdout。云端 full、PR/merge 与 post-merge receipt 待候选 SHA 后补记。
+新增 `scripts/test-v3303-japanese-correction-translation-qa-contract.py`，工程版本推进至 `3.303`，CI Japanese benchmark contract route 已接入。本轮本地安全回归为 302 个无进程入口合同通过、27 个含实际进程启动入口的历史合同按约束跳过；Python AST 349、非第三方 JSON 188、plist 25、workflow YAML 3、shell syntax 31、工程版本两处 `3.303` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，不读取 ground truth，不声称真实 OCR/CER、翻译盲评、目标设备证据或 v3.289 holdout。
+
+候选 exact SHA `3d09e70caefc3d52b1f68eac12ac937400d4861f` 的 full [32352609700](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32352609700) 成功；PR [#367](https://github.com/bengzhu/project1_lgbt_naxida/pull/367) fast [32353922251](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32353922251) 成功，并以 merge SHA `215b936f097f509fdd95460e556bd718aa1dd4d1` 合入 `smalldata_test`；合入后 push CI [32354113876](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32354113876) 的 benchmark、bundle、manifest 与 `AITRANS CI/full-validation=success` receipt 全部成功，Koharu parity 按普通路径策略 skip。`main` 未修改。
 
 ## v3.301：普通日语 OCR 保守拟声词类型提示（2026-08-20）
 
