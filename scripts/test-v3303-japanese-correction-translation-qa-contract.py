@@ -120,12 +120,15 @@ class JapaneseCorrectionTranslationQAContractTests(unittest.TestCase):
             "private func japaneseImageTranslationPrompt(\n",
         )
         for marker in (
-            "let batches = Self.imageTranslationBatches(imageTranslationBlocks)",
-            "let currentBatchIndex = batches.firstIndex",
+            "let contextBlocks = imageTranslationContextBlocks()",
+            "let batchPlan = currentJapaneseImageTranslationBatchPlan()",
+            "let currentBatchIndex = batchPlan.firstIndex",
             "currentBatchIndex > 0",
-            "let previousBatch = batches[currentBatchIndex - 1]",
+            "let previousPlan = batchPlan[currentBatchIndex - 1]",
+            "let previousBlocks = previousPlan.blockIDs.compactMap",
             "let previousBatchComplete",
-            "previousBatch.blocks.allSatisfy",
+            "previousBlocks.count == previousPlan.blockIDs.count",
+            "previousBlocks.allSatisfy",
             "TranslationReadOnlyBatchSummary(",
             "sourceExcerpt: previousBlock.original",
             "targetExcerpt: previousBlock.translation",
@@ -176,12 +179,12 @@ class JapaneseCorrectionTranslationQAContractTests(unittest.TestCase):
         for marker in (
             "scripts/test-v3303-japanese-correction-translation-qa-contract.py",
             "v3.303",
-            "japanese-benchmark-v3.303-",
+            "japanese-benchmark-v3.304-",
         ):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.303", "3.303"],
+            ["3.304", "3.304"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:
