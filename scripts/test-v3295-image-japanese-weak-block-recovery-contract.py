@@ -149,6 +149,8 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             "inputs.koharu_parity_required == 'true'",
             "Koharu MIT48 parity is optional for ordinary OCR validation; no parity gate applied.",
             "if [ \"$KOHARU_MIT48_PARITY_REQUIRED\" = \"true\" ] &&",
+            "MANIFEST_KOHARU_PARITY_REQUIRED",
+            "koharuParityRequired",
         ):
             self.assertIn(marker, self.workflow)
         self.assertNotIn(

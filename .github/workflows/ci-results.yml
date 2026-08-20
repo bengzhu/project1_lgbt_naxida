@@ -2585,6 +2585,7 @@ jobs:
           MANIFEST_PASTE_MATRIX_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.paste_matrix_contract_required }}
           MANIFEST_KOHARU_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.koharu_contract_required }}
           MANIFEST_KOHARU_VALIDATOR_EXTENDED_REQUIRED: ${{ steps.ci_scope.outputs.koharu_validator_extended_required }}
+          MANIFEST_KOHARU_PARITY_REQUIRED: ${{ steps.meta.outputs.koharu_parity_required }}
           MANIFEST_SIMULATOR_BUILD_OUTCOME: ${{ steps.simulator_build.outcome }}
           MANIFEST_SIMULATOR_APP_PATH: ${{ steps.simulator_build.outputs.simulator_app_path }}
           MANIFEST_KOHARU_ARTIFACT_REQUESTED: ${{ steps.meta.outputs.koharu_artifact_requested }}
@@ -2787,6 +2788,7 @@ jobs:
               "v189PasteManualMatrixContractRequired": os.environ["MANIFEST_PASTE_MATRIX_CONTRACT_REQUIRED"] == "true",
               "koharuContractRequired": os.environ["MANIFEST_KOHARU_CONTRACT_REQUIRED"] == "true",
               "koharuValidatorExtendedRequired": os.environ["MANIFEST_KOHARU_VALIDATOR_EXTENDED_REQUIRED"] == "true",
+              "koharuParityRequired": os.environ["MANIFEST_KOHARU_PARITY_REQUIRED"] == "true",
               "simulatorAppReusedFromXcodeBuild": os.environ["MANIFEST_PROBE_MODE"] != "skip" and os.environ["MANIFEST_SIMULATOR_BUILD_OUTCOME"] == "success",
               "simulatorAppPath": os.environ.get("MANIFEST_SIMULATOR_APP_PATH", ""),
               "junitPath": "${RESULT_ROOT}/junit.xml",
