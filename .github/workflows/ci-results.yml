@@ -280,6 +280,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3289-image-ocr-block-structure-editor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3290-image-translation-render-safety-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3290-image-translation-render-safety-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3295-image-japanese-weak-block-recovery-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
   ci-results:
@@ -3498,7 +3499,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3520,6 +3521,7 @@ jobs:
           python3 -B scripts/test-v3292-japanese-corpus-readiness-contract.py
           python3 -B scripts/test-v3293-japanese-corpus-matrix-integrity-contract.py
           python3 -B scripts/test-v3294-japanese-corpus-artifact-intake-contract.py
+          python3 -B scripts/test-v3295-image-japanese-weak-block-recovery-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3623,7 +3625,7 @@ jobs:
           corpus_readiness = json.loads((root / "japanese-corpus-readiness-report.json").read_text(encoding="utf-8"))
           legacy = json.loads((root / "japanese-ocr-legacy-reference-report.json").read_text(encoding="utf-8"))
           summary = "\n".join([
-              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294 Japanese benchmark",
+              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295 Japanese benchmark",
               "",
               "- OCR contract example status: " + ocr["status"],
               "- OCR legacy/reference status: " + legacy["status"] + " (excluded from accuracy)",
@@ -3692,7 +3694,7 @@ jobs:
       - name: Upload Japanese benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: japanese-benchmark-v3.294-${{ github.run_id }}
+          name: japanese-benchmark-v3.295-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json
