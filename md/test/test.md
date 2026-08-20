@@ -3,7 +3,7 @@
 - 修复普通 OCR 新建 block 的 `textKind` 始终为空、翻译因此统一按对白处理的缺口；仅对 2–12 个字符、至少两个日语字母、片假名占比 `>=.65` 且带拟声词标记或重复片假名的高信号文本自动标记 `.sfx`。
 - 旁白、标题和普通对白不由模糊文字/几何猜测；门控不通过时保持旧的 `.dialogue` fallback。只读类型提示不改变 OCR 文本、geometry、reading order、请求预算、tag/QA、取消、结果或持久化边界。
 - 新合同：`scripts/test-v3301-japanese-sfx-kind-inference-contract.py`；工程版本为 `3.301`。本合同只证明保守分类与主路径接线，不声称真实 OCR/CER、翻译盲评或设备证据。
-- 本地回归：v3.301 `7/7`；全量安全合同 `300` 个通过、`27` 个含进程入口的历史合同跳过，共 `1,500` 个测试通过；`327` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist、工程版本与 `git diff --check` 通过。云端 v3.3214 Manga OCR harness 已补齐 `TranslationContextQuality.swift` 与 `textKind` 接线；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，云端 full 与真实外部证据仍待后续。
+- 本地回归：v3.301 `7/7`；全量安全合同 `300` 个通过、`27` 个含进程入口的历史合同跳过，共 `1,500` 个测试通过；`327` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist、工程版本与 `git diff --check` 通过。云端 v3.3214 Manga OCR harness 已补齐 `TranslationContextQuality.swift` 与 `textKind` 接线；精确 SHA `9be163b62cf486b5a7bd54be20ae0adbdf4880dc` 的 full [32339850147](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32339850147) 通过 UI interaction、Home/Paste、Xcode、JUnit/manifest、receipt 与 `AITRANS CI/full-validation=success`，Koharu parity 按配置 skip。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；真实外部证据、授权语料、目标设备证据、翻译盲评与 v3.289 holdout 仍待提供。
 
 ### v3.300 混合文字块提示全局序号合同
 
