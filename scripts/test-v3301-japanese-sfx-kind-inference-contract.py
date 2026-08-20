@@ -38,6 +38,10 @@ class JapaneseSFXKindInferenceContractTests(unittest.TestCase):
         cls.models = read("AITRANS/Models/TranscriptModels.swift")
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
+        cls.runtime = read("scripts/test-v3214-image-japanese-manga-ocr-runtime.sh")
+        cls.runtime_harness = read(
+            "scripts/fixtures/v3214-manga-ocr-runtime-harness.swift"
+        )
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.route = read(
             "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
@@ -102,6 +106,15 @@ class JapaneseSFXKindInferenceContractTests(unittest.TestCase):
             source = self.vision + read("AITRANS/Services/TranslationSessionStore.swift")
             self.assertIn(marker, source)
         self.assertNotIn("recognizeTextBlocks(in: data", self.vision)
+
+    def test_cloud_runtime_harness_receives_the_new_kind_dependency(self) -> None:
+        self.assertIn("TranslationContextQuality.swift in Sources", self.project)
+        self.assertIn(
+            '"$repo_root/AITRANS/Models/TranslationContextQuality.swift"',
+            self.runtime,
+        )
+        self.assertIn("func normalizedToUnit() -> Self?", self.runtime_harness)
+        self.assertIn("var textKind: TranslationTextKind? = nil", self.runtime_harness)
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         combined = self.workflow + self.route + self.flow + self.update_log + self.test_log

@@ -38,6 +38,7 @@ xcrun coremlcompiler compile \
   "$repo_root/AITRANS/Resources/ComicTextDetector/ComicTextBubbleDetectorINT8.mlpackage" \
   "$resources"
 xcrun swiftc -parse-as-library \
+  "$repo_root/AITRANS/Models/TranslationContextQuality.swift" \
   "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/AITRANS/Services/MangaOCRService.swift" \
