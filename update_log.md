@@ -10241,3 +10241,12 @@ v3.287 的 clean-text 多模型比较仍只有 synthetic envelope，真实 GGUF�
 新增 `benchmarks/japanese_translation/schema/model-profile-manifest.schema.json`、contract-only `examples/model_profiles/manifest.json`、`scripts/test-v3286-local-gguf-chat-template-contract.py` 与 cloud-only Swift fixture/runtime。manifest 明确记录 model filename、SHA-256、quantization、license review、template source/SHA、`llama_chat_apply_template`、context、batch ceiling 和 decoding profile；synthetic Gemma/Qwen/Sakura 行不代表可下载模型或授权。新合同 `7/7`，workflow 已把 Python contract、manifest artifact 和 macOS cloud-only evaluator 接入当前路由。
 
 工程版本为 `3.286`。本地 `308` 个 Python AST、无进程入口合同 `281` 个通过且 `27` 个跳过，3 个 workflow YAML、30 个 benchmark JSON、26 个 shell syntax、4 个 tracked plist/project version 与 `git diff --check` 通过；只做静态/安全 Python 合同、JSON、YAML、shell、plist/project version，不运行本地 `xcodebuild`、`swiftc`、`xcrun`、Core ML、Rust/Cargo、GGUF 或 App runtime。当前没有真实模板/模型 SHA、license、设备资源、clean-text holdout、exact-SHA cloud full、Xcode/JUnit 或 receipt，因此本版只证明模板兼容和旧 Gemma prompt 边界，不声称翻译质量提升；v3.287 才进入同一 clean-text corpus 的多模型对照，270M 继续只作 floor。
+## v3.302：日语 OCR 复读后的拟声词类型提示收口（2026-08-20）
+
+审计 v3.301 发现，普通日语 page/layout 先推断 `.sfx`，而弱块恢复和 scoped rerecognition 在之后才可能替换 OCR text；旧实现会把原 block 的 `textKind` 一并带到新文字，导致复读后拟声词仍按对白 prompt 翻译，或原拟声词被改读后继续带着过期 hint。
+
+本轮只收口自动 OCR 替换的 metadata：`VisionOCRService.recognizedBlock` 对日语 Manga/Vision crop 结果重新调用既有保守 `TranslationTextKindClassifier`；不满足 `.sfx` 门控就清除自动 hint，不推断 narration/title/dialogue。`TranslationSessionStore` 的 scoped rerecognition commit 显式复制 accepted `recognized.textKind`。OCR candidate selection、detector/layout、geometry/reading order、弱块最多 4 次恢复、8 blocks/1,800 字符、tag/QA、取消、reviewed 状态、其它译文和持久化时机不变。
+
+新增 `scripts/test-v3302-japanese-kind-reconciliation-contract.py`，工程版本推进至 `3.302`。本地只做该合同、既有 v3.301/v3.300/v3.295 合同、Python AST、JSON/YAML/shell/plist 静态检查和 `git diff --check`；未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。该合同不读取 ground truth、不加载真实 GGUF/Koharu、不声称通用 OCR/CER、翻译质量、盲评、目标设备证据或 v3.289 holdout。
+
+精确 SHA `16fcb5d6d37f2090c589dce0e21b2324f107d754` 的 full [32344380241](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32344380241) 已成功：Japanese benchmark job `96349887339`、主 bundle/Xcode/UI/Speech/Home/Paste job `96349977361`、云端 GGUF manga probe、JUnit `10/10`（0 failures）、manifest、artifact 上传和 `AITRANS CI/full-validation=success` receipt 全部通过；Koharu parity job `96349888437` 按默认 `koharu_parity_required=false` 正确跳过。probe 报告为 13 blocks、`overallPassed=false`，仅作当前 bundled GGUF 产品回归诊断，不构成通用 OCR/CER 或翻译质量证据；真实授权语料、目标设备证据与 v3.289 holdout 仍未提供。

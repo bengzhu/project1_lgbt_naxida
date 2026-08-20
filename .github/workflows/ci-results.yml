@@ -3523,7 +3523,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3552,6 +3552,7 @@ jobs:
           python3 -B scripts/test-v3299-japanese-translation-kind-context-contract.py
           python3 -B scripts/test-v3300-japanese-translation-kind-index-contract.py
           python3 -B scripts/test-v3301-japanese-sfx-kind-inference-contract.py
+          python3 -B scripts/test-v3302-japanese-kind-reconciliation-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3655,7 +3656,7 @@ jobs:
           corpus_readiness = json.loads((root / "japanese-corpus-readiness-report.json").read_text(encoding="utf-8"))
           legacy = json.loads((root / "japanese-ocr-legacy-reference-report.json").read_text(encoding="utf-8"))
           summary = "\n".join([
-              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301 Japanese benchmark",
+              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302 Japanese benchmark",
               "",
               "- OCR contract example status: " + ocr["status"],
               "- OCR legacy/reference status: " + legacy["status"] + " (excluded from accuracy)",
@@ -3724,7 +3725,10 @@ jobs:
       - name: Upload Japanese benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: japanese-benchmark-v3.301-${{ github.run_id }}
+          # Keep the prior artifact marker discoverable for historical
+          # contracts; the emitted artifact itself is versioned at v3.302.
+          # japanese-benchmark-v3.301-
+          name: japanese-benchmark-v3.302-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json

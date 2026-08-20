@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-当前 v3.301 日语图片翻译流程：`OCR/layout blocks -> conservative Japanese SFX kind hint -> bounded batch -> global-ordinal read-only kind hints -> strict tagged translation -> per-block QA/retry`。只有高信号片假名拟声词自动得到 `.sfx` 提示；旁白/标题/对白不由模糊几何猜测，类型 metadata 不进入 OCR/layout、待翻译文本、输出标签、持久化或取消边界。
+当前 v3.302 日语图片翻译流程：`OCR/layout blocks -> bounded Japanese OCR recovery -> reconcile conservative SFX kind hint -> global-ordinal read-only kind hints -> strict tagged translation -> per-block QA/retry`。自动 crop/弱块复读若改变文字，会重新计算可选 `.sfx`；旁白/标题/对白不由模糊几何猜测，类型 metadata 不进入 OCR/layout、待翻译文本、输出标签、持久化或取消边界。
 
 当前 v3.300 日语图片翻译流程：`OCR/layout blocks -> bounded batch -> global-ordinal read-only kind hints -> strict tagged translation -> per-block QA/retry`。类型提示与跨 batch 的 `[N]` 输入序号对齐，不进入待翻译文本、输出标签、OCR/layout、持久化或取消边界。
 

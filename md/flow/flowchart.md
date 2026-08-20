@@ -1,4 +1,6 @@
 # 项目流程图
+v3.302 日语 OCR 类型元数据收口：`page/layout hint -> bounded block reread -> reconcile optional .sfx -> scoped translation/commit`；只更新自动类型提示，不改变 OCR 候选、geometry、预算、tag、取消或持久化边界。
+
 v3.301 保守拟声词类型提示：`new Japanese OCR block -> high-signal katakana/repetition/marker gate -> optional .sfx metadata -> bounded tagged translation -> QA/retry`；不满足门控时保持历史 dialogue fallback，不推断 narration/title，不改变 OCR geometry、预算或持久化。
 
 v3.300 混合文字块序号对齐：`OCR/layout blocks -> bounded batch -> global block ordinal + read-only kind metadata -> tagged translation -> QA/retry`；第二批 `[9]` 等标签对应“第 9 块”提示，metadata 不进入输入/输出标签或持久化。

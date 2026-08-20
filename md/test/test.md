@@ -1,3 +1,9 @@
+### v3.302 日语 OCR 类型提示复读收口合同
+
+- 弱块恢复或 scoped 日语 OCR 复读产生新文字后，重新通过既有保守 classifier 更新可选 `.sfx`；低信号结果清除旧的自动 hint，旁白/标题/对白不自动推断。
+- Store 提交 scoped rerecognition 时复制 accepted OCR result 的 `textKind`，避免新文字仍沿用旧对白提示；OCR candidate、geometry、reading order、请求预算、tag/QA、取消、结果与持久化边界不变。
+- 新合同：`scripts/test-v3302-japanese-kind-reconciliation-contract.py`；工程版本为 `3.302`。只证明自动 metadata reconciliation 与既有接线，不声称真实 OCR/CER、翻译盲评或设备证据。
+
 ### v3.301 普通日语 OCR 保守拟声词类型提示合同
 
 - 修复普通 OCR 新建 block 的 `textKind` 始终为空、翻译因此统一按对白处理的缺口；仅对 2–12 个字符、至少两个日语字母、片假名占比 `>=.65` 且带拟声词标记或重复片假名的高信号文本自动标记 `.sfx`。
