@@ -167,14 +167,38 @@ struct TranslationReadOnlyBatchSummary: Equatable, Codable, Sendable {
         guard isReadOnly,
               !containsPendingInputBlocks,
               generatedFromCompletedBlocks,
+              !batchID.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !items.isEmpty else {
             return false
         }
-        return items.allSatisfy { item in
-            item.ordinal > 0
-                && !item.sourceExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                && !item.targetExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+
+        let ordinals = items.map(\.ordinal)
+        guard Set(ordinals).count == ordinals.count else {
+            return false
         }
+        for (index, item) in items.enumerated() {
+            guard item.ordinal > 0,
+                  !item.sourceExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  !item.targetExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                return false
+            }
+            if index > 0, item.ordinal != items[index - 1].ordinal + 1 {
+                return false
+            }
+        }
+        return true
+    }
+
+    /// A structurally valid summary is still unsafe when it came from a
+    /// different translation pair. The request boundary must provide the
+    /// current source and target languages before the summary can cross.
+    func isEligibleForPrompt(
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) -> Bool {
+        isEligibleForPrompt
+            && self.sourceLanguage == sourceLanguage
+            && self.targetLanguage == targetLanguage
     }
 
     init(
@@ -206,6 +230,12 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
     /// tags without making those metadata lines part of the input.
     var batchStartIndex: Int?
 
+    /// Request-bound language identity. These fields are deliberately
+    /// transient and omitted from CodingKeys: context is prompt metadata, not
+    /// persisted session state. An unbound context fails closed for summaries.
+    private var requestSourceLanguage: SupportedLanguage?
+    private var requestTargetLanguage: SupportedLanguage?
+
     static let empty = TranslationPromptContext(
         confirmedTerms: [],
         previousBatchSummary: nil,
@@ -229,6 +259,8 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         self.maxOutputCharacters = maxOutputCharacters
         self.batchTextKinds = batchTextKinds
         self.batchStartIndex = batchStartIndex
+        self.requestSourceLanguage = nil
+        self.requestTargetLanguage = nil
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -267,6 +299,20 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             Int.self,
             forKey: .batchStartIndex
         )
+        requestSourceLanguage = nil
+        requestTargetLanguage = nil
+    }
+
+    /// Binds transient context to the exact request that will consume it.
+    /// This does not alter any persisted or user-visible state.
+    func bound(
+        to sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) -> TranslationPromptContext {
+        var copy = self
+        copy.requestSourceLanguage = sourceLanguage
+        copy.requestTargetLanguage = targetLanguage
+        return copy
     }
 
     var isEmpty: Bool {
@@ -302,25 +348,34 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         let summary: TranslationReadOnlyBatchSummary?
         if let previousBatchSummary,
            previousBatchSummary.isEligibleForPrompt {
-            summary = TranslationReadOnlyBatchSummary(
-                batchID: previousBatchSummary.batchID,
-                sourceLanguage: previousBatchSummary.sourceLanguage,
-                targetLanguage: previousBatchSummary.targetLanguage,
-                items: previousBatchSummary.items.prefix(maximumSummaryItems).map { item in
-                    TranslationReadOnlyBatchItem(
-                        ordinal: item.ordinal,
-                        sourceExcerpt: Self.bound(Self.removeTags(item.sourceExcerpt), maximum: maximumExcerptCharacters),
-                        targetExcerpt: Self.bound(Self.removeTags(item.targetExcerpt), maximum: maximumExcerptCharacters),
-                        kind: item.kind
-                    )
-                },
-                generatedFromCompletedBlocks: previousBatchSummary.generatedFromCompletedBlocks
-            )
+            if let requestSourceLanguage,
+               let requestTargetLanguage,
+               previousBatchSummary.isEligibleForPrompt(
+                   sourceLanguage: requestSourceLanguage,
+                   targetLanguage: requestTargetLanguage
+               ) {
+                summary = TranslationReadOnlyBatchSummary(
+                    batchID: previousBatchSummary.batchID,
+                    sourceLanguage: previousBatchSummary.sourceLanguage,
+                    targetLanguage: previousBatchSummary.targetLanguage,
+                    items: previousBatchSummary.items.prefix(maximumSummaryItems).map { item in
+                        TranslationReadOnlyBatchItem(
+                            ordinal: item.ordinal,
+                            sourceExcerpt: Self.bound(Self.removeTags(item.sourceExcerpt), maximum: maximumExcerptCharacters),
+                            targetExcerpt: Self.bound(Self.removeTags(item.targetExcerpt), maximum: maximumExcerptCharacters),
+                            kind: item.kind
+                        )
+                    },
+                    generatedFromCompletedBlocks: previousBatchSummary.generatedFromCompletedBlocks
+                )
+            } else {
+                summary = nil
+            }
         } else {
             summary = nil
         }
 
-        return TranslationPromptContext(
+        var normalizedContext = TranslationPromptContext(
             confirmedTerms: Array(terms),
             previousBatchSummary: summary,
             textKind: textKind,
@@ -328,6 +383,9 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             batchTextKinds: Array(batchTextKinds.prefix(8)),
             batchStartIndex: batchStartIndex.map { max($0, 0) }
         )
+        normalizedContext.requestSourceLanguage = requestSourceLanguage
+        normalizedContext.requestTargetLanguage = requestTargetLanguage
+        return normalizedContext
     }
 
     func promptSection() -> String {
@@ -386,6 +444,7 @@ struct TranslationBatchQAInputItem: Equatable, Sendable {
 }
 
 struct TranslationBatchQAConfiguration: Equatable, Sendable {
+    var sourceLanguage: SupportedLanguage
     var targetLanguage: SupportedLanguage
     var confirmedTerms: [TranslationTermMemoryEntry]
     var previousBatchSummary: TranslationReadOnlyBatchSummary?
@@ -393,12 +452,14 @@ struct TranslationBatchQAConfiguration: Equatable, Sendable {
     var maximumOutputCharacters: Int?
 
     init(
+        sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage,
         confirmedTerms: [TranslationTermMemoryEntry] = [],
         previousBatchSummary: TranslationReadOnlyBatchSummary? = nil,
         minimumTargetLanguageDensity: Double = 0.35,
         maximumOutputCharacters: Int? = nil
     ) {
+        self.sourceLanguage = sourceLanguage
         self.targetLanguage = targetLanguage
         self.confirmedTerms = confirmedTerms
         self.previousBatchSummary = previousBatchSummary
@@ -706,7 +767,11 @@ enum TranslationBatchQualityEvaluator {
         }
 
         if let previousBatchSummary = configuration.previousBatchSummary,
-           previousBatchSummary.isEligibleForPrompt {
+           previousBatchSummary.isEligibleForPrompt,
+           previousBatchSummary.isEligibleForPrompt(
+               sourceLanguage: configuration.sourceLanguage,
+               targetLanguage: configuration.targetLanguage
+           ) {
             let normalizedOutput = comparableText(translatedText)
             let copiedPreviousBatch = previousBatchSummary.items.contains { item in
                 let previousTarget = comparableText(item.targetExcerpt)

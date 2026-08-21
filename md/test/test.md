@@ -1,3 +1,9 @@
+### v3.313 跨批次翻译 context identity/language 合同（研发中）
+
+- `TranslationReadOnlyBatchSummary.isEligibleForPrompt` 现在要求非空 batch identity、每个 item 的 ordinal 唯一且严格连续递增、source/target excerpt 非空；新增 source/target language overload，必须与当前翻译请求精确一致。
+- `TranslationPromptContext.bound(to:targetLanguage:)` 只保存 transient request identity，且不进入 `CodingKeys`；prompt 和两条图片 QA 路径先绑定当前 source/target，再调用既有 `normalized()`。未绑定、错语言、重复/跳号或不完整摘要被丢弃，不影响当前 block 翻译或 previous-context leakage 判定。
+- 单块 context fallback ordinal 统一修正为 one-based；context 仍不写入 block、snapshot、Store、transcript 或导出。新合同：`scripts/test-v3313-japanese-translation-context-integrity-contract.py`，工程版本为 `3.313`。本轮只运行安全静态检查，不运行本机 Xcode/Swift/Core ML/Rust/GGUF/App runtime 或漫画探针，不声称真实 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+
 ### v3.312 日语中点 OCR 保真合同（已完成）
 
 - Vision、bundled Manga OCR 与共享 `JapaneseOCRTextNormalizer` 不再把 U+30FB `・` 当作 ASCII 句点；真正的 `.`、`．` 和 `…` 仍走原有有界点号归一化。

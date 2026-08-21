@@ -3563,6 +3563,7 @@ jobs:
           python3 -B scripts/test-v3310-image-translation-qa-contract.py
           python3 -B scripts/test-v3311-japanese-fullwidth-token-normalization-contract.py
           python3 -B scripts/test-v3312-japanese-middle-dot-fidelity-contract.py
+          python3 -B scripts/test-v3313-japanese-translation-context-integrity-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3735,8 +3736,8 @@ jobs:
       - name: Upload Japanese benchmark artifacts
         uses: actions/upload-artifact@v4
         with:
-          # Keep the prior artifact marker discoverable for historical
-          # contracts; the emitted artifact itself is versioned at v3.312.
+          # Keep prior artifact markers discoverable for historical
+          # contracts; the emitted artifact itself is versioned at v3.313.
           # japanese-benchmark-v3.301-
           # japanese-benchmark-v3.302-
           # japanese-benchmark-v3.305-
@@ -3746,7 +3747,8 @@ jobs:
           # japanese-benchmark-v3.309-
           # japanese-benchmark-v3.310-
           # japanese-benchmark-v3.311-
-          name: japanese-benchmark-v3.312-${{ github.run_id }}
+          # japanese-benchmark-v3.312-
+          name: japanese-benchmark-v3.313-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json

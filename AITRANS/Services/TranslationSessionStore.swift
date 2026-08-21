@@ -5120,6 +5120,7 @@ final class TranslationSessionStore: ObservableObject {
                     )
                 },
                 configuration: japaneseTranslationQAConfiguration(
+                    sourceLanguage: sourceLanguage,
                     targetLanguage: targetLanguage,
                     translationContext: translationContext
                 )
@@ -5209,11 +5210,17 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private func japaneseTranslationQAConfiguration(
+        sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage,
-        translationContext: TranslationPromptContext
+        translationContext incomingContext: TranslationPromptContext
     ) -> TranslationBatchQAConfiguration {
+        let translationContext = incomingContext.bound(
+            to: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
         let normalizedContext = translationContext.normalized()
         return TranslationBatchQAConfiguration(
+            sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage,
             confirmedTerms: normalizedContext.confirmedTerms,
             previousBatchSummary: normalizedContext.previousBatchSummary,
@@ -5227,11 +5234,17 @@ final class TranslationSessionStore: ObservableObject {
     /// path so a standard translation cannot bypass placeholder, source
     /// leakage, number, target-language-density, or length checks.
     private func imageTranslationQAConfiguration(
+        sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage,
-        translationContext: TranslationPromptContext
+        translationContext incomingContext: TranslationPromptContext
     ) -> TranslationBatchQAConfiguration {
+        let translationContext = incomingContext.bound(
+            to: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
         let normalizedContext = translationContext.normalized()
         return TranslationBatchQAConfiguration(
+            sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage,
             confirmedTerms: normalizedContext.confirmedTerms,
             previousBatchSummary: normalizedContext.previousBatchSummary,
@@ -5259,6 +5272,7 @@ final class TranslationSessionStore: ObservableObject {
             sourceText: block.original,
             kind: block.textKind ?? translationContext.textKind,
             configuration: imageTranslationQAConfiguration(
+                sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
                 translationContext: translationContext
             )
@@ -5296,6 +5310,7 @@ final class TranslationSessionStore: ObservableObject {
             sourceText: block.original,
             kind: block.textKind ?? translationContext.textKind,
             configuration: japaneseTranslationQAConfiguration(
+                sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
                 translationContext: translationContext
             )
@@ -5361,8 +5376,8 @@ final class TranslationSessionStore: ObservableObject {
                     targetLanguage: contextTargetLanguage,
                     items: previousBlocks.enumerated().map { offset, previousBlock in
                         TranslationReadOnlyBatchItem(
-                            ordinal: imageTranslationOriginalBlockOrder[previousBlock.id]
-                                ?? previousStartIndex + offset,
+                            ordinal: (imageTranslationOriginalBlockOrder[previousBlock.id]
+                                ?? previousStartIndex + offset) + 1,
                             sourceExcerpt: previousBlock.original,
                             targetExcerpt: previousBlock.translation,
                             kind: previousBlock.textKind ?? .dialogue
@@ -27489,8 +27504,12 @@ final class TranslationSessionStore: ObservableObject {
             prompt: selectedPrompt,
             sampling: requestSampling ?? sampling,
             translationProfile: translationProfile,
-            translationContext: translationContext
-                ?? TranslationPromptContext(confirmedTerms: translationTermMemory)
+            translationContext: (translationContext
+                ?? TranslationPromptContext(confirmedTerms: translationTermMemory))
+                .bound(
+                    to: resolvedSourceLanguage,
+                    targetLanguage: resolvedTargetLanguage
+                )
         )
     }
 
