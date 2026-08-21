@@ -210,7 +210,7 @@ class JapaneseOCRLineSignalContractTests(unittest.TestCase):
         self.assertIn("v3.283", self.route)
         self.assertIn("TextRegion/line", self.route)
         self.assertIn("shadow", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.311", "3.311"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.312", "3.312"])
 
 
 if __name__ == "__main__":

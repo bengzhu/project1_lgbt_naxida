@@ -102,10 +102,12 @@ enum JapaneseOCRTextNormalizer {
         }
 
         for scalar in expanded.unicodeScalars {
-            if scalar.value == 0x2E || scalar.value == 0x30FB || scalar.value == 0xFF0E {
+            if scalar.value == 0x2E || scalar.value == 0xFF0E {
                 dotCount += 1
                 continue
             }
+            // Japanese middle dot separates names and loanwords; it is not
+            // an ASCII period and must survive OCR normalization as `・`.
             flushDots()
             collapsed.unicodeScalars.append(scalar)
         }

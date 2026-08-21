@@ -62,7 +62,7 @@ class JapaneseOCRPostprocessContractTests(unittest.TestCase):
         for marker in [
             "filter { !$0.isWhitespace }",
             'replacingOccurrences(of: "…", with: "...")',
-            "case 0x2E, 0x30FB:",
+            "case 0x2E, 0xFF0E:",
             "String(repeating: \".\", count: dotCount)",
             "0xFEE0",
             "UnicodeScalar(0x3000)!",

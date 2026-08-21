@@ -130,7 +130,7 @@ class KoharuLineCoverageOwnerContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.311", "3.311"],
+            ["3.312", "3.312"],
         )
 
 

@@ -40,7 +40,7 @@ class JapaneseKoharuPostprocessOrderContractTests(unittest.TestCase):
     def test_collapse_runs_before_fullwidth_conversion(self) -> None:
         for marker in [
             'var collapsed = ""',
-            "case 0x2E, 0x30FB:",
+            "case 0x2E, 0xFF0E:",
             'String(repeating: ".", count: dotCount)',
             "collapsed.append(contentsOf:",
             "for scalar in collapsed.unicodeScalars",

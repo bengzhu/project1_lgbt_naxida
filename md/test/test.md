@@ -1,3 +1,9 @@
+### v3.312 日语中点 OCR 保真合同
+
+- Vision、bundled Manga OCR 与共享 `JapaneseOCRTextNormalizer` 不再把 U+30FB `・` 当作 ASCII 句点；真正的 `.`、`．` 和 `…` 仍走原有有界点号归一化。
+- 该修复只影响 OCR 文本后处理，保留中点在姓名/外来词中的语义；不新增 OCR/翻译请求，不改变 detector、crop/warp、candidate、geometry/layout、预算、翻译 QA、取消、generation、持久化或 Koharu 可选研究边界。
+- 新合同：`scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本为 `3.312`；本轮只记录静态边界，未运行本机 Xcode、Swift/Core ML、Rust/GGUF/App runtime。
+
 ### v3.311 全角日语技术 token 归一化合同
 
 - Vision 与 bundled Manga OCR 共用 `JapaneseOCRTextNormalizer`；全角数字、拉丁大/小写进入混合脚本文字边界，`FF01–FF5E` 技术标点/字符在保真分支内转为 ASCII，`FF0E` 继续参与有界点号归一化。

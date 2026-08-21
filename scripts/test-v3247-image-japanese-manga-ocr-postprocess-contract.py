@@ -46,7 +46,7 @@ class JapaneseMangaOCRPostProcessContractTests(unittest.TestCase):
             '.replacing("…", with: "...")',
             "var collapsed = \"\"",
             "func flushDots()",
-            "scalar.value == 0x2E || scalar.value == 0x30FB",
+            "scalar.value == 0x2E || scalar.value == 0xFF0E",
             "collapsed.unicodeScalars.append(scalar)",
             "for scalar in collapsed.unicodeScalars",
             "(0x21...0x7E).contains(scalar.value)",
