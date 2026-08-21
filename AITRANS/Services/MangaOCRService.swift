@@ -1370,6 +1370,9 @@ private struct MangaOCRRuntime {
     }
 
     private static func postProcess(_ text: String) -> String {
+        if let mixedScriptCandidate = JapaneseOCRTextNormalizer.mixedScriptCandidate(text) {
+            return mixedScriptCandidate
+        }
         let noWhitespace = text.filter { !$0.isWhitespace }
             .replacing("…", with: "...")
         var collapsed = ""

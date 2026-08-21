@@ -57,6 +57,7 @@
 		0A00000100000000000000E4 /* ImageOCRProvenance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E5 /* ImageOCRProvenance.swift */; };
 		0A00000100000000000000E6 /* LocalModelPromptProfile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E7 /* LocalModelPromptProfile.swift */; };
 		0A00000100000000000000E8 /* TranslationContextQuality.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000E9 /* TranslationContextQuality.swift */; };
+		0A00000100000000000000F2 /* JapaneseOCRTextNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F3 /* JapaneseOCRTextNormalizer.swift */; };
 		0A00000100000000000000EA /* ImageOCRProvenanceDisclosureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000EB /* ImageOCRProvenanceDisclosureView.swift */; };
 		0A00000100000000000000EC /* ImageOCRGeometryEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */; };
 		0A00000100000000000000EE /* ImageOCRBlockStructureEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */; };
@@ -134,6 +135,7 @@
 		0A00000100000000000000E5 /* ImageOCRProvenance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRProvenance.swift; sourceTree = "<group>"; };
 		0A00000100000000000000E7 /* LocalModelPromptProfile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelPromptProfile.swift; sourceTree = "<group>"; };
 		0A00000100000000000000E9 /* TranslationContextQuality.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationContextQuality.swift; sourceTree = "<group>"; };
+		0A00000100000000000000F3 /* JapaneseOCRTextNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JapaneseOCRTextNormalizer.swift; sourceTree = "<group>"; };
 		0A00000100000000000000EB /* ImageOCRProvenanceDisclosureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRProvenanceDisclosureView.swift; sourceTree = "<group>"; };
 		0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRGeometryEditor.swift; sourceTree = "<group>"; };
 		0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRBlockStructureEditor.swift; sourceTree = "<group>"; };
@@ -203,6 +205,7 @@
 				0A00000100000000000000E5 /* ImageOCRProvenance.swift */,
 				0A00000100000000000000E7 /* LocalModelPromptProfile.swift */,
 				0A00000100000000000000E9 /* TranslationContextQuality.swift */,
+				0A00000100000000000000F3 /* JapaneseOCRTextNormalizer.swift */,
 				0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */,
 				0A0000010000000000000013 /* TranscriptModels.swift */,
 				0A00000100000000000000C1 /* ImageOCRResultSummary.swift */,
@@ -393,6 +396,7 @@
 				0A00000100000000000000E4 /* ImageOCRProvenance.swift in Sources */,
 				0A00000100000000000000E6 /* LocalModelPromptProfile.swift in Sources */,
 				0A00000100000000000000E8 /* TranslationContextQuality.swift in Sources */,
+				0A00000100000000000000F2 /* JapaneseOCRTextNormalizer.swift in Sources */,
 				0A0000010000000000000003 /* TranscriptModels.swift in Sources */,
 				0A0000010000000000000004 /* TranslationSessionStore.swift in Sources */,
 				0A0000010000000000000005 /* MockGemmaService.swift in Sources */,
@@ -565,7 +569,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.304;
+				MARKETING_VERSION = 3.305;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -592,7 +596,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 3.304;
+				MARKETING_VERSION = 3.305;
 				PRODUCT_BUNDLE_IDENTIFIER = com.local.aitransform114;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
