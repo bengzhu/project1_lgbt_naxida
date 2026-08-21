@@ -97,7 +97,7 @@ class KoharuDetectorTriangleContractTests(unittest.TestCase):
 
     def test_version_is_3262(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.314", "3.314"])
+        self.assertEqual(versions, ["3.315", "3.315"])
 
 
 if __name__ == "__main__":
