@@ -1,3 +1,10 @@
+### v3.311 全角日语技术 token 归一化合同
+
+- Vision 与 bundled Manga OCR 共用 `JapaneseOCRTextNormalizer`；全角数字、拉丁大/小写进入混合脚本文字边界，`FF01–FF5E` 技术标点/字符在保真分支内转为 ASCII，`FF0E` 继续参与有界点号归一化。
+- 纯日语仍沿用历史后处理；不新增 OCR/翻译请求，不改变 detector、crop/warp、geometry/layout、预算、翻译 QA、取消、generation、持久化或 Koharu 可选研究边界。
+- 新合同：`scripts/test-v3311-japanese-fullwidth-token-normalization-contract.py`，工程版本为 `3.311`；只证明共享归一化与静态接线，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+- 本轮验证完成前不记录云端 full、PR merge 或合入后 CI receipt；本机不运行 Xcode、Swift/Core ML、Rust/GGUF/App runtime。
+
 ### v3.310 普通图片翻译单块 QA 合同
 
 - 非日语图片整页翻译、人工修正、单块重试和 OCR 复读重译统一经过 `translateImageBlockWithQA`，复用占位答复、原文泄漏、数字、目标语言密度、术语与长度的 fail-closed 检查；日语 tagged batch 路径保持原有 context/QA。

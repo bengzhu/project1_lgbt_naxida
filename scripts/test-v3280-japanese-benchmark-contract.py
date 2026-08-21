@@ -369,7 +369,7 @@ class JapaneseBenchmarkContractTests(unittest.TestCase):
             source = read(source_path)
             self.assertNotIn("evaluate-japanese-ocr-benchmark.py", source)
             self.assertNotIn("benchmarks/japanese_ocr", source)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.310", "3.310"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.311", "3.311"])
 
 
 if __name__ == "__main__":
