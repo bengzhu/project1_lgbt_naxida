@@ -1375,10 +1375,14 @@ final class TranslationSessionStore: ObservableObject {
             for (index, block) in recognizedBlocks.enumerated() {
                 try Task.checkCancellation()
                 guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
-                translatedBlocks[index].translation = try await translate(
-                    block.original,
+                translatedBlocks[index].translation = try await translateImageBlockWithQA(
+                    block,
                     sourceLanguage: sourceLanguage,
-                    targetLanguage: targetLanguage
+                    targetLanguage: targetLanguage,
+                    translationContext: TranslationPromptContext(
+                        confirmedTerms: translationTermMemory,
+                        textKind: block.textKind ?? .dialogue
+                    )
                 )
                 guard isCurrentImageTranslationTask(taskID) else { throw CancellationError() }
                 imageTranslationBlocks = Array(translatedBlocks.prefix(index + 1))
@@ -2298,10 +2302,17 @@ final class TranslationSessionStore: ObservableObject {
                     translationContext: prompt.context
                 )
             } else {
-                correctedTranslation = try await translate(
-                    correctedOriginal,
+                var correctedBlock = currentBlock
+                correctedBlock.original = correctedOriginal
+                correctedBlock.translation = ""
+                correctedTranslation = try await translateImageBlockWithQA(
+                    correctedBlock,
                     sourceLanguage: sourceLanguage,
-                    targetLanguage: targetLanguage
+                    targetLanguage: targetLanguage,
+                    translationContext: TranslationPromptContext(
+                        confirmedTerms: translationTermMemory,
+                        textKind: correctedBlock.textKind ?? .dialogue
+                    )
                 )
             }
             guard imageTranslationCorrectionID == correctionID,
@@ -2546,8 +2557,8 @@ final class TranslationSessionStore: ObservableObject {
                         translationContext: prompt.context
                     ).first ?? ""
                 } else {
-                    translation = try await self.translate(
-                        block.original,
+                    translation = try await self.translateImageBlockWithQA(
+                        block,
                         sourceLanguage: sourceLanguage,
                         targetLanguage: targetLanguage,
                         translationContext: TranslationPromptContext(
@@ -2712,8 +2723,8 @@ final class TranslationSessionStore: ObservableObject {
                             translationContext: prompt.context
                         )
                     } else {
-                        translation = try await self.translate(
-                            recognizedOriginal,
+                        translation = try await self.translateImageBlockWithQA(
+                            translationBlock,
                             sourceLanguage: sourceLanguage,
                             targetLanguage: targetLanguage,
                             translationContext: TranslationPromptContext(
@@ -5208,6 +5219,60 @@ final class TranslationSessionStore: ObservableObject {
             previousBatchSummary: normalizedContext.previousBatchSummary,
             maximumOutputCharacters: normalizedContext.maxOutputCharacters
         )
+    }
+
+    /// Uses the same fail-closed single-block checks for every image source
+    /// language. Japanese tagged batches already enter this evaluator through
+    /// the manga-specific helper; non-Japanese image blocks use this narrow
+    /// path so a standard translation cannot bypass placeholder, source
+    /// leakage, number, target-language-density, or length checks.
+    private func imageTranslationQAConfiguration(
+        targetLanguage: SupportedLanguage,
+        translationContext: TranslationPromptContext
+    ) -> TranslationBatchQAConfiguration {
+        let normalizedContext = translationContext.normalized()
+        return TranslationBatchQAConfiguration(
+            targetLanguage: targetLanguage,
+            confirmedTerms: normalizedContext.confirmedTerms,
+            previousBatchSummary: normalizedContext.previousBatchSummary,
+            maximumOutputCharacters: normalizedContext.maxOutputCharacters
+        )
+    }
+
+    private func translateImageBlockWithQA(
+        _ block: ImageTranslationBlock,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage,
+        translationContext: TranslationPromptContext
+    ) async throws -> String {
+        let candidate = try await translate(
+            block.original,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            translationContext: translationContext
+        )
+        try Task.checkCancellation()
+
+        let cleanCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
+        let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
+            output: cleanCandidate,
+            sourceText: block.original,
+            kind: block.textKind ?? translationContext.textKind,
+            configuration: imageTranslationQAConfiguration(
+                targetLanguage: targetLanguage,
+                translationContext: translationContext
+            )
+        )
+        guard failures.isEmpty else {
+            writeLaunchLLMSmokeProbe(
+                "image-single-result state=qa-failure " +
+                "source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
+                "reasons=\(failures.joined(separator: "+")) " +
+                "output=\(Self.probeField(cleanCandidate))"
+            )
+            throw ImageMangaBatchTranslationError.qualityFailure([0])
+        }
+        return cleanCandidate
     }
 
     private func translateJapaneseImageBlockWithQA(
