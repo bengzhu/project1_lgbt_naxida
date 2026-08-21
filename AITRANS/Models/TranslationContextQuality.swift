@@ -160,6 +160,23 @@ struct TranslationReadOnlyBatchSummary: Equatable, Codable, Sendable {
     var isReadOnly: Bool { true }
     var containsPendingInputBlocks: Bool { false }
 
+    /// Only a complete, non-empty summary may cross the prompt boundary.
+    /// This keeps decoded/transient context fail-closed when a caller hands
+    /// us a summary that was not produced from completed blocks.
+    var isEligibleForPrompt: Bool {
+        guard isReadOnly,
+              !containsPendingInputBlocks,
+              generatedFromCompletedBlocks,
+              !items.isEmpty else {
+            return false
+        }
+        return items.allSatisfy { item in
+            item.ordinal > 0
+                && !item.sourceExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !item.targetExcerpt.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+    }
+
     init(
         batchID: String,
         sourceLanguage: SupportedLanguage,
@@ -283,7 +300,8 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             .prefix(maximumTerms)
 
         let summary: TranslationReadOnlyBatchSummary?
-        if let previousBatchSummary {
+        if let previousBatchSummary,
+           previousBatchSummary.isEligibleForPrompt {
             summary = TranslationReadOnlyBatchSummary(
                 batchID: previousBatchSummary.batchID,
                 sourceLanguage: previousBatchSummary.sourceLanguage,
@@ -687,7 +705,8 @@ enum TranslationBatchQualityEvaluator {
             failures.append("numberMismatch")
         }
 
-        if let previousBatchSummary = configuration.previousBatchSummary {
+        if let previousBatchSummary = configuration.previousBatchSummary,
+           previousBatchSummary.isEligibleForPrompt {
             let normalizedOutput = comparableText(translatedText)
             let copiedPreviousBatch = previousBatchSummary.items.contains { item in
                 let previousTarget = comparableText(item.targetExcerpt)

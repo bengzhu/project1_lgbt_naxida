@@ -1,3 +1,10 @@
+### v3.307 completed-only 跨 batch context 合同
+
+- `TranslationReadOnlyBatchSummary.isEligibleForPrompt` 现在要求摘要保持只读、没有 pending input、明确来自 completed blocks、包含至少一个 item，且每个 item 的 ordinal、source excerpt 与 target excerpt 有效；不满足任一条件的摘要被丢弃。
+- prompt 和 block-level QA 共用 `TranslationPromptContext.normalized()` 后的摘要；无效摘要不进入模型 prompt，也不参与 `previousContextLeakage` 判定。context 仍是 transient metadata，不写入 block、snapshot、Store、transcript 或导出。
+- OCR 请求、geometry/layout、8 blocks/1,800 chars、tag、QA/fallback、取消、partial persistence、UI、renderer 与非日语路径不变。本合同只证明 completed-only context boundary，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3307-japanese-translation-completed-context-contract.py`，工程版本为 `3.307`；本机只运行安全静态合同，未运行本机 Xcode、Swift/Core ML、Rust/GGUF、App runtime 或漫画探针。
+
 ### v3.306 混合脚本 OCR candidate selection 与 harness source closure 合同
 
 - 修复 v3.305 后的实际集成缺口：Vision 日语 candidate score 在既有 confidence 窄窗口内给同时含日语脚本与 ASCII 字母/数字的候选一个有界 fidelity hint，避免高置信英文/型号 token 被纯日语密度偏好丢弃；confidence 仍是主信号。

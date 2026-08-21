@@ -5196,11 +5196,12 @@ final class TranslationSessionStore: ObservableObject {
         targetLanguage: SupportedLanguage,
         translationContext: TranslationPromptContext
     ) -> TranslationBatchQAConfiguration {
-        TranslationBatchQAConfiguration(
+        let normalizedContext = translationContext.normalized()
+        return TranslationBatchQAConfiguration(
             targetLanguage: targetLanguage,
-            confirmedTerms: translationContext.confirmedTerms,
-            previousBatchSummary: translationContext.previousBatchSummary,
-            maximumOutputCharacters: translationContext.maxOutputCharacters
+            confirmedTerms: normalizedContext.confirmedTerms,
+            previousBatchSummary: normalizedContext.previousBatchSummary,
+            maximumOutputCharacters: normalizedContext.maxOutputCharacters
         )
     }
 

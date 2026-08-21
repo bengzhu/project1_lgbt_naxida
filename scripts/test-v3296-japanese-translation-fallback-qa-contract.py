@@ -121,9 +121,10 @@ class JapaneseTranslationFallbackQAContractTests(unittest.TestCase):
             "private func japaneseTranslationQAConfiguration(\n",
         )
         for marker in (
-            "confirmedTerms: translationContext.confirmedTerms",
-            "previousBatchSummary: translationContext.previousBatchSummary",
-            "maximumOutputCharacters: translationContext.maxOutputCharacters",
+            "let normalizedContext = translationContext.normalized()",
+            "confirmedTerms: normalizedContext.confirmedTerms",
+            "previousBatchSummary: normalizedContext.previousBatchSummary",
+            "maximumOutputCharacters: normalizedContext.maxOutputCharacters",
         ):
             self.assertIn(marker, helper)
         self.assertIn("previousContextLeakage", self.context_source)
@@ -166,7 +167,7 @@ class JapaneseTranslationFallbackQAContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.306", "3.306"],
+            ["3.307", "3.307"],
         )
 
     def test_contract_has_no_process_entry(self) -> None:
