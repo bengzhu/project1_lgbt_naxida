@@ -1,8 +1,10 @@
-### v3.313 跨批次翻译 context identity/language 合同（研发中）
+### v3.313 跨批次翻译 context identity/language 合同（已完成）
 
 - `TranslationReadOnlyBatchSummary.isEligibleForPrompt` 现在要求非空 batch identity、每个 item 的 ordinal 唯一且严格连续递增、source/target excerpt 非空；新增 source/target language overload，必须与当前翻译请求精确一致。
 - `TranslationPromptContext.bound(to:targetLanguage:)` 只保存 transient request identity，且不进入 `CodingKeys`；prompt 和两条图片 QA 路径先绑定当前 source/target，再调用既有 `normalized()`。未绑定、错语言、重复/跳号或不完整摘要被丢弃，不影响当前 block 翻译或 previous-context leakage 判定。
 - 单块 context fallback ordinal 统一修正为 one-based；context 仍不写入 block、snapshot、Store、transcript 或导出。新合同：`scripts/test-v3313-japanese-translation-context-integrity-contract.py`，工程版本为 `3.313`。本轮只运行安全静态检查，不运行本机 Xcode/Swift/Core ML/Rust/GGUF/App runtime 或漫画探针，不声称真实 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+- 本地安全回归：312 个确认无进程入口合同共 1,593 个测试全部通过，27 个实际含进程/编译/runtime 入口的历史合同按约束跳过；Python AST 565/565、JSON 144/144、workflow YAML 3/3、shell 32/32、4 个 plist 加 `project.pbxproj` lint 与 `git diff --check` 通过。
+- 精确实现 SHA `85e9a66311a62b842525f2807c2780c1cfb534ae` 的 full [32481434269](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32481434269)、PR [#377](https://github.com/bengzhu/project1_lgbt_naxida/pull/377) fast [32481190451](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32481190451)、merge SHA `a63bf805a2dd39222803d9e5c9e234eb657a8bb3` 与合入后 CI [32482611428](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32482611428) 全部成功；合入后 benchmark `96772064437`、主 bundle/receipt `96772144881` 成功，Koharu 按 `koharu_parity_required=false` 跳过。`main` 未修改，研发分支已清理。本轮不声称通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证明。
 
 ### v3.312 日语中点 OCR 保真合同（已完成）
 

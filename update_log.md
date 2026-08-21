@@ -1,10 +1,14 @@
-## v3.313：跨批次翻译 context identity/language fail-closed（2026-08-21，研发中）
+## v3.313：跨批次翻译 context identity/language fail-closed（2026-08-21，已完成）
 
 v3.307–v3.312 已让上一完成 batch 的只读摘要进入日语图片 prompt/QA，但审计发现 `TranslationReadOnlyBatchSummary` 仍接受重复或跳号 ordinal，且 decoded/transient summary 没有与当前 source/target language 做身份绑定；旧 context 可能因此被错误复用，或在 QA 的 previous-context leakage 检查中继续生效。
 
 本轮把摘要资格收紧为非空 batch identity、唯一且严格连续的正 ordinal、非空 source/target excerpt，并增加当前请求 source/target 的精确匹配。`TranslationPromptContext.bound(to:targetLanguage:)` 只写入 transient request metadata，`CodingKeys` 不包含它；Gemma prompt boundary、日语/非日语图片 QA boundary 都先绑定当前语言再调用既有 `normalized()`，未绑定、语言不匹配或结构不完整摘要直接丢弃，不影响当前 block 翻译。单块 context 的 fallback ordinal 同时修正为 one-based，避免第一个上一批 block 变成 ordinal 0。
 
 新增 `scripts/test-v3313-japanese-translation-context-integrity-contract.py`，工程版本推进至 `3.313`，CI Japanese benchmark contract route 已接入。OCR、detector、crop/warp、geometry/layout、8 blocks/1,800 chars、tag/QA/fallback、取消、generation、partial persistence、UI、renderer/export、非图片路径和 Koharu/GPL/GGUF/授权语料/目标设备证据边界不变；本轮仍只做安全静态回归，不把合同或云端工程回归外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
+
+本地安全回归：312 个确认无进程入口合同共 1,593 个测试全部通过；27 个实际含进程/编译/runtime 入口的历史合同按约束跳过；Python AST 565/565、JSON 144/144、workflow YAML 3/3、shell 32/32、4 个 plist 加 `project.pbxproj` lint 与 `git diff --check` 通过。未运行本机 Xcode、Swift、Core ML、Rust、GGUF、App runtime 或漫画探针。
+
+精确实现 SHA `85e9a66311a62b842525f2807c2780c1cfb534ae` 的 exact-SHA full [32481434269](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32481434269) 成功：Japanese benchmark `96768470792`、主 bundle/Xcode/UI/Home/Paste/Speech/JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt `96768563960` 全部通过，Koharu `96768471753` 按 `koharu_parity_required=false` 跳过。PR [#377](https://github.com/bengzhu/project1_lgbt_naxida/pull/377) fast [32481190451](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32481190451) 成功，并以 merge SHA `a63bf805a2dd39222803d9e5c9e234eb657a8bb3` 合入 `smalldata_test`；合入后 push CI [32482611428](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32482611428) 的 benchmark `96772064437`、主 bundle/receipt `96772144881` 全部成功，Koharu `96772065657` 跳过。`main` 未修改，研发分支已清理。本轮证据不代表通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证明。
 
 ## v3.312：日语中点 OCR 保真（2026-08-21，已完成）
 
