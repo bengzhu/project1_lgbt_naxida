@@ -10319,3 +10319,10 @@ v3.308 已在同一 bounded crop 上比较 bundled Manga OCR 与有限 Vision �
 block identity、geometry、layout、translation QA、generation、取消、review progress、snapshot/导出持久化和非图片路径不变。不增加 OCR 请求、不重跑 detector/layout、不依赖 Koharu/GPL artifact、不读取 ground truth。新增 `scripts/test-v3309-image-ocr-scoped-provenance-contract.py`，工程版本推进至 `3.309`，CI Japanese benchmark contract route 已接入。本地安全回归为新合同 `7/7`、`308` 个无进程入口合同通过、`27` 个含实际进程入口的历史合同跳过；Python AST `354`、JSON `144`、workflow YAML `3`、shell `32`、plist `4` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
 
 候选精确 SHA `ef6babaa8deea5dfc12e38ce801c445c8b9c9cc8` 的 full [32453420062](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32453420062) 成功：Japanese benchmark `96686016669`、主 bundle/Xcode/UI/Home/Paste/Speech/JUnit/manifest/artifact 与 `AITRANS CI/full-validation=success` receipt `96686077136` 全部通过，Koharu `96686017191` 按普通路径可选策略 skip。PR [#373](https://github.com/bengzhu/project1_lgbt_naxida/pull/373) 已合入 `smalldata_test`，merge SHA `de3761472fb15a7661ed94b5ba9f2c3854a942a2`；合入后 push CI [32454187910](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32454187910) 的 benchmark `96688212281`、主 bundle/receipt `96688283000` 成功，Koharu `96688213032` skip。`main` 未修改。
+## v3.311：全角日语技术 token 保真（2026-08-21，研发中）
+
+v3.310 已把普通图片非日语整页、人工修正、单块重试和 scoped OCR 复读重译接入单块 QA；本轮继续只优化 AITRANS 自有 OCR→翻译主路径。审计发现 v3.305/v3.306 的混合脚本归一化只把 ASCII 字母/数字识别为技术 token，Vision 或 bundled Manga OCR 输出的 `ＡＢＣ１２３` 会绕过保真分支，随后被纯日语 fallback 改写或丢失 token 边界。
+
+本轮新增全角技术 token 支持：`FF10–FF19`、`FF21–FF3A`、`FF41–FF5A` 进入混合脚本候选/归一化；保真分支将完整 `FF01–FF5E` 映射到 ASCII，`FF0E` 纳入既有有界点号归一化。Vision 与 bundled Manga OCR 继续共用同一个 `JapaneseOCRTextNormalizer`，纯日语仍使用旧的全角标点 fallback。
+
+detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag/QA、取消、generation、持久化、非图片路径和 Koharu/GGUF/授权语料/目标设备证据边界不变。新增 `scripts/test-v3311-japanese-fullwidth-token-normalization-contract.py`，工程版本推进至 `3.311`，并接入 Japanese benchmark contract route；本地先完成无进程静态安全回归，云端 full 与合入 receipt 待验证，不把合同结果外推为 OCR/CER 或翻译质量证据。
