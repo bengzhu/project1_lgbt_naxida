@@ -1,4 +1,5 @@
 # 项目流程图
+v3.316 日语 OCR 浊音保真：`canonical Unicode -> Japanese width folding without diacritic stripping -> overlap dedupe/fusion/layout`；`か/が`、`は/ぱ` 等不同 kana 不因去重比较被合并，全角/半角仍可比较为同一形式，不增加 OCR 请求或改变翻译/持久化边界。
 v3.315 日语 OCR Unicode 规范化：`Vision/Manga OCR -> canonical Unicode sequence + Japanese width-aware comparison -> existing dedupe/fusion/layout`；只合并等价的组合字符/宽度形式，不增加 OCR 请求，不改变候选、geometry、预算、翻译 QA、取消或持久化边界。
 v3.314 日语 OCR 候选内容 gate：`Vision top candidates -> bounded confidence window -> prefer letter-bearing Japanese candidate -> existing OCR fusion/layout`；有文字候选时不让符号-only候选替换它，窗口无文字候选时保留历史 fallback，不增加请求或改变翻译/布局边界。
 v3.313 跨批次 context 完整性：`completed batch summary -> identity/strict-ordinal validation -> request source/target binding -> normalized prompt/QA context -> tagged translation`；未绑定、错语言、重复/跳号或不完整摘要 fail closed，不影响当前 block、OCR、取消或持久化边界。

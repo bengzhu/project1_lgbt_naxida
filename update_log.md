@@ -1,3 +1,11 @@
+## v3.316：日语 OCR 浊音/半浊音保真（2026-08-22，进行中）
+
+本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。v3.315 为处理全角/半角等价形式在日语 dedupe 中加入了 `widthInsensitive`，但同时使用 `diacriticInsensitive`；Unicode canonical composition 后，这会把日语浊音/半浊音差异当作可忽略的附加标记，重叠 observation 可能把 `か/が`、`は/ぱ` 等不同文字错误合并，直接造成 OCR 漏字/错字并污染翻译输入。
+
+可证伪假设：**若日语 observation 先保持 canonical composition，再只做 case/width-insensitive folding 而保留 diacritic，则全角/半角等价输出仍可稳定去重，而带 dakuten/handakuten 的不同 kana 不会因比较规则被吞掉。**
+
+实现：`VisionOCRService.normalizedOCRText(widthInsensitive:)` 的日语比较移除 `.diacriticInsensitive`，保留 `.caseInsensitive` 与 `.widthInsensitive`；非日语比较、canonical 文本后处理、候选选择、OCR 请求、geometry/layout、翻译 QA、取消与持久化不变。新增 `scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py`，工程版本推进至 `3.316`，CI Japanese benchmark route 接入。本轮仍待本地安全回归与云端 receipt，不把静态合同或固定样图外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.315：日语 OCR Unicode 规范化（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现 Vision 与 bundled Manga OCR 对同一日语 glyph 可能输出预组字符/combining-mark 序列或不同宽度形式；当前文本后处理和日语观察比较未完全统一这些等价表示，可能造成重复 observation 或不稳定 dedupe。

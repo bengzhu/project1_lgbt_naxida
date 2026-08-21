@@ -4515,6 +4515,8 @@ struct VisionOCRService: Sendable {
         return intersection / union
     }
 
+    /// Japanese width folding intentionally preserves dakuten/handakuten;
+    /// `.diacriticInsensitive` would collapse distinct kana during dedupe.
     private static func normalizedOCRText(
         _ text: String,
         widthInsensitive: Bool = false
@@ -4522,7 +4524,7 @@ struct VisionOCRService: Sendable {
         let canonicalText = JapaneseOCRTextNormalizer.canonicalized(text)
         let comparedText = widthInsensitive
             ? canonicalText.folding(
-                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                options: [.caseInsensitive, .widthInsensitive],
                 locale: .current
             )
             : canonicalText.lowercased()
