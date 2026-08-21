@@ -1,3 +1,11 @@
+## v3.313：跨批次翻译 context identity/language fail-closed（2026-08-21，研发中）
+
+v3.307–v3.312 已让上一完成 batch 的只读摘要进入日语图片 prompt/QA，但审计发现 `TranslationReadOnlyBatchSummary` 仍接受重复或跳号 ordinal，且 decoded/transient summary 没有与当前 source/target language 做身份绑定；旧 context 可能因此被错误复用，或在 QA 的 previous-context leakage 检查中继续生效。
+
+本轮把摘要资格收紧为非空 batch identity、唯一且严格连续的正 ordinal、非空 source/target excerpt，并增加当前请求 source/target 的精确匹配。`TranslationPromptContext.bound(to:targetLanguage:)` 只写入 transient request metadata，`CodingKeys` 不包含它；Gemma prompt boundary、日语/非日语图片 QA boundary 都先绑定当前语言再调用既有 `normalized()`，未绑定、语言不匹配或结构不完整摘要直接丢弃，不影响当前 block 翻译。单块 context 的 fallback ordinal 同时修正为 one-based，避免第一个上一批 block 变成 ordinal 0。
+
+新增 `scripts/test-v3313-japanese-translation-context-integrity-contract.py`，工程版本推进至 `3.313`，CI Japanese benchmark contract route 已接入。OCR、detector、crop/warp、geometry/layout、8 blocks/1,800 chars、tag/QA/fallback、取消、generation、partial persistence、UI、renderer/export、非图片路径和 Koharu/GPL/GGUF/授权语料/目标设备证据边界不变；本轮仍只做安全静态回归，不把合同或云端工程回归外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
+
 ## v3.312：日语中点 OCR 保真（2026-08-21，已完成）
 
 当前 Vision、bundled Manga OCR 和共享混合脚本归一化把 U+30FB `・` 与 ASCII 点号一起压缩；日语姓名、外来词和分隔词因此可能从 `ア・ニメ` 变成 `ア.ニメ`。本轮只让真正的 ASCII/全角句点与省略号进入点号归一化，并让中点原样保留；候选选择、geometry/layout、请求预算和翻译边界不变。
