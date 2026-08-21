@@ -846,7 +846,17 @@ struct VisionOCRService: Sendable {
         let scriptDensity = Double(japaneseCount) / Double(scalars.count)
         let punctuationDensity = Double(punctuationCount) / Double(scalars.count)
         let confidence = min(max(Double(candidate.confidence), 0), 1)
-        return confidence * 0.82 + scriptDensity * 0.14 + punctuationDensity * 0.04
+        let hasMixedJapaneseAndASCII = JapaneseOCRTextNormalizer.hasMixedJapaneseAndASCII(candidate.string)
+        // Keep confidence as the dominant signal, but do not let the old
+        // pure-Japanese density preference discard a high-confidence English
+        // token/model-name candidate. The bonus is deliberately bounded and
+        // only applies when both Japanese script and ASCII word characters
+        // are present.
+        let mixedScriptFidelityBonus = hasMixedJapaneseAndASCII ? 0.12 : 0
+        return confidence * 0.82
+            + scriptDensity * 0.14
+            + punctuationDensity * 0.04
+            + mixedScriptFidelityBonus
     }
 
     private static func recognizedTextGeometry(

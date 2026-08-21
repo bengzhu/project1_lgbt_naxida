@@ -19,6 +19,7 @@ trap cleanup EXIT HUP INT TERM
 
 xcrun swiftc -parse-as-library \
   "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
+  "$repo_root/AITRANS/Models/JapaneseOCRTextNormalizer.swift" \
   "$repo_root/AITRANS/Services/MangaOCRService.swift" \
   "$repo_root/scripts/fixtures/v3264-koharu-vertical-quad-warp-harness.swift" \
   -o "$executable"

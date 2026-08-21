@@ -1,8 +1,15 @@
+### v3.306 混合脚本 OCR candidate selection 与 harness source closure 合同
+
+- 修复 v3.305 后的实际集成缺口：Vision 日语 candidate score 在既有 confidence 窄窗口内给同时含日语脚本与 ASCII 字母/数字的候选一个有界 fidelity hint，避免高置信英文/型号 token 被纯日语密度偏好丢弃；confidence 仍是主信号。
+- 所有直接编译 `MangaOCRService.swift` 或 `VisionOCRService.swift` 的历史 runtime harness 现在显式携带 `JapaneseOCRTextNormalizer.swift`，产品 target 与 standalone compile 使用同一 source closure；OCR geometry、crop/warp、方向、预算、layout、翻译 QA、取消、持久化与非日语路径不变。工程版本为 `3.306`。
+- 新合同：`scripts/test-v3306-japanese-mixed-script-candidate-selection-contract.py`。只证明候选选择提示、编译接线和静态边界，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+
 ### v3.305 混合脚本文字 OCR 保真合同
 
 - 新增 `scripts/test-v3305-japanese-mixed-script-normalization-contract.py` 与 `AITRANS/Models/JapaneseOCRTextNormalizer.swift`。日语 OCR 文本含 ASCII 字母/数字时保留英文、型号、URL/路径和必要 token 空格；纯日语仍沿用既有点号压缩与全角标点 fallback。
 - Vision 与 bundled Manga OCR 共用该归一化边界；它只改 OCR 文本格式，不增加请求、不改变 detector、crop/warp、geometry、layout、候选胜负、预算、翻译 QA、取消、持久化或非日语路径。工程版本为 `3.305`。
 - 本合同只证明混合脚本文本保真接线与静态边界，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+- 精确实现 SHA `19854acf` 的 PR [#369](https://github.com/bengzhu/project1_lgbt_naxida/pull/369) full [32440198386](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32440198386) 成功，merge SHA `d43d463b` 合入 `smalldata_test`；合入后 push [32440363618](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32440363618) 的 benchmark 成功、Koharu 跳过，但主 bundle 因历史 standalone Manga OCR harness 漏带 `JapaneseOCRTextNormalizer.swift` 编译失败，不能记为 full-validation success。v3.306 补齐 source closure，`main` 未修改。
 
 ### v3.304 稳定日语图片 batch identity 与跨批次 context 合同
 
