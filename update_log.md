@@ -1,10 +1,12 @@
-## v3.310：普通图片非日语翻译接入单块 QA（当前研发分支）
+## v3.310：普通图片非日语翻译接入单块 QA（已完成）
 
 v3.309 之后审计发现日语图片路径已有 tagged batch、只读 context 与逐块 QA，但非日语图片整页翻译、人工修正、单块重试和 scoped OCR 复读重译仍直接接受标准 `translate` 输出，可能绕过占位答复、原文泄漏、数字、目标语言密度、术语和长度检查。
 
 本轮新增 `translateImageBlockWithQA`，统一调用 `TranslationBatchQualityEvaluator.singleOutputFailures` 和 normalized `TranslationPromptContext`。非日语整页、修正、单块重试和 OCR 复读重译全部经过该 fail-closed 单块门；QA 失败不写入当前候选，既有 task/cancel/generation、其它块、OCR geometry/layout、请求预算、持久化、UI、renderer、日语 tagged batch 与非图片路径保持不变。不引入或等待 GGUF、Koharu/GPL runtime/weights、授权语料或目标设备证据，也不把静态合同当成真实翻译质量证据。
 
-新增 `scripts/test-v3310-image-translation-qa-contract.py`，工程版本推进至 `3.310`，已接入 CI Japanese benchmark contract route。新合同 `8/8` 通过；本地安全回归为 `295` 个无进程入口合同通过、`41` 个命中进程/编译/runtime 预扫描的历史合同按约束跳过，`356` 个 Python AST、`144` 个 tracked JSON、`3` 个 workflow YAML、`32` 个 tracked shell、`4` 个 plist/project version 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；本节待 exact-SHA cloud full、PR/merge 与合入后 CI 完成后补充对应 SHA、run、receipt。
+新增 `scripts/test-v3310-image-translation-qa-contract.py`，工程版本推进至 `3.310`，已接入 CI Japanese benchmark contract route。新合同 `8/8` 通过；本地安全回归为 `295` 个无进程入口合同通过、`41` 个命中进程/编译/runtime 预扫描的历史合同按约束跳过，`356` 个 Python AST、`144` 个 tracked JSON、`3` 个 workflow YAML、`32` 个 tracked shell、`4` 个 plist/project version 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
+精确实现 SHA `f5d8d3fea4ae9cc2b88af63e47d6af55b8e8ec29` 的 full [32459560337](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32459560337) 成功：Japanese benchmark、主 bundle、云端 Xcode、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过，Koharu MIT48 parity 按可选策略跳过。PR [#374](https://github.com/bengzhu/project1_lgbt_naxida/pull/374) 检查 [32460542674](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32460542674) 成功，并以 merge SHA `01ae37b64626f55b2e1055a7d727ff4f02325649` 合入 `smalldata_test`；合入后 push CI [32460705051](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32460705051) 的 benchmark、bundle、manifest 与 `AITRANS CI/full-validation=success` receipt 全部成功。`main` 未修改，研发分支已删除；本轮不声称真实 GGUF、授权语料、目标设备或 v3.289 holdout 证据。
 
 ## v3.306：修复混合脚本 OCR 候选偏好与历史 harness 接线（2026-08-21，已完成）
 
