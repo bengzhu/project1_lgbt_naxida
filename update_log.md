@@ -1,3 +1,9 @@
+## v3.305：保留混合日语/拉丁文字 OCR 的 token 保真（2026-08-20）
+
+普通日语图片 OCR 的后处理此前无条件删除空格并将 ASCII 字母、数字和 URL 分隔符转为全角；日语页面中的英文对白、型号、日期、路径和链接因此可能在翻译前被合并或改写。本轮只修复该输入保真缺口：当候选含 ASCII 字母/数字时，Vision 与 bundled Manga OCR 共用 `JapaneseOCRTextNormalizer`，保留拉丁/数字 token 的 ASCII 字符与相邻必要空格，同时继续压缩省略号/点号；不含 ASCII 字母/数字的纯日语候选继续使用原有全角标点 fallback。
+
+新增 `scripts/test-v3305-japanese-mixed-script-normalization-contract.py`，工程版本推进至 `3.305`，接入 Japanese benchmark contract route。该 helper 不调用 OCR、翻译或 Store，不增加请求，也不改变 detector、crop/warp、geometry/layout、候选选择、预算、QA、取消、持久化或非日语路径。本地验证与云端 full/PR/merge receipt 待本轮完成；本轮不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+
 ## v3.304：稳定日语图片 batch identity，收紧忽略/修正后的跨批次 context（2026-08-20）
 
 v3.303 已让日语人工修正、单块翻译重试和 scoped OCR 复读重译统一重建只读 context，但 helper 仍按当前可见 block 数组和可变原文重新切 batch。忽略一个已完成块会把后续 block 前移，人工修正增长原文也可能改变 1,800 字符边界，导致第 9 块重试拿到错误的上一批摘要或把当前批内容带入 context。
@@ -6,7 +12,7 @@ v3.303 已让日语人工修正、单块翻译重试和 scoped OCR 复读重译�
 
 新增 `scripts/test-v3304-japanese-translation-batch-boundary-contract.py`，工程版本推进至 `3.304`，并接入 Japanese benchmark contract route。本地安全回归：v3.304、v3.303、v3.288 合同通过；`330` 个 `scripts/test-v*.py` 完成 AST 解析，`303` 个无实际进程入口合同通过、`27` 个实际含进程入口的历史合同按约束跳过；`349` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，不读取 ground truth，不声称真实 OCR/CER、翻译盲评、授权语料、目标设备或 v3.289 holdout 证据。
 
-当前候选仍在 `codex/v3.304-stable-image-translation-context` 工作树；`.git` 写权限和 GitHub DNS 不可用，尚未产生 v3.304 commit，因此 exact-SHA full、PR、`smalldata_test` 合入及合入后 receipt 均待权限恢复后执行。不得把本地合同结果当作云端或合入证据。
+精确实现 SHA `564eb5b56ce99b2e01fc33e04ccf8141c693a5eb` 的 PR [#368](https://github.com/bengzhu/project1_lgbt_naxida/pull/368) full [32371921518](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32371921518) 成功：Japanese benchmark、主 bundle/Xcode/JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过，Koharu 按可选策略跳过。PR 已以 merge SHA `c6603ab59b12e728eb7b01a9622f8c7459644638` 合入 `smalldata_test`；合入后 push CI [32372218598](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32372218598) 的 benchmark、主 bundle 与 receipt 全部成功，Koharu 跳过。`main` 未修改。
 
 ## v3.303：日语人工修正与单块重试的 context/QA 收口（2026-08-20）
 

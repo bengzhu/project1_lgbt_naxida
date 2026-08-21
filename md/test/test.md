@@ -1,9 +1,16 @@
+### v3.305 混合脚本文字 OCR 保真合同
+
+- 新增 `scripts/test-v3305-japanese-mixed-script-normalization-contract.py` 与 `AITRANS/Models/JapaneseOCRTextNormalizer.swift`。日语 OCR 文本含 ASCII 字母/数字时保留英文、型号、URL/路径和必要 token 空格；纯日语仍沿用既有点号压缩与全角标点 fallback。
+- Vision 与 bundled Manga OCR 共用该归一化边界；它只改 OCR 文本格式，不增加请求、不改变 detector、crop/warp、geometry、layout、候选胜负、预算、翻译 QA、取消、持久化或非日语路径。工程版本为 `3.305`。
+- 本合同只证明混合脚本文本保真接线与静态边界，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+
 ### v3.304 稳定日语图片 batch identity 与跨批次 context 合同
 
 - 日语图片页在首次识别后建立仅含 `startIndex`/`blockIDs` 的 transient batch plan；人工修正、scoped OCR 复读、忽略/恢复不因可见数组变化而重编号，active + ignored block 按原始 page order 重建只读 context。
 - 上一批摘要只接受 plan 紧邻前一批且每个 block 都有非空译文；缺 block 或 pending translation 时 fail closed。split/merge/move 结构 mutation 清除 plan，恢复持久化会从当前认证 block 集合按需重建；plan 不进入 block、snapshot、Store、transcript 或导出。
 - 新合同：`scripts/test-v3304-japanese-translation-batch-boundary-contract.py`；工程版本为 `3.304`。只证明 batch identity/context 边界与已有 QA 接线，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
 - 本地安全回归：v3.304、v3.303、v3.288 合同通过；`330` 个 `scripts/test-v*.py` 完成 AST 解析，`303` 个无实际进程入口合同通过、`27` 个实际含进程入口的历史合同按约束跳过；`349` 个 Python AST、`144` 个 JSON、`3` 个 workflow YAML、`32` 个 shell、`4` 个 plist 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 精确实现 SHA `564eb5b5` 的 full [32371921518](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32371921518) 与 PR [#368](https://github.com/bengzhu/project1_lgbt_naxida/pull/368) 成功，merge SHA `c6603ab5` 合入 `smalldata_test`；合入后 push CI [32372218598](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32372218598) 成功，`main` 未修改。Koharu parity 按普通主路径策略跳过。
 
 ### v3.303 日语人工修正与单块重试 context/QA 合同
 

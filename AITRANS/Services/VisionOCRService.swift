@@ -760,6 +760,9 @@ struct VisionOCRService: Sendable {
     /// Vision's candidate string is still the source of geometry; this only
     /// removes recognition formatting noise before layout, dedupe, and translation.
     private static func postProcessJapaneseOCRText(_ text: String) -> String {
+        if let mixedScriptCandidate = JapaneseOCRTextNormalizer.mixedScriptCandidate(text) {
+            return mixedScriptCandidate
+        }
         let withoutWhitespace = text.filter { !$0.isWhitespace }
             .replacingOccurrences(of: "…", with: "...")
 
