@@ -81,10 +81,11 @@ class JapaneseCorrectionTranslationQAContractTests(unittest.TestCase):
             body.index("imageTranslationBlocks[currentIndex] = correctedBlock"),
         )
 
-    def test_non_japanese_correction_keeps_existing_plain_translation_path(self) -> None:
+    def test_non_japanese_correction_uses_current_image_translation_qa_path(self) -> None:
         body = function_body(self.store, "func correctImageTranslationBlock(")
         non_japanese_branch = body[body.index("} else {") :]
-        self.assertIn("correctedTranslation = try await translate(", non_japanese_branch)
+        self.assertIn("correctedTranslation = try await translateImageBlockWithQA(", non_japanese_branch)
+        self.assertIn("TranslationPromptContext(", non_japanese_branch)
         self.assertNotIn("translateJapaneseImageBlockWithQA(", non_japanese_branch)
 
     def test_retry_reuses_page_ordinal_and_rebuilt_context(self) -> None:
@@ -184,7 +185,7 @@ class JapaneseCorrectionTranslationQAContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.309", "3.309"],
+            ["3.310", "3.310"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:

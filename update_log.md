@@ -1,3 +1,11 @@
+## v3.310：普通图片非日语翻译接入单块 QA（当前研发分支）
+
+v3.309 之后审计发现日语图片路径已有 tagged batch、只读 context 与逐块 QA，但非日语图片整页翻译、人工修正、单块重试和 scoped OCR 复读重译仍直接接受标准 `translate` 输出，可能绕过占位答复、原文泄漏、数字、目标语言密度、术语和长度检查。
+
+本轮新增 `translateImageBlockWithQA`，统一调用 `TranslationBatchQualityEvaluator.singleOutputFailures` 和 normalized `TranslationPromptContext`。非日语整页、修正、单块重试和 OCR 复读重译全部经过该 fail-closed 单块门；QA 失败不写入当前候选，既有 task/cancel/generation、其它块、OCR geometry/layout、请求预算、持久化、UI、renderer、日语 tagged batch 与非图片路径保持不变。不引入或等待 GGUF、Koharu/GPL runtime/weights、授权语料或目标设备证据，也不把静态合同当成真实翻译质量证据。
+
+新增 `scripts/test-v3310-image-translation-qa-contract.py`，工程版本推进至 `3.310`，已接入 CI Japanese benchmark contract route。新合同 `8/8` 通过；本地安全回归为 `295` 个无进程入口合同通过、`41` 个命中进程/编译/runtime 预扫描的历史合同按约束跳过，`356` 个 Python AST、`144` 个 tracked JSON、`3` 个 workflow YAML、`32` 个 tracked shell、`4` 个 plist/project version 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；本节待 exact-SHA cloud full、PR/merge 与合入后 CI 完成后补充对应 SHA、run、receipt。
+
 ## v3.306：修复混合脚本 OCR 候选偏好与历史 harness 接线（2026-08-21，已完成）
 
 v3.305 已把混合日语/拉丁文字归一化接到 Vision 与 bundled Manga OCR，但合入后 post-merge run [32440363618](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32440363618) 暴露了两个普通主路径边界：Vision candidate score 仍会用纯日语脚本密度压过高置信混合候选，且历史 Manga OCR runtime harness 直接编译 `MangaOCRService.swift` 时没有携带新共用 `JapaneseOCRTextNormalizer.swift`，主 bundle 的编译合同因此失败。

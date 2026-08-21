@@ -77,7 +77,7 @@ class ImageTranslationBlockRetryContractTests(unittest.TestCase):
     def test_retry_reuses_translation_without_running_ocr(self) -> None:
         self.assertIn("if sourceLanguage == .japanese", self.retry)
         self.assertIn("translateJapaneseImageBatch(", self.retry)
-        self.assertIn("translation = try await self.translate(", self.retry)
+        self.assertIn("translation = try await self.translateImageBlockWithQA(", self.retry)
         for forbidden in [
             "visionOCRService",
             "recognizeTextBlocks(",

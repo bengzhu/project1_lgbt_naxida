@@ -47,7 +47,7 @@ class ImageOCRCorrectionContractTests(unittest.TestCase):
 
     def test_only_target_block_is_retranslated_with_content_identity_isolation(self) -> None:
         correction = braced_body(self.store, "func correctImageTranslationBlock(")
-        self.assertEqual(correction.count("try await translate("), 1)
+        self.assertEqual(correction.count("try await translateImageBlockWithQA("), 1)
         self.assertIn("let contentTaskID = imageTranslationTaskID", correction)
         self.assertIn("imageTranslationCorrectionID == correctionID", correction)
         self.assertIn("imageTranslationTaskID == contentTaskID", correction)

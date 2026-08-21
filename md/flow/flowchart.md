@@ -1,4 +1,5 @@
 # 项目流程图
+v3.310 图片翻译 QA：`recognized block -> language branch -> Japanese tagged batch/context/QA OR non-Japanese translateImageBlockWithQA -> correction/retry/reread same gate -> scoped commit/render`；非日语不再绕过单块质量门，失败只阻止当前翻译提交并沿用既有错误/取消恢复，不重跑 OCR/layout、不改变 geometry、预算或持久化边界。
 v3.309 scoped OCR provenance：`accepted reread candidate -> replacement text/confidence/provenance -> existing scoped QA/commit -> provenance disclosure/restore baseline`；只更新接受候选的诊断来源，不改变 block identity、geometry、layout、translation QA、取消或持久化边界。
 v3.308 scoped 日语 OCR 候选：`same block crop -> bundled Manga OCR baseline + bounded Vision orientations -> Japanese quality gate -> deterministic replacement or baseline tie-break -> existing scoped commit`；不增加无界请求，不改变 detector/layout、翻译 QA、持久化或取消。completed-only context 仍由 normalized read-only summary 进入 prompt/QA；无效或未完成摘要不参与 previous-context leakage 判定。
 v3.307 completed-only context：`TranslationReadOnlyBatchSummary -> eligibility (read-only + completed + non-empty items) -> normalized prompt/QA context -> tagged translation`；无效或未完成摘要不进入 prompt，也不参与 previous-context leakage 判定，不改变 OCR、持久化或取消。

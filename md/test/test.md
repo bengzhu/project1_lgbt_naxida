@@ -1,3 +1,10 @@
+### v3.310 普通图片翻译单块 QA 合同
+
+- 非日语图片整页翻译、人工修正、单块重试和 OCR 复读重译统一经过 `translateImageBlockWithQA`，复用占位答复、原文泄漏、数字、目标语言密度、术语与长度的 fail-closed 检查；日语 tagged batch 路径保持原有 context/QA。
+- QA 失败不写入当前块译文；既有 task/cancel/generation、其它块、OCR geometry/layout、请求预算、持久化和非图片路径不变。
+- 新合同：`scripts/test-v3310-image-translation-qa-contract.py`，工程版本为 `3.310`；本机只运行安全静态合同，未运行本机 Xcode、Swift/Core ML、Rust/GGUF、App runtime 或漫画探针。
+- 本地结果：合同 `8/8`；安全回归 `295` 个合同通过、`41` 个命中进程/编译/runtime 预扫描的历史合同跳过；`356` 个 Python AST、`144` 个 tracked JSON、`3` 个 workflow YAML、`32` 个 tracked shell、`4` 个 plist/project version 与 `git diff --check` 通过。
+
 ### v3.309 scoped OCR provenance handoff 合同
 
 - 接受的 scoped OCR 候选现在与新文字、置信度、SFX 类型提示一起替换 block 的 `ocrProvenance`，复查 disclosure 不再显示旧的引擎、crop 或旋转来源。
