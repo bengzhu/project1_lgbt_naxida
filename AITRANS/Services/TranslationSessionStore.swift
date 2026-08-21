@@ -5197,7 +5197,7 @@ final class TranslationSessionStore: ObservableObject {
         translationContext: TranslationPromptContext
     ) -> TranslationBatchQAConfiguration {
         let normalizedContext = translationContext.normalized()
-        TranslationBatchQAConfiguration(
+        return TranslationBatchQAConfiguration(
             targetLanguage: targetLanguage,
             confirmedTerms: normalizedContext.confirmedTerms,
             previousBatchSummary: normalizedContext.previousBatchSummary,
