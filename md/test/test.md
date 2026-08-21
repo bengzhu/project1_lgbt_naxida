@@ -1,8 +1,9 @@
-### v3.315 日语 OCR Unicode 规范化合同（进行中）
+### v3.315 日语 OCR Unicode 规范化合同（已完成）
 
 - 新增共享 `JapaneseOCRTextNormalizer.canonicalized`，Vision 与 bundled Manga OCR 在既有日语后处理前先使用 Unicode canonical composition；日语 dedupe 仅在比较时增加 width-insensitive folding，因此组合字符/宽度等价输出不会留下重复观察，最终 OCR 文本边界仍保持既有规则。
 - 只改变 OCR 文本规范化和日语观察比较，不增加 OCR 请求、crop/warp、detector、candidate 分数、geometry/layout、owner、预算、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证明。
-- 新合同：`scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py`，工程版本为 `3.315`；云端 Japanese benchmark route 已接入。本地安全回归与 exact-SHA full/PR/merge receipt 待完成，未把本轮实现外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py`，工程版本为 `3.315`；云端 Japanese benchmark route 已接入。本地安全回归为 314 个无进程入口合同全部通过，27 个含外部进程/编译入口的历史合同跳过；Python AST `361/361`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、工程 lint 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `2b2374f59fe0372cb0618088193a87dad9e5a8e5` 的 PR [#379](https://github.com/bengzhu/project1_lgbt_naxida/pull/379) checks [32535148570](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32535148570) 成功；merge SHA `46a89cf3cb27a1e66059783d3c42922f2b2ce9d5` 合入 `smalldata_test` 后，push full CI [32535247634](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32535247634) 的 Japanese benchmark、Xcode 26.6、UI/Home/Paste/Speech、JUnit/manifest 与 full receipt 全部通过，Koharu parity 按默认策略跳过。`main` 未修改；本轮不外推通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证据。
 
 ### v3.314 日语 OCR 候选内容优先合同（已完成）
 

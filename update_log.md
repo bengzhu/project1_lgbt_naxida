@@ -1,10 +1,14 @@
-## v3.315：日语 OCR Unicode 规范化（2026-08-22，进行中）
+## v3.315：日语 OCR Unicode 规范化（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现 Vision 与 bundled Manga OCR 对同一日语 glyph 可能输出预组字符/combining-mark 序列或不同宽度形式；当前文本后处理和日语观察比较未完全统一这些等价表示，可能造成重复 observation 或不稳定 dedupe。
 
 可证伪假设：**如果 OCR 文本在既有日语后处理前先做 Unicode canonical composition，且日语 dedupe 比较增加 width-insensitive folding，那么等价的组合字符/宽度输出可以稳定合并，而 OCR 请求、候选分数、geometry/layout、翻译 QA、取消与持久化边界保持不变。**
 
-实现：新增共享 `JapaneseOCRTextNormalizer.canonicalized`；Vision 与 Manga OCR 日语 post-process 先 canonicalize；Vision 的日语 `normalizedOCRText` 只在 `prefersJapanese` 比较中使用 canonical + case/diacritic/width-insensitive folding。新增 `scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py`，工程版本推进至 `3.315`，CI Japanese benchmark contract route 接入。当前仍待本地安全回归与 exact-SHA 云端 full/PR/merge receipt，不把本轮静态合同外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证据。
+实现：新增共享 `JapaneseOCRTextNormalizer.canonicalized`；Vision 与 Manga OCR 日语 post-process 先 canonicalize；Vision 的日语 `normalizedOCRText` 只在 `prefersJapanese` 比较中使用 canonical + case/diacritic/width-insensitive folding。新增 `scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py`，工程版本推进至 `3.315`，CI Japanese benchmark contract route 接入。
+
+本地安全回归：314 个确认无进程入口合同全部通过；27 个实际含外部进程/编译入口的历史合同按约束跳过；Python AST `361/361`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、工程 lint 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
+实现 SHA `2b2374f59fe0372cb0618088193a87dad9e5a8e5` 的 PR [#379](https://github.com/bengzhu/project1_lgbt_naxida/pull/379) checks [32535148570](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32535148570) 成功；以 merge SHA `46a89cf3cb27a1e66059783d3c42922f2b2ce9d5` 合入 `smalldata_test`，合入后 push full CI [32535247634](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32535247634) 成功，Japanese benchmark、Xcode 26.6、UI/Home/Paste/Speech、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过；Koharu parity 按 `koharu_parity_required=false` 跳过。`main` 未修改，研发分支已清理。本轮不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证据。
 
 ## v3.314：日语 OCR 候选内容优先 gate（2026-08-21，已完成）
 
