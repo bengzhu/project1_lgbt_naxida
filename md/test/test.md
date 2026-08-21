@@ -3,7 +3,8 @@
 - Vision 与 bundled Manga OCR 共用 `JapaneseOCRTextNormalizer`；全角数字、拉丁大/小写进入混合脚本文字边界，`FF01–FF5E` 技术标点/字符在保真分支内转为 ASCII，`FF0E` 继续参与有界点号归一化。
 - 纯日语仍沿用历史后处理；不新增 OCR/翻译请求，不改变 detector、crop/warp、geometry/layout、预算、翻译 QA、取消、generation、持久化或 Koharu 可选研究边界。
 - 新合同：`scripts/test-v3311-japanese-fullwidth-token-normalization-contract.py`，工程版本为 `3.311`；只证明共享归一化与静态接线，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
-- 本轮验证完成前不记录云端 full、PR merge 或合入后 CI receipt；本机不运行 Xcode、Swift/Core ML、Rust/GGUF/App runtime。
+- 本地安全回归：337 个 v3 合同中 310 个无进程入口合同共 1,576 个测试通过，27 个实际启动外部进程的历史合同按约束跳过；356 个 Python AST、144 个 tracked JSON、3 个 workflow YAML、32 个 tracked shell、4 个 plist/project version 与 `git diff --check` 通过。本机未运行 Xcode、Swift/Core ML、Rust/GGUF/App runtime。
+- 精确实现 SHA `55f24b6987ec780d3cd31e25f99963a52ef46b43` 的 full [32464202121](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32464202121) 与 PR [#375](https://github.com/bengzhu/project1_lgbt_naxida/pull/375) 检查 [32465343062](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32465343062) 成功；merge SHA `ae30e5926b34fb757c0f8aca4a5b39003e6005b` 合入 `smalldata_test`，合入后 CI [32465968295](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32465968295) 成功。Koharu parity 按可选策略跳过；这些证据不代表真实 OCR/CER、翻译盲评或 holdout 质量证明。
 
 ### v3.310 普通图片翻译单块 QA 合同
 
