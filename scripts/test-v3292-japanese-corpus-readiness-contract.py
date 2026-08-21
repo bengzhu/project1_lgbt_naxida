@@ -153,7 +153,7 @@ class JapaneseCorpusReadinessContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.306", "3.306"])
+        self.assertEqual(versions, ["3.307", "3.307"])
         for marker in (
             "v3.292",
             "共享日语 OCR/translation corpus",
