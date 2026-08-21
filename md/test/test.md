@@ -1,3 +1,10 @@
+### v3.308 日语图片 scoped OCR 候选门合同
+
+- 同一已有日语 block 的 scoped reread 先保留 bundled Manga OCR 结果，再运行既有 bounded Vision crop 方向候选；垂直最多 `[270, 90]`、横排 `[0]`、方向未知最多 `[270, 90, 0]`，取消继续由当前 task guard 传播。
+- Manga OCR 是确定性基线；Vision 只有在非空、confidence `>=.55`、日语脚本密度 `>=.5` 且文字数量/密度或 confidence 达到明确有界 margin 时才替换，平局保留 Manga。模型/方向失败不清除已接受基线，弱候选不替换。
+- 不重跑 detector/layout、不改变 block geometry、translation QA、generation、scoped cancel、reviewed progress 或持久化；合同只证明普通 OCR 选择边界，不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3308-image-japanese-scoped-candidate-contract.py`，工程版本为 `3.308`；本机只运行安全静态合同，未运行本机 Xcode、Swift/Core ML、Rust/GGUF、App runtime 或漫画探针。
+
 ### v3.307 completed-only 跨 batch context 合同
 
 - `TranslationReadOnlyBatchSummary.isEligibleForPrompt` 现在要求摘要保持只读、没有 pending input、明确来自 completed blocks、包含至少一个 item，且每个 item 的 ordinal、source excerpt 与 target excerpt 有效；不满足任一条件的摘要被丢弃。

@@ -1,4 +1,5 @@
 # 项目流程图
+v3.308 scoped 日语 OCR 候选：`same block crop -> bundled Manga OCR baseline + bounded Vision orientations -> Japanese quality gate -> deterministic replacement or baseline tie-break -> existing scoped commit`；不增加无界请求，不改变 detector/layout、翻译 QA、持久化或取消。completed-only context 仍由 normalized read-only summary 进入 prompt/QA；无效或未完成摘要不参与 previous-context leakage 判定。
 v3.307 completed-only context：`TranslationReadOnlyBatchSummary -> eligibility (read-only + completed + non-empty items) -> normalized prompt/QA context -> tagged translation`；无效或未完成摘要不进入 prompt，也不参与 previous-context leakage 判定，不改变 OCR、持久化或取消。
 v3.306 混合脚本 candidate selection 与编译接线：`Vision candidates -> confidence-windowed mixed Japanese/ASCII fidelity hint -> shared normalizer -> OCR fusion/layout -> translation`；保留高置信英文/型号 token，历史 Manga OCR/Vision runtime harness 显式携带共用 normalizer source，不增加请求、不改变 geometry、预算、layout 或翻译 QA。
 v3.305 混合脚本文字保真：`Vision/Manga OCR -> mixed-script normalizer -> Japanese fusion/layout -> translation`；含 ASCII 字母/数字的 token 保留英文、型号、URL 与必要空格，纯日语继续走既有全角/点号边界，不增加 OCR 请求、改变 geometry、layout、预算或翻译 QA。
