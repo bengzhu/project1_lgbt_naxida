@@ -10336,3 +10336,8 @@ v3.310 已把普通图片非日语整页、人工修正、单块重试和 scoped
 本轮新增全角技术 token 支持：`FF10–FF19`、`FF21–FF3A`、`FF41–FF5A` 进入混合脚本候选/归一化；保真分支将完整 `FF01–FF5E` 映射到 ASCII，`FF0E` 纳入既有有界点号归一化。Vision 与 bundled Manga OCR 继续共用同一个 `JapaneseOCRTextNormalizer`，纯日语仍使用旧的全角标点 fallback。
 
 detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag/QA、取消、generation、持久化、非图片路径和 Koharu/GGUF/授权语料/目标设备证据边界不变。新增 `scripts/test-v3311-japanese-fullwidth-token-normalization-contract.py`，工程版本推进至 `3.311`，并接入 Japanese benchmark contract route；本地先完成无进程静态安全回归，云端 full 与合入 receipt 待验证，不把合同结果外推为 OCR/CER 或翻译质量证据。
+## v3.312：日语中点 OCR 保真（2026-08-21，研发中）
+
+当前 Vision、bundled Manga OCR 和共享混合脚本归一化把 `・` 与 ASCII 点号一起压缩；日语姓名、外来词和分隔词因此可能从 `ア・ニメ` 变成 `ア.ニメ`，损失原文标点语义。本轮的可证伪假设是：**若只把真正的 ASCII/全角句点与省略号纳入点号归一化，并让 U+30FB 中点原样保留，则日语 OCR 输入的姓名/外来词标点保真会提高，同时不改变候选选择、geometry/layout、请求预算或翻译边界。**
+
+实现边界：`JapaneseOCRTextNormalizer`、Vision Japanese fallback 和 bundled Manga OCR fallback 都停止把 U+30FB 计入 `dotCount`；ASCII `.`、全角 `．` 和 `…` 仍按既有规则处理。新增 `scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本推进至 `3.312`，CI Japanese benchmark contract route 已接入。Koharu/GPL、GGUF、授权语料和目标设备证据不参与本轮产品选择。

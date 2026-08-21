@@ -3523,7 +3523,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311/v3.312 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3562,6 +3562,7 @@ jobs:
           python3 -B scripts/test-v3309-image-ocr-scoped-provenance-contract.py
           python3 -B scripts/test-v3310-image-translation-qa-contract.py
           python3 -B scripts/test-v3311-japanese-fullwidth-token-normalization-contract.py
+          python3 -B scripts/test-v3312-japanese-middle-dot-fidelity-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3665,7 +3666,7 @@ jobs:
           corpus_readiness = json.loads((root / "japanese-corpus-readiness-report.json").read_text(encoding="utf-8"))
           legacy = json.loads((root / "japanese-ocr-legacy-reference-report.json").read_text(encoding="utf-8"))
           summary = "\n".join([
-              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311 Japanese benchmark",
+              "# v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311/v3.312 Japanese benchmark",
               "",
               "- OCR contract example status: " + ocr["status"],
               "- OCR legacy/reference status: " + legacy["status"] + " (excluded from accuracy)",
@@ -3735,7 +3736,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # Keep the prior artifact marker discoverable for historical
-          # contracts; the emitted artifact itself is versioned at v3.311.
+          # contracts; the emitted artifact itself is versioned at v3.312.
           # japanese-benchmark-v3.301-
           # japanese-benchmark-v3.302-
           # japanese-benchmark-v3.305-
@@ -3744,7 +3745,8 @@ jobs:
           # japanese-benchmark-v3.308-
           # japanese-benchmark-v3.309-
           # japanese-benchmark-v3.310-
-          name: japanese-benchmark-v3.311-${{ github.run_id }}
+          # japanese-benchmark-v3.311-
+          name: japanese-benchmark-v3.312-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json

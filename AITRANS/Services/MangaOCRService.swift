@@ -1385,10 +1385,12 @@ private struct MangaOCRRuntime {
         }
 
         for scalar in noWhitespace.unicodeScalars {
-            if scalar.value == 0x2E || scalar.value == 0x30FB {
+            if scalar.value == 0x2E || scalar.value == 0xFF0E {
                 dotCount += 1
                 continue
             }
+            // Preserve Japanese middle dots in names and loanwords instead
+            // of turning them into fullwidth periods.
             flushDots()
             collapsed.unicodeScalars.append(scalar)
         }

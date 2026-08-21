@@ -143,7 +143,7 @@ class MaskArtifactReadinessContractTests(unittest.TestCase):
 
     def test_project_version_is_v3291_and_history_remains_currently_versioned(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.311", "3.311"])
+        self.assertEqual(versions, ["3.312", "3.312"])
         self.assertIn("v3.291", self.update_log)
 
 

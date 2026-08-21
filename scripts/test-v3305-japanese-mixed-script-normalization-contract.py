@@ -43,7 +43,7 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
     def test_dot_and_punctuation_normalization_remain_bounded(self) -> None:
         for marker in [
             'replacingOccurrences(of: "…", with: "...")',
-            "scalar.value == 0x2E || scalar.value == 0x30FB",
+            "scalar.value == 0x2E || scalar.value == 0xFF0E",
             'String(repeating: ".", count: dotCount)',
             "0xFEE0",
         ]:
@@ -101,7 +101,7 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.311", "3.311"])
+        self.assertEqual(versions, ["3.312", "3.312"])
         self.assertIn(
             "python3 -B scripts/test-v3305-japanese-mixed-script-normalization-contract.py",
             self.workflow,

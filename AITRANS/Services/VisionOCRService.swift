@@ -852,11 +852,10 @@ struct VisionOCRService: Sendable {
         let withoutWhitespace = text.filter { !$0.isWhitespace }
             .replacingOccurrences(of: "…", with: "...")
 
-        // Keep Koharu's two-stage boundary explicit: collapse dot/middle-dot
-        // runs first, then apply halfwidth-to-fullwidth conversion to the
-        // collapsed result. Emitting the dots directly into the final output
-        // would leave them halfwidth while all other ASCII punctuation becomes
-        // fullwidth.
+        // Keep the two-stage boundary explicit: collapse true dot runs first,
+        // then apply halfwidth-to-fullwidth conversion to the collapsed
+        // result. Japanese middle dots are separators, not periods, so they
+        // remain U+30FB in the final OCR text.
         var collapsed = ""
         var dotCount = 0
         func flushDots() {
@@ -867,7 +866,7 @@ struct VisionOCRService: Sendable {
 
         for scalar in withoutWhitespace.unicodeScalars {
             switch scalar.value {
-            case 0x2E, 0x30FB:
+            case 0x2E, 0xFF0E:
                 dotCount += 1
             default:
                 flushDots()
