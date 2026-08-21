@@ -40,6 +40,7 @@ xcrun coremlcompiler compile \
 xcrun swiftc -parse-as-library \
   "$repo_root/AITRANS/Models/TranslationContextQuality.swift" \
   "$repo_root/AITRANS/Models/ImageOCRProvenance.swift" \
+  "$repo_root/AITRANS/Models/JapaneseOCRTextNormalizer.swift" \
   "$repo_root/AITRANS/Services/ImageOCRLayoutEngine.swift" \
   "$repo_root/AITRANS/Services/MangaOCRService.swift" \
   "$repo_root/AITRANS/Services/ComicTextBubbleDetectorService.swift" \

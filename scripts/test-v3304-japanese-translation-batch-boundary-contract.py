@@ -166,12 +166,12 @@ class JapaneseTranslationBatchBoundaryContractTests(unittest.TestCase):
         for marker in (
             "scripts/test-v3304-japanese-translation-batch-boundary-contract.py",
             "v3.304",
-            "japanese-benchmark-v3.305-",
+            "japanese-benchmark-v3.306-",
         ):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.305", "3.305"],
+            ["3.306", "3.306"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:

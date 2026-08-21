@@ -1,8 +1,18 @@
+## v3.306：修复混合脚本 OCR 候选偏好与历史 harness 接线（2026-08-21，进行中）
+
+v3.305 已把混合日语/拉丁文字归一化接到 Vision 与 bundled Manga OCR，但合入后 post-merge run [32440363618](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32440363618) 暴露了两个普通主路径边界：Vision candidate score 仍会用纯日语脚本密度压过高置信混合候选，且历史 Manga OCR runtime harness 直接编译 `MangaOCRService.swift` 时没有携带新共用 `JapaneseOCRTextNormalizer.swift`，主 bundle 的编译合同因此失败。
+
+本轮让 Vision 日语 candidate score 保持 confidence 主导，只对同时含日语脚本和 ASCII 字母/数字的候选增加有界 mixed-script fidelity hint；候选仍受既有 `bestConfidence - 0.14` 窄窗口约束，不改变 OCR request、candidate geometry、detector/line/block crop、方向、预算、layout、翻译、QA、取消、持久化或非日语路径。另将该 Models source 补入所有直接编译 Manga OCR/Vision 的历史 v3.214/v3.218/v3.238/v3.239/v3.245/v3.254/v3.259/v3.260/v3.264 harness，避免源文件在产品 target 中存在但 standalone compile 漏接。
+
+新增 `scripts/test-v3306-japanese-mixed-script-candidate-selection-contract.py`，工程版本推进至 `3.306`，benchmark contract route 同步更新。合同锁定 mixed signal 的日语+ASCII 双门控、confidence 主导与 bounded bonus、历史 runtime source closure、无 OCR/translation side effect 和现有路径边界；本轮不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+
 ## v3.305：保留混合日语/拉丁文字 OCR 的 token 保真（2026-08-20）
 
 普通日语图片 OCR 的后处理此前无条件删除空格并将 ASCII 字母、数字和 URL 分隔符转为全角；日语页面中的英文对白、型号、日期、路径和链接因此可能在翻译前被合并或改写。本轮只修复该输入保真缺口：当候选含 ASCII 字母/数字时，Vision 与 bundled Manga OCR 共用 `JapaneseOCRTextNormalizer`，保留拉丁/数字 token 的 ASCII 字符与相邻必要空格，同时继续压缩省略号/点号；不含 ASCII 字母/数字的纯日语候选继续使用原有全角标点 fallback。
 
-新增 `scripts/test-v3305-japanese-mixed-script-normalization-contract.py`，工程版本推进至 `3.305`，接入 Japanese benchmark contract route。该 helper 不调用 OCR、翻译或 Store，不增加请求，也不改变 detector、crop/warp、geometry/layout、候选选择、预算、QA、取消、持久化或非日语路径。本地验证与云端 full/PR/merge receipt 待本轮完成；本轮不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+新增 `scripts/test-v3305-japanese-mixed-script-normalization-contract.py`，工程版本推进至 `3.305`，接入 Japanese benchmark contract route。该 helper 不调用 OCR、翻译或 Store，不增加请求，也不改变 detector、crop/warp、geometry/layout、候选选择、预算、QA、取消、持久化或非日语路径。本地安全合同与 PR full 已通过；本轮不声称真实 OCR/CER、翻译盲评、GGUF、授权语料、目标设备或 v3.289 holdout 证据。
+
+精确实现 SHA `19854acfa9f37213fa3592aa76632669cb473d70` 的 PR [#369](https://github.com/bengzhu/project1_lgbt_naxida/pull/369) full [32440198386](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32440198386) 成功：Japanese benchmark `96649209341`、主 bundle/Xcode/JUnit/manifest/receipt `96649296050` 全部通过，Koharu `96649209924` 按默认可选策略跳过。PR 以 merge SHA `d43d463bf61f5c92200170fb8ec9359b443d2a44` 合入 `smalldata_test`；合入后 push [32440363618](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32440363618) 的 benchmark `96649695552` 成功、Koharu `96649696285` 跳过，但主 bundle `96649749169` 因历史 standalone Manga OCR harness 漏带 `JapaneseOCRTextNormalizer.swift` 编译失败，不能记录为 `AITRANS CI/full-validation=success`。该集成缺口由 v3.306 修复，`main` 未修改。
 
 ## v3.304：稳定日语图片 batch identity，收紧忽略/修正后的跨批次 context（2026-08-20）
 

@@ -4,6 +4,15 @@ import Foundation
 /// pure-Japanese normalization path. Vision and bundled Manga OCR both feed
 /// their Japanese candidates through this boundary before fusion/layout.
 enum JapaneseOCRTextNormalizer {
+    /// Identifies a Japanese candidate whose Latin/number tokens are part of
+    /// the OCR signal, rather than incidental punctuation. Vision candidate
+    /// selection uses this as a bounded fidelity hint before the shared
+    /// post-processing boundary runs.
+    static func hasMixedJapaneseAndASCII(_ text: String) -> Bool {
+        containsASCIIWord(text)
+            && text.unicodeScalars.contains(where: containsJapaneseScript)
+    }
+
     /// Returns a normalized mixed-script candidate when the text contains an
     /// ASCII letter or digit; otherwise returns nil so callers can retain the
     /// historical pure-Japanese post-processing implementation.
@@ -42,6 +51,17 @@ enum JapaneseOCRTextNormalizer {
             (0x30...0x39).contains(scalar.value)
                 || (0x41...0x5A).contains(scalar.value)
                 || (0x61...0x7A).contains(scalar.value)
+        }
+    }
+
+    private static func containsJapaneseScript(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x3040...0x30FF, 0x3400...0x4DBF,
+             0x4E00...0x9FFF, 0xF900...0xFAFF,
+             0xFF66...0xFF9D:
+            return true
+        default:
+            return false
         }
     }
 

@@ -130,7 +130,7 @@ class ImageReviewDirectionFilterFocusContractTests(unittest.TestCase):
         )
         self.assertEqual(
             set(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)),
-            {"3.305"},
+            {"3.306"},
         )
         self.assertIn(
             "python3 -B scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py",
