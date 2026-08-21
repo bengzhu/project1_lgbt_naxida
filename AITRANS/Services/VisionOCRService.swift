@@ -900,8 +900,22 @@ struct VisionOCRService: Sendable {
         // Japanese-script candidate. This avoids replacing a strong result with
         // a speculative alternative while recovering common vertical glyph
         // substitutions that Vision reports just below top-1.
-        return candidates
-            .filter { $0.confidence >= bestConfidence - 0.14 }
+        let confidenceWindow = candidates.filter {
+            $0.confidence >= bestConfidence - 0.14
+        }
+        // Vision can return a high-confidence punctuation or symbol-only
+        // alternative for a glyph row whose nearby candidate contains actual
+        // Japanese letters. Prefer letter-bearing content within the same
+        // bounded confidence window so punctuation cannot replace a usable
+        // OCR word; retain the old window when no letter-bearing candidate
+        // exists because punctuation-only Japanese text is still valid input.
+        let letterBearingCandidates = confidenceWindow.filter {
+            japaneseLetterCountForRecovery(postProcessJapaneseOCRText($0.string)) > 0
+        }
+        let candidatesToScore = letterBearingCandidates.isEmpty
+            ? confidenceWindow
+            : letterBearingCandidates
+        return candidatesToScore
             .max { lhs, rhs in
                 japaneseCandidateScore(lhs) < japaneseCandidateScore(rhs)
             }

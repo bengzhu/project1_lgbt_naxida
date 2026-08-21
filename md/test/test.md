@@ -1,3 +1,9 @@
+### v3.314 日语 OCR 候选内容优先合同（研发中）
+
+- Vision 日语候选继续使用原有 `bestConfidence - 0.14` 窄窗口；若窗口内存在含日语字母的候选，优先在该窗口内评分，避免标点/符号-only候选压过可用文字；窗口内没有日语字母时保留历史候选，兼容合法符号-only文字。
+- 只改变 `selectOCRCandidate` 的候选选择，不增加 OCR 请求、crop/warp、detector、geometry/layout、owner、预算、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备只作为可选研究/质量证明，不是普通 `test/jap.jpg` 修复的阻塞条件。新合同：`scripts/test-v3314-japanese-ocr-candidate-content-contract.py`，工程版本为 `3.314`。
+- 本轮先做安全静态合同与云端 exact-SHA full；未运行本机 Xcode/Swift/Core ML/Rust/GGUF/App runtime 或漫画探针，不把该内容 gate 单独外推为通用 OCR/CER 或翻译质量证明。
+
 ### v3.313 跨批次翻译 context identity/language 合同（已完成）
 
 - `TranslationReadOnlyBatchSummary.isEligibleForPrompt` 现在要求非空 batch identity、每个 item 的 ordinal 唯一且严格连续递增、source/target excerpt 非空；新增 source/target language overload，必须与当前翻译请求精确一致。

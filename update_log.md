@@ -1,3 +1,13 @@
+## v3.314：日语 OCR 候选内容优先 gate（2026-08-21，研发中）
+
+本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现 `VisionOCRService.selectOCRCandidate` 在原有窄置信度窗口内只按 confidence、日语脚本密度和标点密度评分；当 Vision 给出高置信标点/符号-only alternative，而相邻候选包含实际日语字母时，符号候选可能替换可用文字，随后造成漏字或错误 block 输入。
+
+可证伪假设：**如果同一置信度窗口内存在含日语字母的候选，就先在这些文字候选中使用既有评分；只有窗口内完全没有日语字母候选时才回退到完整窗口，那么标点/符号-only alternative 不会覆盖可用日语文字，同时合法的符号-only文字仍可保留。**
+
+实现只收紧 `selectOCRCandidate` 的局部候选选择：保留 `bestConfidence - 0.14` 窗口，增加 letter-bearing content preference，窗口内没有日语字母时沿用历史 fallback。OCR 请求数量、Vision/Manga OCR、detector、crop/warp、geometry/layout、owner、8 blocks/1,800 chars、翻译 tag/QA、取消、generation、持久化、UI、renderer/export 和非日语路径不变；Koharu 对比、真实 GGUF、授权语料和目标设备证据属于可选研究/质量证明，不阻塞普通 `test/jap.jpg` OCR/翻译修复。
+
+新增 `scripts/test-v3314-japanese-ocr-candidate-content-contract.py`，工程版本推进至 `3.314`，CI Japanese benchmark contract route 已接入。本轮尚未记录云端 receipt；不把静态合同或固定回归页外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
+
 ## v3.313：跨批次翻译 context identity/language fail-closed（2026-08-21，已完成）
 
 v3.307–v3.312 已让上一完成 batch 的只读摘要进入日语图片 prompt/QA，但审计发现 `TranslationReadOnlyBatchSummary` 仍接受重复或跳号 ordinal，且 decoded/transient summary 没有与当前 source/target language 做身份绑定；旧 context 可能因此被错误复用，或在 QA 的 previous-context leakage 检查中继续生效。

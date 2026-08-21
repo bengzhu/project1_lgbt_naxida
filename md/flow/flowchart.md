@@ -1,4 +1,5 @@
 # 项目流程图
+v3.314 日语 OCR 候选内容 gate：`Vision top candidates -> bounded confidence window -> prefer letter-bearing Japanese candidate -> existing OCR fusion/layout`；有文字候选时不让符号-only候选替换它，窗口无文字候选时保留历史 fallback，不增加请求或改变翻译/布局边界。
 v3.313 跨批次 context 完整性：`completed batch summary -> identity/strict-ordinal validation -> request source/target binding -> normalized prompt/QA context -> tagged translation`；未绑定、错语言、重复/跳号或不完整摘要 fail closed，不影响当前 block、OCR、取消或持久化边界。
 v3.312 日语中点保真：`Vision/Manga OCR -> true-period/ellipsis normalization while preserving U+30FB -> existing Japanese fusion/layout -> translation QA`；姓名/外来词中的 `・` 不再被改写为 `.`，不增加 OCR 请求、不改变 candidate、geometry、budget、layout、取消或持久化边界。
 v3.311 全角技术 token：`Vision/Manga OCR -> fullwidth Latin/digit detection -> bounded FF01–FF5E ASCII canonicalization -> shared Japanese normalization -> existing fusion/layout/translation QA`；只修复混合脚本 token 保真，纯日语继续走既有标点 fallback，不增加请求、不改变 geometry、budget、layout、取消或持久化边界。
