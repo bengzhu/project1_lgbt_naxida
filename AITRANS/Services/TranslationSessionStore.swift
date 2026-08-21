@@ -2740,6 +2740,11 @@ final class TranslationSessionStore: ObservableObject {
                 replacement.original = recognizedOriginal
                 replacement.translation = cleanTranslation
                 replacement.confidence = recognized.confidence
+                // The accepted scoped candidate owns the diagnostic OCR
+                // provenance as well as the replacement text. Keeping the
+                // old provenance would disclose the previous engine/crop or
+                // rotation after a successful reread.
+                replacement.ocrProvenance = recognized.ocrProvenance
                 // Scoped OCR can change the Japanese text shape. Carry the
                 // reconciled automatic SFX hint with the accepted OCR result;
                 // otherwise this block would still be translated with its
