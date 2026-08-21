@@ -1,4 +1,4 @@
-## v3.314：日语 OCR 候选内容优先 gate（2026-08-21，研发中）
+## v3.314：日语 OCR 候选内容优先 gate（2026-08-21，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现 `VisionOCRService.selectOCRCandidate` 在原有窄置信度窗口内只按 confidence、日语脚本密度和标点密度评分；当 Vision 给出高置信标点/符号-only alternative，而相邻候选包含实际日语字母时，符号候选可能替换可用文字，随后造成漏字或错误 block 输入。
 
@@ -6,7 +6,9 @@
 
 实现只收紧 `selectOCRCandidate` 的局部候选选择：保留 `bestConfidence - 0.14` 窗口，增加 letter-bearing content preference，窗口内没有日语字母时沿用历史 fallback。OCR 请求数量、Vision/Manga OCR、detector、crop/warp、geometry/layout、owner、8 blocks/1,800 chars、翻译 tag/QA、取消、generation、持久化、UI、renderer/export 和非日语路径不变；Koharu 对比、真实 GGUF、授权语料和目标设备证据属于可选研究/质量证明，不阻塞普通 `test/jap.jpg` OCR/翻译修复。
 
-新增 `scripts/test-v3314-japanese-ocr-candidate-content-contract.py`，工程版本推进至 `3.314`，CI Japanese benchmark contract route 已接入。本轮尚未记录云端 receipt；不把静态合同或固定回归页外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
+新增 `scripts/test-v3314-japanese-ocr-candidate-content-contract.py`，工程版本推进至 `3.314`，CI Japanese benchmark contract route 已接入。本地安全回归为 313 个确认无进程入口合同全部通过；27 个实际含 `subprocess` 入口的历史合同按约束跳过；360 个 Python AST、144 个 JSON、3 个 workflow YAML、32 个 shell、4 个 plist、工程版本两处 `3.314` 与 `git diff --check` 全部通过。未运行本机 Xcode/Swift/Core ML/Rust/GGUF/App runtime 或漫画探针。
+
+精确实现 SHA `4b4b177d363ec5294d4e3d9a7c624341ba7f6605` 的 full [32486507817](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32486507817) 成功：Japanese benchmark `96784141962`、主 bundle/Xcode/UI/Home/Paste/Speech、simulator manga probe、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt `96784256948` 全部通过；Koharu parity `96784143176` 按 `koharu_parity_required=false` 跳过。PR [#378](https://github.com/bengzhu/project1_lgbt_naxida/pull/378) fast [32489114544](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32489114544) 成功，并以 merge SHA `c32eb3915a0ae150df5dcd311101848e261e531f` 合入 `smalldata_test`；合入后 push CI [32489275585](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32489275585) 的 benchmark `96792860439`、主 bundle/receipt `96792981844` 成功，Koharu `96792861586` 跳过。`main` 未修改，研发分支已清理。该版本只收紧普通 Vision OCR 候选内容 gate，不把静态合同、固定回归页或云端工程回归外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证明。
 
 ## v3.313：跨批次翻译 context identity/language fail-closed（2026-08-21，已完成）
 

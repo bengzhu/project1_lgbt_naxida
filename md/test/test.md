@@ -1,8 +1,9 @@
-### v3.314 日语 OCR 候选内容优先合同（研发中）
+### v3.314 日语 OCR 候选内容优先合同（已完成）
 
 - Vision 日语候选继续使用原有 `bestConfidence - 0.14` 窄窗口；若窗口内存在含日语字母的候选，优先在该窗口内评分，避免标点/符号-only候选压过可用文字；窗口内没有日语字母时保留历史候选，兼容合法符号-only文字。
 - 只改变 `selectOCRCandidate` 的候选选择，不增加 OCR 请求、crop/warp、detector、geometry/layout、owner、预算、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备只作为可选研究/质量证明，不是普通 `test/jap.jpg` 修复的阻塞条件。新合同：`scripts/test-v3314-japanese-ocr-candidate-content-contract.py`，工程版本为 `3.314`。
-- 本轮先做安全静态合同与云端 exact-SHA full；未运行本机 Xcode/Swift/Core ML/Rust/GGUF/App runtime 或漫画探针，不把该内容 gate 单独外推为通用 OCR/CER 或翻译质量证明。
+- 本地安全回归：313 个确认无进程入口合同全部通过；27 个实际含 `subprocess` 入口的历史合同按约束跳过；Python AST `360/360`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、工程版本两处 `3.314` 与 `git diff --check` 通过。未运行本机 Xcode/Swift/Core ML/Rust/GGUF/App runtime 或漫画探针。
+- 精确实现 SHA `4b4b177d363ec5294d4e3d9a7c624341ba7f6605` 的 full [32486507817](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32486507817) 成功：benchmark、静态、UI/Home/Paste、Xcode、simulator manga probe、JUnit/manifest 与 full receipt 全部通过；Koharu parity 按 `koharu_parity_required=false` 跳过。PR [#378](https://github.com/bengzhu/project1_lgbt_naxida/pull/378) fast [32489114544](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32489114544) 成功，以 merge SHA `c32eb3915a0ae150df5dcd311101848e261e531f` 合入 `smalldata_test`；合入后 push CI [32489275585](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32489275585) 成功。`main` 未修改，不把本版外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
 
 ### v3.313 跨批次翻译 context identity/language 合同（已完成）
 
