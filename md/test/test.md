@@ -1,8 +1,9 @@
-### v3.312 日语中点 OCR 保真合同
+### v3.312 日语中点 OCR 保真合同（已完成）
 
 - Vision、bundled Manga OCR 与共享 `JapaneseOCRTextNormalizer` 不再把 U+30FB `・` 当作 ASCII 句点；真正的 `.`、`．` 和 `…` 仍走原有有界点号归一化。
 - 该修复只影响 OCR 文本后处理，保留中点在姓名/外来词中的语义；不新增 OCR/翻译请求，不改变 detector、crop/warp、candidate、geometry/layout、预算、翻译 QA、取消、generation、持久化或 Koharu 可选研究边界。
-- 新合同：`scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本为 `3.312`；本轮只记录静态边界，未运行本机 Xcode、Swift/Core ML、Rust/GGUF/App runtime。
+- 新合同：`scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本为 `3.312`。本地安全回归为 297 个无进程入口合同通过、41 个含进程/编译/runtime 入口的历史合同跳过；Python AST 564/564、有效 JSON 237/239（2 个既有 JSONC 配置跳过）、workflow YAML 3/3、shell 32/32、4 个 plist 加 `project.pbxproj` lint 与 `git diff --check` 通过。未运行本机 Xcode、Swift/Core ML、Rust/GGUF/App runtime。
+- 精确实现 SHA `6d9ff5ef3b9b13dab9f48c594f115f4db3c8ffa6` 的 full [32468044159](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32468044159)、PR [#376](https://github.com/bengzhu/project1_lgbt_naxida/pull/376) 检查 [32469076433](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32469076433)、merge SHA `d62144fef56a17bbff0908cd4e00106d9c71a357` 与合入后 CI [32469195740](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32469195740) 全部成功；Koharu parity 按可选策略跳过。本轮不声称通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 证据。
 
 ### v3.311 全角日语技术 token 归一化合同
 

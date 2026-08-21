@@ -1,3 +1,13 @@
+## v3.312：日语中点 OCR 保真（2026-08-21，已完成）
+
+当前 Vision、bundled Manga OCR 和共享混合脚本归一化把 U+30FB `・` 与 ASCII 点号一起压缩；日语姓名、外来词和分隔词因此可能从 `ア・ニメ` 变成 `ア.ニメ`。本轮只让真正的 ASCII/全角句点与省略号进入点号归一化，并让中点原样保留；候选选择、geometry/layout、请求预算和翻译边界不变。
+
+实现边界：`JapaneseOCRTextNormalizer`、Vision Japanese fallback 和 bundled Manga OCR fallback 都停止把 U+30FB 计入 `dotCount`；ASCII `.`、全角 `．` 与 `…` 仍按既有规则归一化。新增 `scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本推进至 `3.312`，CI Japanese benchmark contract route 已接入。Koharu/GPL、GGUF、授权语料和目标设备证据仍不参与本轮产品选择。
+
+本地安全回归：297 个确认无进程入口合同通过，41 个含进程/编译/runtime 入口的历史合同按约束跳过；Python AST 564/564、有效 JSON 237/239（2 个既有 JSONC 配置跳过）、workflow YAML 3/3、shell 32/32、4 个 plist 加 `project.pbxproj` lint 与 `git diff --check` 通过。未运行本地 Xcode、Swift、Core ML、Rust、GGUF 或 App runtime。
+
+精确实现 SHA `6d9ff5ef3b9b13dab9f48c594f115f4db3c8ffa6` 的 full [32468044159](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32468044159) 成功：benchmark `96728777833`、主 bundle/Xcode/UI/Home/Paste/Speech/JUnit/manifest/receipt `96728871404` 全部通过，Koharu `96728778968` 按 `koharu_parity_required=false` 跳过。PR [#376](https://github.com/bengzhu/project1_lgbt_naxida/pull/376) 检查 [32469076433](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32469076433) 成功，并以 merge SHA `d62144fef56a17bbff0908cd4e00106d9c71a357` 合入 `smalldata_test`；合入后 push CI [32469195740](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32469195740) 成功。`main` 未修改，研发分支已清理。本轮证据不代表通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证明。
+
 ## v3.311：全角日语技术 token 保真（2026-08-21，已完成）
 
 v3.305/v3.306 已让混合日语/ASCII token 走共享归一化，但边界只覆盖半角 ASCII；Vision 或 bundled Manga OCR 输出 `ＡＢＣ１２３` 时，候选可能回落到纯日语后处理，导致英文/型号/日期 token 被改写或边界丢失。本轮把全角数字 `FF10–FF19`、拉丁大/小写 `FF21–FF3A`/`FF41–FF5A` 纳入混合脚本文字边界，并在保真分支将 `FF01–FF5E` 映射为 ASCII；全角句点 `FF0E` 继续进入有界点号归一化。
