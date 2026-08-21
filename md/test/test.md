@@ -1,3 +1,9 @@
+### v3.315 日语 OCR Unicode 规范化合同（进行中）
+
+- 新增共享 `JapaneseOCRTextNormalizer.canonicalized`，Vision 与 bundled Manga OCR 在既有日语后处理前先使用 Unicode canonical composition；日语 dedupe 仅在比较时增加 width-insensitive folding，因此组合字符/宽度等价输出不会留下重复观察，最终 OCR 文本边界仍保持既有规则。
+- 只改变 OCR 文本规范化和日语观察比较，不增加 OCR 请求、crop/warp、detector、candidate 分数、geometry/layout、owner、预算、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证明。
+- 新合同：`scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py`，工程版本为 `3.315`；云端 Japanese benchmark route 已接入。本地安全回归与 exact-SHA full/PR/merge receipt 待完成，未把本轮实现外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+
 ### v3.314 日语 OCR 候选内容优先合同（已完成）
 
 - Vision 日语候选继续使用原有 `bestConfidence - 0.14` 窄窗口；若窗口内存在含日语字母的候选，优先在该窗口内评分，避免标点/符号-only候选压过可用文字；窗口内没有日语字母时保留历史候选，兼容合法符号-only文字。

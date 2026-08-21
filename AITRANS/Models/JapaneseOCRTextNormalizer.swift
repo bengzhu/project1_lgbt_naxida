@@ -4,6 +4,15 @@ import Foundation
 /// pure-Japanese normalization path. Vision and bundled Manga OCR both feed
 /// their Japanese candidates through this boundary before fusion/layout.
 enum JapaneseOCRTextNormalizer {
+    /// Canonicalize equivalent Unicode sequences before OCR text is scored,
+    /// compared, or passed into the shared post-processing boundary. Vision
+    /// and the bundled decoder can emit a precomposed kana or its combining
+    /// mark sequence for the same glyph; keeping one canonical form prevents
+    /// those equivalent reads from becoming separate layout candidates.
+    static func canonicalized(_ text: String) -> String {
+        text.precomposedStringWithCanonicalMapping
+    }
+
     /// Identifies a Japanese candidate whose Latin/number tokens are part of
     /// the OCR signal, rather than incidental punctuation. Fullwidth Latin
     /// letters and digits are included because Vision may emit `ＡＢＣ１２３`
@@ -19,7 +28,7 @@ enum JapaneseOCRTextNormalizer {
     /// ASCII letter or digit; otherwise returns nil so callers can retain the
     /// historical pure-Japanese post-processing implementation.
     static func mixedScriptCandidate(_ text: String) -> String? {
-        let tokens = text
+        let tokens = canonicalized(text)
             .split(whereSeparator: { $0.isWhitespace })
             .map(String.init)
         guard !tokens.isEmpty,

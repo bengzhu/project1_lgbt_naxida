@@ -42,7 +42,8 @@ class JapaneseMangaOCRPostProcessContractTests(unittest.TestCase):
 
     def test_koharu_order_collapses_dots_before_fullwidth_conversion(self) -> None:
         for marker in [
-            "let noWhitespace = text.filter { !$0.isWhitespace }",
+            "let canonicalText = JapaneseOCRTextNormalizer.canonicalized(text)",
+            "let noWhitespace = canonicalText.filter { !$0.isWhitespace }",
             '.replacing("…", with: "...")',
             "var collapsed = \"\"",
             "func flushDots()",

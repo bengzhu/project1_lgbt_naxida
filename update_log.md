@@ -1,3 +1,11 @@
+## v3.315：日语 OCR Unicode 规范化（2026-08-22，进行中）
+
+本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现 Vision 与 bundled Manga OCR 对同一日语 glyph 可能输出预组字符/combining-mark 序列或不同宽度形式；当前文本后处理和日语观察比较未完全统一这些等价表示，可能造成重复 observation 或不稳定 dedupe。
+
+可证伪假设：**如果 OCR 文本在既有日语后处理前先做 Unicode canonical composition，且日语 dedupe 比较增加 width-insensitive folding，那么等价的组合字符/宽度输出可以稳定合并，而 OCR 请求、候选分数、geometry/layout、翻译 QA、取消与持久化边界保持不变。**
+
+实现：新增共享 `JapaneseOCRTextNormalizer.canonicalized`；Vision 与 Manga OCR 日语 post-process 先 canonicalize；Vision 的日语 `normalizedOCRText` 只在 `prefersJapanese` 比较中使用 canonical + case/diacritic/width-insensitive folding。新增 `scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py`，工程版本推进至 `3.315`，CI Japanese benchmark contract route 接入。当前仍待本地安全回归与 exact-SHA 云端 full/PR/merge receipt，不把本轮静态合同外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.314：日语 OCR 候选内容优先 gate（2026-08-21，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现 `VisionOCRService.selectOCRCandidate` 在原有窄置信度窗口内只按 confidence、日语脚本密度和标点密度评分；当 Vision 给出高置信标点/符号-only alternative，而相邻候选包含实际日语字母时，符号候选可能替换可用文字，随后造成漏字或错误 block 输入。

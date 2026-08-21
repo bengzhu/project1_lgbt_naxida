@@ -846,10 +846,11 @@ struct VisionOCRService: Sendable {
     /// Vision's candidate string is still the source of geometry; this only
     /// removes recognition formatting noise before layout, dedupe, and translation.
     private static func postProcessJapaneseOCRText(_ text: String) -> String {
+        let canonicalText = JapaneseOCRTextNormalizer.canonicalized(text)
         if let mixedScriptCandidate = JapaneseOCRTextNormalizer.mixedScriptCandidate(text) {
             return mixedScriptCandidate
         }
-        let withoutWhitespace = text.filter { !$0.isWhitespace }
+        let withoutWhitespace = canonicalText.filter { !$0.isWhitespace }
             .replacingOccurrences(of: "…", with: "...")
 
         // Keep the two-stage boundary explicit: collapse true dot runs first,
@@ -4457,6 +4458,19 @@ struct VisionOCRService: Sendable {
         let leftText = normalizedOCRText(lhs.text)
         let rightText = normalizedOCRText(rhs.text)
         guard !leftText.isEmpty, !rightText.isEmpty else { return overlap >= 0.72 }
+        if prefersJapanese {
+            let widthInsensitiveLeftText = normalizedOCRText(
+                lhs.text,
+                widthInsensitive: true
+            )
+            let widthInsensitiveRightText = normalizedOCRText(
+                rhs.text,
+                widthInsensitive: true
+            )
+            if widthInsensitiveLeftText == widthInsensitiveRightText {
+                return true
+            }
+        }
         if leftText == rightText || leftText.contains(rightText) || rightText.contains(leftText) {
             return true
         }
@@ -4501,8 +4515,18 @@ struct VisionOCRService: Sendable {
         return intersection / union
     }
 
-    private static func normalizedOCRText(_ text: String) -> String {
-        text.lowercased().filter { $0.isLetter || $0.isNumber }
+    private static func normalizedOCRText(
+        _ text: String,
+        widthInsensitive: Bool = false
+    ) -> String {
+        let canonicalText = JapaneseOCRTextNormalizer.canonicalized(text)
+        let comparedText = widthInsensitive
+            ? canonicalText.folding(
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                locale: .current
+            )
+            : canonicalText.lowercased()
+        return comparedText.filter { $0.isLetter || $0.isNumber }
     }
 
     private static func textSimilarity(_ lhs: String, _ rhs: String) -> Double {

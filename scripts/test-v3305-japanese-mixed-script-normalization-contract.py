@@ -61,11 +61,11 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
         )
         self.assertLess(
             self.vision.index("JapaneseOCRTextNormalizer.mixedScriptCandidate(text)"),
-            self.vision.index("let withoutWhitespace = text.filter"),
+            self.vision.index("let withoutWhitespace = canonicalText.filter"),
         )
         self.assertLess(
             self.manga.index("JapaneseOCRTextNormalizer.mixedScriptCandidate(text)"),
-            self.manga.index("let noWhitespace = text.filter"),
+            self.manga.index("let noWhitespace = canonicalText.filter"),
         )
 
     def test_normalizer_is_product_source_without_ocr_or_translation_side_effects(self) -> None:
@@ -101,7 +101,7 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.314", "3.314"])
+        self.assertEqual(versions, ["3.315", "3.315"])
         self.assertIn(
             "python3 -B scripts/test-v3305-japanese-mixed-script-normalization-contract.py",
             self.workflow,
