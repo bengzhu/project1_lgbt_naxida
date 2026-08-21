@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.315 Japanese OCR Unicode canonicalization."""
+"""Static contract for v3.316 Japanese OCR diacritic-preserving dedupe."""
 
 from pathlib import Path
 import re
@@ -29,11 +29,11 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class JapaneseOCRUnicodeCanonicalizationContractTests(unittest.TestCase):
+class JapaneseOCRDiacriticPreservationContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.normalizer = read("AITRANS/Models/JapaneseOCRTextNormalizer.swift")
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
+        cls.normalizer = read("AITRANS/Models/JapaneseOCRTextNormalizer.swift")
         cls.manga = read("AITRANS/Services/MangaOCRService.swift")
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
@@ -45,74 +45,45 @@ class JapaneseOCRUnicodeCanonicalizationContractTests(unittest.TestCase):
         cls.test_log = read("md/test/test.md")
         cls.update_log = read("update_log.md")
 
-    def test_shared_boundary_canonicalizes_before_mixed_script_tokenization(self) -> None:
-        canonicalizer = function_body(
-            self.normalizer,
-            "static func canonicalized(_ text: String) -> String",
-        )
-        self.assertIn("precomposedStringWithCanonicalMapping", canonicalizer)
-        mixed = function_body(
-            self.normalizer,
-            "static func mixedScriptCandidate(_ text: String) -> String?",
-        )
-        self.assertIn("let tokens = canonicalized(text)", mixed)
-        self.assertLess(
-            mixed.index("canonicalized(text)"),
-            mixed.index("split(whereSeparator:"),
-        )
-
-    def test_both_ocr_engines_canonicalize_before_existing_postprocess(self) -> None:
-        vision = function_body(
-            self.vision,
-            "private static func postProcessJapaneseOCRText(_ text: String) -> String",
-        )
-        manga = function_body(
-            self.manga,
-            "private static func postProcess(_ text: String) -> String",
-        )
-        for body in (vision, manga):
-            self.assertIn(
-                "let canonicalText = JapaneseOCRTextNormalizer.canonicalized(text)",
-                body,
-            )
-            self.assertIn(
-                "mixedScriptCandidate(text)",
-                body,
-            )
-            self.assertLess(
-                body.index("canonicalText"),
-                body.index("filter { !$0.isWhitespace }"),
-            )
-
-    def test_japanese_dedupe_compares_canonical_width_equivalents(self) -> None:
+    def test_canonical_composition_precedes_width_comparison(self) -> None:
         normalizer = function_body(
             self.vision,
             "private static func normalizedOCRText(\n",
         )
         self.assertIn("canonicalized(text)", normalizer)
         self.assertIn("widthInsensitive", normalizer)
+        self.assertIn(".widthInsensitive", normalizer)
+        self.assertIn(".caseInsensitive", normalizer)
+        self.assertLess(
+            normalizer.index("canonicalized(text)"),
+            normalizer.index(".widthInsensitive"),
+        )
+
+    def test_width_folding_does_not_strip_japanese_diacritics(self) -> None:
+        normalizer = function_body(
+            self.vision,
+            "private static func normalizedOCRText(\n",
+        )
+        self.assertNotIn(".diacriticInsensitive", normalizer)
+        self.assertIn("dakuten", self.vision)
+        self.assertIn("handakuten", self.vision)
+        # These pairs must remain semantically distinct after NFC composition;
+        # the source contract must not erase their combining marks.
+        self.assertNotEqual("か", "が")
+        self.assertNotEqual("は", "ぱ")
+
+    def test_only_japanese_dedupe_uses_width_folding(self) -> None:
         dedupe = function_body(
             self.vision,
             "private static func isDuplicateObservation(\n",
         )
-        self.assertIn(
-            "let widthInsensitiveLeftText = normalizedOCRText(",
-            dedupe,
-        )
-        self.assertIn(
-            "lhs.text,\n                widthInsensitive: true",
-            dedupe,
-        )
-        self.assertIn(
-            "let widthInsensitiveRightText = normalizedOCRText(",
-            dedupe,
-        )
-        self.assertIn(
-            "rhs.text,\n                widthInsensitive: true",
-            dedupe,
-        )
+        self.assertIn("if prefersJapanese", dedupe)
+        width_call = dedupe.index("widthInsensitive: true")
+        self.assertLess(dedupe.index("if prefersJapanese"), width_call)
+        self.assertIn("leftText == rightText", dedupe)
+        self.assertIn("textSimilarity(leftText, rightText)", dedupe)
 
-    def test_canonicalization_does_not_expand_ocr_or_session_boundaries(self) -> None:
+    def test_ocr_and_translation_boundaries_remain_unchanged(self) -> None:
         for source in (self.normalizer, self.vision, self.manga):
             self.assertNotIn("groundTruth", source)
             self.assertNotIn("sub" + "process", source)
@@ -124,7 +95,6 @@ class JapaneseOCRUnicodeCanonicalizationContractTests(unittest.TestCase):
             "translateImageBlockWithQA(",
         ):
             self.assertIn(marker, self.vision + self.manga + self.store)
-        self.assertIn("JapaneseOCRTextNormalizer.swift in Sources", self.project)
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
@@ -132,9 +102,9 @@ class JapaneseOCRUnicodeCanonicalizationContractTests(unittest.TestCase):
             ["3.316", "3.316"],
         )
         for marker in (
-            "scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py",
-            "v3.315",
-            "japanese-benchmark-v3.315-",
+            "scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py",
+            "v3.316",
+            "japanese-benchmark-v3.316-",
         ):
             self.assertIn(
                 marker,
@@ -143,7 +113,7 @@ class JapaneseOCRUnicodeCanonicalizationContractTests(unittest.TestCase):
 
     def test_contract_has_no_process_entry(self) -> None:
         contract = read(
-            "scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py"
+            "scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py"
         )
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)

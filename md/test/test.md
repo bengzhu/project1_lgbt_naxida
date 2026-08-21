@@ -1,3 +1,9 @@
+### v3.316 日语 OCR 浊音/半浊音保真合同（进行中）
+
+- v3.315 的宽度无关去重同时使用 `diacriticInsensitive`，会在重叠 geometry 下抹掉日语 combining dakuten/handakuten 的差异；本轮保留 Unicode canonical composition 与 width-insensitive folding，但移除 diacritic-insensitive 选项，使 `か/が`、`は/ぱ` 等不同 kana 不被误合并。
+- 只改变日语 observation 比较，不增加 OCR 请求、crop/warp、detector、candidate 分数、geometry/layout、owner、预算、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证明。
+- 新合同：`scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py`，工程版本为 `3.316`；云端 Japanese benchmark route 已接入。本轮尚未记录云端 receipt，不把静态合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+
 ### v3.315 日语 OCR Unicode 规范化合同（已完成）
 
 - 新增共享 `JapaneseOCRTextNormalizer.canonicalized`，Vision 与 bundled Manga OCR 在既有日语后处理前先使用 Unicode canonical composition；日语 dedupe 仅在比较时增加 width-insensitive folding，因此组合字符/宽度等价输出不会留下重复观察，最终 OCR 文本边界仍保持既有规则。
