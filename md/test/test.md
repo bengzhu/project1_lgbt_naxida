@@ -1,3 +1,9 @@
+### v3.309 scoped OCR provenance handoff 合同
+
+- 接受的 scoped OCR 候选现在与新文字、置信度、SFX 类型提示一起替换 block 的 `ocrProvenance`，复查 disclosure 不再显示旧的引擎、crop 或旋转来源。
+- 既有 transient Vision baseline/restore 路径保持不变；block identity、geometry、布局、翻译 QA、取消、review progress 和持久化边界不变，不增加 OCR 请求，也不依赖 Koharu artifact。
+- 新合同：`scripts/test-v3309-image-ocr-scoped-provenance-contract.py`，工程版本为 `3.309`；本机只运行安全静态合同，未运行本机 Xcode、Swift/Core ML、Rust/GGUF、App runtime 或漫画探针。
+
 ### v3.308 日语图片 scoped OCR 候选门合同
 
 - 同一已有日语 block 的 scoped reread 先保留 bundled Manga OCR 结果，再运行既有 bounded Vision crop 方向候选；垂直最多 `[270, 90]`、横排 `[0]`、方向未知最多 `[270, 90, 0]`，取消继续由当前 task guard 传播。
