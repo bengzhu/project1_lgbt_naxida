@@ -242,7 +242,7 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         self.assertIn("v3.285", self.route)
         self.assertIn("GT 隔离", self.route)
         self.assertIn("rollback", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.313", "3.313"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.314", "3.314"])
         for marker in (
             "struct ImageOCRSelectorPolicy",
             "struct ImageOCRSelectorEngineSignal",
