@@ -296,9 +296,9 @@ struct VisionOCRService: Sendable {
     }
 
     /// Re-read one existing text node without rerunning page detection, layout,
-    /// or the rest of the translation session. Japanese keeps Koharu's bundled
-    /// Manga OCR as the primary crop engine and falls back to rotated Vision
-    /// reads; other languages use one bounded Vision crop.
+    /// or the rest of the translation session. Japanese keeps the bundled
+    /// Manga OCR crop as the baseline and compares it with the same bounded
+    /// Vision crop; other languages use one bounded Vision crop.
     func recognizeTextBlock(
         in imageData: Data,
         sourceLanguage: SupportedLanguage,
@@ -355,6 +355,9 @@ struct VisionOCRService: Sendable {
             )
             : rect
 
+        let japanese = sourceLanguage == .japanese
+        var mangaCandidate: ImageTranslationBlock?
+
         if sourceLanguage == .japanese {
             do {
                 let cropOrientation: MangaOCRCropOrientation =
@@ -376,7 +379,7 @@ struct VisionOCRService: Sendable {
                    result.confidence.isFinite,
                    result.confidence >= 0.55,
                    Self.japaneseScriptDensity(in: text) >= 0.5 {
-                    return Self.recognizedBlock(
+                    mangaCandidate = Self.recognizedBlock(
                         block,
                         text: text,
                         confidence: result.confidence,
@@ -406,10 +409,12 @@ struct VisionOCRService: Sendable {
         }
 
         guard let crop = Self.cropImageForBlock(image, normalizedRect: blockCropRect) else {
+            if japanese {
+                return mangaCandidate
+            }
             throw VisionOCRServiceError.blockRecognitionFailed
         }
 
-        let japanese = sourceLanguage == .japanese
         let angles: [Int]
         if japanese {
             // Keep this comparison compatible with the lightweight runtime
@@ -437,29 +442,41 @@ struct VisionOCRService: Sendable {
                 }
                 orientedCrop = rotated
             }
-            observations.append(contentsOf: try Self.recognizeObservations(
-                in: orientedCrop,
-                recognitionLanguages: japanese
-                    ? ["ja-JP", "ja"]
-                    : sourceLanguage.visionRecognitionLanguageIdentifiers,
-                minimumTextHeight: japanese ? 0.006 : 0.01,
-                automaticallyDetectsLanguage: !japanese,
-                rotationApplied: angle,
-                postProcessJapaneseText: japanese,
-                usesLanguageCorrection: !japanese,
-                observationRole: .crop
-            ))
+            do {
+                observations.append(contentsOf: try Self.recognizeObservations(
+                    in: orientedCrop,
+                    recognitionLanguages: japanese
+                        ? ["ja-JP", "ja"]
+                        : sourceLanguage.visionRecognitionLanguageIdentifiers,
+                    minimumTextHeight: japanese ? 0.006 : 0.01,
+                    automaticallyDetectsLanguage: !japanese,
+                    rotationApplied: angle,
+                    postProcessJapaneseText: japanese,
+                    usesLanguageCorrection: !japanese,
+                    observationRole: .crop
+                ))
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let error {
+                // A Vision orientation failure must not discard an accepted
+                // Manga OCR candidate. Other angles remain bounded and may
+                // still provide a comparable candidate.
+                if japanese {
+                    continue
+                }
+                throw error
+            }
         }
 
         try Task.checkCancellation()
         guard let best = observations.max(by: {
             Self.isBetterObservation($0, $1, prefersJapanese: japanese)
         }),
-              let text = Self.cleanRecognizedBlockText(best.text),
-              !text.isEmpty else {
-            return nil
+        let text = Self.cleanRecognizedBlockText(best.text),
+        !text.isEmpty else {
+            return japanese ? mangaCandidate : nil
         }
-        return Self.recognizedBlock(
+        let visionCandidate = Self.recognizedBlock(
             block,
             text: text,
             confidence: best.confidence,
@@ -467,6 +484,13 @@ struct VisionOCRService: Sendable {
             selectionReason: selectionReason,
             reconcileJapaneseTextKind: japanese
         )
+        if japanese {
+            return Self.selectJapaneseScopedBlockCandidate(
+                mangaCandidate: mangaCandidate,
+                visionCandidate: visionCandidate
+            )
+        }
+        return visionCandidate
     }
 
     private static func recognizeObservations(
@@ -726,6 +750,68 @@ struct VisionOCRService: Sendable {
         }
         return candidate.confidence >= max(originalConfidence + 0.04, 0.55)
             && candidateLetters >= max(originalLetters, 1)
+    }
+
+    /// Select between the accepted bundled Manga OCR read and the bounded
+    /// Vision reread for one existing Japanese block. The bundled model stays
+    /// the deterministic baseline: Vision may replace it only when its
+    /// accepted Japanese evidence is measurably better. Confidence is a
+    /// bounded tie-break within this local comparison, not a cross-engine
+    /// calibration claim; equal evidence keeps the Manga OCR result.
+    private static func selectJapaneseScopedBlockCandidate(
+        mangaCandidate: ImageTranslationBlock?,
+        visionCandidate: ImageTranslationBlock?
+    ) -> ImageTranslationBlock? {
+        guard let mangaCandidate else { return visionCandidate }
+        guard let visionCandidate else { return mangaCandidate }
+        guard isUsableJapaneseScopedBlockCandidate(visionCandidate) else {
+            return mangaCandidate
+        }
+        guard isUsableJapaneseScopedBlockCandidate(mangaCandidate) else {
+            return visionCandidate
+        }
+        return isBetterJapaneseScopedBlockCandidate(
+            visionCandidate,
+            than: mangaCandidate
+        ) ? visionCandidate : mangaCandidate
+    }
+
+    private static func isUsableJapaneseScopedBlockCandidate(
+        _ candidate: ImageTranslationBlock
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(candidate.original)
+        return !text.isEmpty
+            && candidate.confidence.isFinite
+            && candidate.confidence >= 0.55
+            && japaneseScriptDensity(in: text) >= 0.5
+    }
+
+    private static func isBetterJapaneseScopedBlockCandidate(
+        _ candidate: ImageTranslationBlock,
+        than incumbent: ImageTranslationBlock
+    ) -> Bool {
+        guard isUsableJapaneseScopedBlockCandidate(candidate),
+              isUsableJapaneseScopedBlockCandidate(incumbent) else {
+            return false
+        }
+
+        let candidateText = postProcessJapaneseOCRText(candidate.original)
+        let incumbentText = postProcessJapaneseOCRText(incumbent.original)
+        let candidateLetters = japaneseLetterCountForRecovery(candidateText)
+        let incumbentLetters = japaneseLetterCountForRecovery(incumbentText)
+        let candidateDensity = japaneseScriptDensity(in: candidateText)
+        let incumbentDensity = japaneseScriptDensity(in: incumbentText)
+
+        if candidateLetters > incumbentLetters,
+           candidate.confidence >= max(incumbent.confidence - 0.04, 0.55) {
+            return true
+        }
+        if candidateDensity > incumbentDensity + 0.05,
+           candidate.confidence >= max(incumbent.confidence - 0.02, 0.55) {
+            return true
+        }
+        return candidateLetters == incumbentLetters
+            && candidate.confidence >= incumbent.confidence + 0.04
     }
 
     private static func cleanRecognizedBlockText(_ text: String) -> String? {
