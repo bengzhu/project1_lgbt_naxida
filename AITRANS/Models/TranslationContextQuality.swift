@@ -756,9 +756,13 @@ enum TranslationBatchQualityEvaluator {
         if TranslationOutputPolicy.isPlaceholderResponse(translatedText) {
             failures.append("placeholderOutput")
         }
-        if normalizedSource.count > 1,
-           !isOnlyDigits(normalizedSource),
-           normalizedOutput.contains(normalizedSource) {
+        if isSourceLeakage(
+            source: sourceText,
+            normalizedSource: normalizedSource,
+            normalizedOutput: normalizedOutput,
+            sourceLanguage: configuration.sourceLanguage,
+            targetLanguage: configuration.targetLanguage
+        ) {
             failures.append("sourceLeakage")
         }
 
@@ -844,6 +848,49 @@ enum TranslationBatchQualityEvaluator {
 
     private static func isOnlyDigits(_ text: String) -> Bool {
         !text.isEmpty && text.unicodeScalars.allSatisfy { CharacterSet.decimalDigits.contains($0) }
+    }
+
+    /// Japanese and Simplified Chinese share a meaningful Han vocabulary.
+    /// A pure-kanji Japanese name or place can therefore be a correct Chinese
+    /// translation even when its normalized spelling is unchanged. Keep the
+    /// leakage gate strict for kana/Latin/digit-bearing Japanese text and for
+    /// every other language pair, while avoiding false rejection of shared Han
+    /// output.
+    private static func isSourceLeakage(
+        source: String,
+        normalizedSource: String,
+        normalizedOutput: String,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) -> Bool {
+        guard normalizedSource.count > 1,
+              !isOnlyDigits(normalizedSource),
+              normalizedOutput.contains(normalizedSource) else {
+            return false
+        }
+
+        if sourceLanguage == .japanese,
+           targetLanguage == .simplifiedChinese,
+           isSharedHanOnlyJapaneseSource(source) {
+            return false
+        }
+        return true
+    }
+
+    private static func isSharedHanOnlyJapaneseSource(_ text: String) -> Bool {
+        let visible = text.unicodeScalars.filter { scalar in
+            !CharacterSet.whitespacesAndNewlines.contains(scalar)
+                && !CharacterSet.punctuationCharacters.contains(scalar)
+        }
+        guard !visible.isEmpty else { return false }
+        return visible.allSatisfy { scalar in
+            switch scalar.value {
+            case 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF:
+                true
+            default:
+                false
+            }
+        }
     }
 
     private static func numericTokens(in text: String) -> [String] {

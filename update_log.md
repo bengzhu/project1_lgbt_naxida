@@ -1,3 +1,9 @@
+## v3.319：日语→简体中文翻译 QA shared-Han 门（2026-08-22，进行中）
+
+本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径。现有 `sourceLeakage` 以归一化原文是否出现在译文中作硬门，但日语纯汉字的人名、地名或词语可能与简体中文合法译文共享 Han 字形，导致正确译文被误拒；含假名的日语原文仍应被视为可识别的原文回显。
+
+实现边界：`TranslationBatchQualityEvaluator` 与 Japanese benchmark evaluator 共享语言对规则：仅当 source/target 为日语→简体中文且源文本不含假名时，允许共享 Han 原文形式；日语含假名及其它语言对继续使用原有 source leakage 拒绝。标签、数字、术语、context、目标语言密度、长度、OCR、取消、持久化和非图片路径不变。新增 `scripts/test-v3319-japanese-shared-han-translation-qa-contract.py`，工程版本推进至 `3.319`；本轮待安全回归与云端 receipt，不把本轮证据外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
+
 ## v3.318：日语 OCR 单块复查 meaningful-text 门（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。v3.317 已收紧页面 detector owner、line coverage 和双候选 scoped replacement，但单块 `recognizeTextBlockDetached` 的 bundled Manga crop 仍只以 `japaneseScriptDensity >= 0.5` 接受；当 Manga/Vision 只有一侧结果时，标点-only 结果仍可能作为复查结果替换现有 block，绕过实际文字证据边界。

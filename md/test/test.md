@@ -1,3 +1,9 @@
+### v3.319 日语→简体中文翻译 QA shared-Han 门合同（进行中）
+
+- 日语→简体中文时，纯汉字源文本可能与合法中文译文共享 Han 字形；本轮让 `sourceLeakage` 只在含假名的日语原文或其它语言对中继续拒绝原文回显，避免误杀“日本”等合法共享字形译文。
+- 标签顺序、数字一致性、confirmed/revoked 术语、上一批 context 泄漏、占位答复、目标语言密度、长度、OCR/layout、scoped cancel、partial persistence 和非图片路径不变；Koharu/GGUF/授权语料/目标设备仍不阻塞。
+- 新合同：`scripts/test-v3319-japanese-shared-han-translation-qa-contract.py`，工程版本推进至 `3.319`；本轮待本地安全回归与云端 receipt，不把 QA 合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+
 ### v3.318 日语 OCR 单块复查 meaningful-text 门合同（已完成）
 
 - v3.317 已收紧页面 owner、line coverage 和双候选 scoped replacement，但单块 `recognizeTextBlockDetached` 的 Manga crop 仍只按 `japaneseScriptDensity` 接受，单边 Vision 返回也可能提交标点-only 复查结果；本轮让 scoped reread 的两条单边/双边路径都复用共享 `JapaneseOCRTextNormalizer.containsJapaneseLetter`，实际日语书写字符缺失时保持原 block。

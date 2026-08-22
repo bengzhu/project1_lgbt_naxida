@@ -255,6 +255,44 @@ def _target_density(text: str, target_language: str) -> float:
     return count / len(visible)
 
 
+def _is_shared_han_only_japanese_source(value: str) -> bool:
+    visible = [
+        character
+        for character in value
+        if not character.isspace() and not unicodedata.category(character).startswith("P")
+    ]
+    if not visible:
+        return False
+    return all(
+        "\u3400" <= character <= "\u4dbf"
+        or "\u4e00" <= character <= "\u9fff"
+        or "\uf900" <= character <= "\ufaff"
+        for character in visible
+    )
+
+
+def _source_leakage(
+    source: str,
+    output: str,
+    source_language: str,
+    target_language: str,
+) -> bool:
+    normalized_source = unicodedata.normalize("NFC", source)
+    if not output or not (
+        output == source
+        or output == normalized_source
+        or normalized_source in output
+    ):
+        return False
+    if (
+        source_language == "ja"
+        and target_language == "zh-CN"
+        and _is_shared_han_only_japanese_source(source)
+    ):
+        return False
+    return True
+
+
 def _parse_tagged_response(response: str) -> tuple[list[tuple[str, str]], list[str]]:
     matches = list(TAG_PATTERN.finditer(response))
     prefix = response[: matches[0].start()].strip() if matches else response.strip()
@@ -265,7 +303,12 @@ def _parse_tagged_response(response: str) -> tuple[list[tuple[str, str]], list[s
     return rows, (["prefixText"] if prefix else [])
 
 
-def _evaluate_prediction(fixture: dict[str, Any], prediction: dict[str, Any], target_language: str) -> dict[str, Any]:
+def _evaluate_prediction(
+    fixture: dict[str, Any],
+    prediction: dict[str, Any],
+    source_language: str,
+    target_language: str,
+) -> dict[str, Any]:
     expected_blocks = sorted(fixture["blocks"], key=lambda block: (block["order"], block["blockID"]))
     expected_ids = [block["blockID"] for block in expected_blocks]
     parsed, parser_failures = _parse_tagged_response(prediction["rawResponse"])
@@ -285,8 +328,12 @@ def _evaluate_prediction(fixture: dict[str, Any], prediction: dict[str, Any], ta
         block_id = block["blockID"]
         texts = parsed_by_id.get(block_id, [])
         text = texts[0] if texts else ""
-        normalized_source = unicodedata.normalize("NFC", block["sourceText"])
-        leaked = bool(text and (text == block["sourceText"] or text == normalized_source or normalized_source in text))
+        leaked = _source_leakage(
+            block["sourceText"],
+            text,
+            source_language,
+            target_language,
+        )
         if leaked:
             source_leakage += 1
         density = _target_density(text, target_language)
@@ -338,7 +385,15 @@ def score(
     manifest_info = validate_manifest(manifest, manifest_path=manifest_path, repo_root=repo_root, verify_assets=verify_assets)
     predictions, prediction_info = _validate_predictions(predictions_payload, manifest_info, split=split)
     selected = prediction_info["selectedFixtures"]
-    rows = [_evaluate_prediction(selected[prediction["fixtureID"]], prediction, manifest["targetLanguage"]) for prediction in predictions]
+    rows = [
+        _evaluate_prediction(
+            selected[prediction["fixtureID"]],
+            prediction,
+            manifest["sourceLanguage"],
+            manifest["targetLanguage"],
+        )
+        for prediction in predictions
+    ]
     rows = sorted(rows, key=lambda row: row["fixtureID"])
     by_kind: dict[str, list[dict[str, Any]]] = {"cleanSource": [], "ocrCorrupted": []}
     for row in rows:
