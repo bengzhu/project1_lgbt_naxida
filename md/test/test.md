@@ -1,8 +1,9 @@
-### v3.319 日语→简体中文翻译 QA shared-Han 门合同（进行中）
+### v3.319 日语→简体中文翻译 QA shared-Han 门合同（已完成）
 
 - 日语→简体中文时，纯汉字源文本可能与合法中文译文共享 Han 字形；本轮让 `sourceLeakage` 只在含假名的日语原文或其它语言对中继续拒绝原文回显，避免误杀“日本”等合法共享字形译文。
 - 标签顺序、数字一致性、confirmed/revoked 术语、上一批 context 泄漏、占位答复、目标语言密度、长度、OCR/layout、scoped cancel、partial persistence 和非图片路径不变；Koharu/GGUF/授权语料/目标设备仍不阻塞。
-- 新合同：`scripts/test-v3319-japanese-shared-han-translation-qa-contract.py`，工程版本推进至 `3.319`；本轮待本地安全回归与云端 receipt，不把 QA 合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3319-japanese-shared-han-translation-qa-contract.py`，工程版本推进至 `3.319`；本地安全回归为 318 个无外部进程/编译入口合同全部通过，27 个含外部进程/编译/runtime 入口的历史合同按约束跳过；Python AST `365/365`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `60c0fe6e664cca1107dedadf2b4741193fe1877a` 的 PR [#383](https://github.com/bengzhu/project1_lgbt_naxida/pull/383) CI [32556617545](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32556617545) 成功；以 merge SHA `9ba32384e5554d8aac66b96396bf0dd3bca71f74` 合入 `smalldata_test` 后，push CI [32556678512](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32556678512) 的 Japanese benchmark、静态检查、UI interaction、Home/Paste、Speech、云端 Xcode build 与 `AITRANS CI/full-validation=success` receipt 全部通过，Koharu/GGUF 按当前 scope skip。`main` 未修改，候选分支已清理。本轮只证明该局部自有翻译 QA 误杀边界和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.318 日语 OCR 单块复查 meaningful-text 门合同（已完成）
 

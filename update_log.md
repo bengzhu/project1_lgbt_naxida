@@ -1,8 +1,8 @@
-## v3.319：日语→简体中文翻译 QA shared-Han 门（2026-08-22，进行中）
+## v3.319：日语→简体中文翻译 QA shared-Han 门（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径。现有 `sourceLeakage` 以归一化原文是否出现在译文中作硬门，但日语纯汉字的人名、地名或词语可能与简体中文合法译文共享 Han 字形，导致正确译文被误拒；含假名的日语原文仍应被视为可识别的原文回显。
 
-实现边界：`TranslationBatchQualityEvaluator` 与 Japanese benchmark evaluator 共享语言对规则：仅当 source/target 为日语→简体中文且源文本不含假名时，允许共享 Han 原文形式；日语含假名及其它语言对继续使用原有 source leakage 拒绝。标签、数字、术语、context、目标语言密度、长度、OCR、取消、持久化和非图片路径不变。新增 `scripts/test-v3319-japanese-shared-han-translation-qa-contract.py`，工程版本推进至 `3.319`；本轮待安全回归与云端 receipt，不把本轮证据外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 质量证明。
+实现边界：`TranslationBatchQualityEvaluator` 与 Japanese benchmark evaluator 共享语言对规则：仅当 source/target 为日语→简体中文且源文本为纯 Han 时，允许共享 Han 原文形式；含假名、拉丁/数字或其它语言对继续使用原有 source leakage 拒绝。标签、数字、术语、context、目标语言密度、长度、OCR、取消、持久化和非图片路径不变。新增 `scripts/test-v3319-japanese-shared-han-translation-qa-contract.py`，工程版本推进至 `3.319`；本地安全回归为 318 个无外部进程/编译入口合同全部通过，27 个含外部进程/编译/runtime 入口的历史合同按约束跳过；Python AST `365/365`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint `4/4` 与 `git diff --check` 全部通过。实现 SHA `60c0fe6e664cca1107dedadf2b4741193fe1877a` 的 PR [#383](https://github.com/bengzhu/project1_lgbt_naxida/pull/383) CI [32556617545](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32556617545) 成功，并以 merge SHA `9ba32384e5554d8aac66b96396bf0dd3bca71f74` 合入 `smalldata_test`；合入后 push CI [32556678512](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32556678512) 的 Japanese benchmark、静态检查、UI interaction、Home/Paste、Speech、云端 Xcode build 与 `AITRANS CI/full-validation=success` receipt 全部通过，Koharu/GGUF 按当前 scope skip。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。本轮只证明该局部自有翻译 QA 误杀边界和工程回归通过，不把本轮证据外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证明。
 
 ## v3.318：日语 OCR 单块复查 meaningful-text 门（2026-08-22，已完成）
 
