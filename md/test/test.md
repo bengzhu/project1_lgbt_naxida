@@ -1,3 +1,9 @@
+### v3.317 日语 OCR 可靠文字证据门合同（进行中）
+
+- 既有 `japaneseScriptDensity >= 0.5` 会把 `！！`、`…` 等纯标点当作日语质量；本轮新增共享 `JapaneseOCRTextNormalizer.japaneseLetterCount`/`containsJapaneseLetter`，只在 detector owner、vertical line coverage 和 scoped block acceptance 中要求至少一个实际日语书写字符。
+- 标点-only observation 仍留在普通 OCR fallback/候选流中，不增加 OCR 请求、crop/warp、detector、预算、geometry/layout、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证明。
+- 新合同：`scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py`，工程版本为 `3.317`；云端 Japanese benchmark route 已接入。本轮尚未记录本地回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+
 ### v3.316 日语 OCR 浊音/半浊音保真合同（已完成）
 
 - v3.315 的宽度无关去重同时使用 `diacriticInsensitive`，会在重叠 geometry 下抹掉日语 combining dakuten/handakuten 的差异；本轮保留 Unicode canonical composition 与 width-insensitive folding，但移除 diacritic-insensitive 选项，使 `か/が`、`は/ぱ` 等不同 kana 不被误合并。

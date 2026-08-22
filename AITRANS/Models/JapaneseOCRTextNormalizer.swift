@@ -13,6 +13,29 @@ enum JapaneseOCRTextNormalizer {
         text.precomposedStringWithCanonicalMapping
     }
 
+    /// Counts Japanese writing characters without treating Japanese
+    /// punctuation as recognition evidence.  Density is still useful for
+    /// broad language routing, but punctuation-only output such as `！！` or
+    /// `…` must not be strong enough to claim detector ownership or complete a
+    /// source line.  Keep this definition shared by Vision and bundled Manga
+    /// OCR so their quality gates make the same distinction.
+    static func japaneseLetterCount(_ text: String) -> Int {
+        text.unicodeScalars.reduce(into: 0) { count, scalar in
+            switch scalar.value {
+            case 0x3041...0x3096, 0x30A1...0x30FA, 0x30FD...0x30FF,
+                 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF,
+                 0xFF66...0xFF9D:
+                count += 1
+            default:
+                break
+            }
+        }
+    }
+
+    static func containsJapaneseLetter(_ text: String) -> Bool {
+        japaneseLetterCount(text) > 0
+    }
+
     /// Identifies a Japanese candidate whose Latin/number tokens are part of
     /// the OCR signal, rather than incidental punctuation. Fullwidth Latin
     /// letters and digits are included because Vision may emit `ＡＢＣ１２３`

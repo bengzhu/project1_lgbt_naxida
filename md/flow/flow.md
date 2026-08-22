@@ -1,6 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.317 日语 OCR 可靠文字证据边界：`Vision/Manga OCR -> shared Japanese letter signal (punctuation excluded) -> owner/line-coverage/scoped-candidate quality gates`；标点-only observation 仍可作为普通 fallback，但不能单独成为可靠 detector owner、complete line coverage 或 scoped block replacement 证据，不增加请求、预算、布局、翻译 QA、取消或持久化边界。
 当前 v3.316 日语 OCR 比较边界：`Vision/Manga OCR -> canonical Unicode normalization -> width-aware, dakuten-preserving Japanese dedupe -> existing OCR fusion/layout`；全角/半角等价形式仍可合并，但不再用 diacritic-insensitive folding 抹掉浊音/半浊音，不增加请求、不改变候选分数、geometry/layout、翻译 QA、取消或持久化边界。
 当前 v3.315 日语 OCR 文本边界：`Vision/Manga OCR -> canonical Unicode normalization -> mixed-script/period normalization -> width-aware Japanese dedupe -> existing OCR fusion/layout`；等价的组合日文字符与宽度形式在比较/去重时保持一致，不增加请求、不改变候选分数、geometry/layout、翻译 QA、取消或持久化边界。
 当前 v3.314 图片翻译流程：`OCR/layout blocks -> Japanese normalization -> Vision confidence-window content gate -> stable batch identity/context -> strict ordinal + request language validation -> tagged translation QA -> scoped correction/retry/reread parity -> render/export`。Vision 日语候选在有日语字母的同一置信度窗口内优先保留文字内容，只有窗口没有文字候选时才保留符号-only fallback；不增加 OCR 请求、crop/warp、预算或翻译 QA 边界。上一批摘要仍只有在 identity、连续 ordinal、source/target language 与当前请求全部匹配时才进入 prompt/QA；request language binding 是 transient metadata，不进入 block、snapshot、Store、transcript 或导出。

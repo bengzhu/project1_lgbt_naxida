@@ -1,3 +1,13 @@
+## v3.317：日语 OCR 可靠文字证据门（2026-08-22，进行中）
+
+本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现既有 `japaneseScriptDensity >= 0.5` 会把 `！！`、`…` 等纯日语标点按“日语质量”计满；因此标点-only 的 Manga OCR 结果可能被提升为可靠 detector owner、单独证明 vertical line coverage，或进入 scoped block 候选替换，压住后续真实文字恢复。
+
+可证伪假设：**若 Vision 与 bundled Manga OCR 共用不包含日语标点的 `japaneseLetterCount`，并要求 detector owner、line coverage 和 scoped block acceptance 至少有一个实际日语书写字符，则标点-only 结果仍可作为普通 fallback 保留，但不会再以可靠文字证据阻止恢复或污染 owner/coverage 判断。**
+
+实现：`JapaneseOCRTextNormalizer` 新增共享 `japaneseLetterCount`/`containsJapaneseLetter`，排除 U+3000–U+303F 等标点，仅计平假名、片假名、汉字与半角片假名；`isReliableJapaneseMangaOCRResult`、`isReliableJapaneseLineCoverageResult` 与 `isUsableJapaneseScopedBlockCandidate` 复用该门。OCR 候选选择仍保留 punctuation-only fallback，不增加 OCR 请求、crop/warp、detector、预算、geometry/layout、翻译 QA、取消、持久化或非日语路径。
+
+新增 `scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py`，工程版本推进至 `3.317`，CI Japanese benchmark route 已接入。本轮仍待本地安全回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.316：日语 OCR 浊音/半浊音保真（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。v3.315 为处理全角/半角等价形式在日语 dedupe 中加入了 `widthInsensitive`，但同时使用 `diacriticInsensitive`；Unicode canonical composition 后，这会把日语浊音/半浊音差异当作可忽略的附加标记，重叠 observation 可能把 `か/が`、`は/ぱ` 等不同文字错误合并，直接造成 OCR 漏字/错字并污染翻译输入。

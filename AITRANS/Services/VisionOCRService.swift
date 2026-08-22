@@ -783,6 +783,7 @@ struct VisionOCRService: Sendable {
         return !text.isEmpty
             && candidate.confidence.isFinite
             && candidate.confidence >= 0.55
+            && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
             && japaneseScriptDensity(in: text) >= 0.5
     }
 
@@ -1350,6 +1351,7 @@ struct VisionOCRService: Sendable {
         let confidence = Double(result.confidence)
         guard confidence.isFinite,
               confidence >= 0.55,
+              JapaneseOCRTextNormalizer.containsJapaneseLetter(result.text),
               japaneseScriptDensity(in: result.text) >= 0.5 else {
             return false
         }
@@ -2989,6 +2991,7 @@ struct VisionOCRService: Sendable {
         guard !text.isEmpty,
               result.confidence.isFinite,
               result.confidence >= 0.48,
+              JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
               japaneseScriptDensity(in: text) >= 0.5 else {
             return false
         }
