@@ -1,8 +1,9 @@
-### v3.318 日语 OCR 单块复查 meaningful-text 门合同（进行中）
+### v3.318 日语 OCR 单块复查 meaningful-text 门合同（已完成）
 
 - v3.317 已收紧页面 owner、line coverage 和双候选 scoped replacement，但单块 `recognizeTextBlockDetached` 的 Manga crop 仍只按 `japaneseScriptDensity` 接受，单边 Vision 返回也可能提交标点-only 复查结果；本轮让 scoped reread 的两条单边/双边路径都复用共享 `JapaneseOCRTextNormalizer.containsJapaneseLetter`，实际日语书写字符缺失时保持原 block。
 - 页面普通 OCR candidate 选择继续保留 punctuation-only fallback；不增加 OCR 请求、crop/warp、detector、预算、geometry/layout、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备仍是可选研究/质量证明。
-- 新合同：`scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py`，工程版本推进至 `3.318`；云端 Japanese benchmark route 已接入。本轮待安全回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py`，工程版本推进至 `3.318`；云端 Japanese benchmark route 已接入。本地安全回归为 317 个无外部进程/编译入口合同全部通过，27 个含外部进程/编译入口的历史合同按约束跳过；Python AST `364/364`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `91dfb43bd226463381bc54809c26f6a4c6ee635c` 的 PR [#382](https://github.com/bengzhu/project1_lgbt_naxida/pull/382) checks [32555267979](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32555267979) 成功；候选 push full [32555259842](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32555259842) 的 Xcode build、UI/Home/Paste、Japanese benchmark、静态检查与 `AITRANS CI/full-validation=success` receipt 全部通过，并以 merge SHA `f51c289e14c364139dd986c31faa17cc5be84bed` 合入 `smalldata_test`；合入后 push CI [32555789000](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32555789000) 的 Japanese benchmark、静态检查、receipt 与状态检查全部成功，Koharu/GGUF、Xcode/UI 按当前 scope skip。`main` 未修改，研发分支已清理。本轮只证明该局部自有 OCR 单块复查文字证据门和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.317 日语 OCR 可靠文字证据门合同（已完成）
 

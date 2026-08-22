@@ -1,10 +1,10 @@
-## v3.318：日语 OCR 单块复查 meaningful-text 门（2026-08-22，进行中）
+## v3.318：日语 OCR 单块复查 meaningful-text 门（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。v3.317 已收紧页面 detector owner、line coverage 和双候选 scoped replacement，但单块 `recognizeTextBlockDetached` 的 bundled Manga crop 仍只以 `japaneseScriptDensity >= 0.5` 接受；当 Manga/Vision 只有一侧结果时，标点-only 结果仍可能作为复查结果替换现有 block，绕过实际文字证据边界。
 
 实现：单块 Manga crop 增加共享 `JapaneseOCRTextNormalizer.containsJapaneseLetter`；`selectJapaneseScopedBlockCandidate` 对 Manga-only、Vision-only 和双候选路径统一拒绝 punctuation-only 文本，含实际日语文字的弱候选仍沿用既有 confidence/quality 选择。页面普通 `selectOCRCandidate`、OCR 请求/crop/warp/预算、detector/geometry/layout、翻译 QA、取消、持久化和非日语路径不变。
 
-新增 `scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py`，工程版本推进至 `3.318`，CI Japanese benchmark route 已接入。本轮待本地安全回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
+新增 `scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py`，工程版本推进至 `3.318`，CI Japanese benchmark route 已接入。本地安全回归为 317 个无外部进程/编译入口合同全部通过，27 个含外部进程/编译入口的历史合同按约束跳过；Python AST `364/364`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint `4/4` 与 `git diff --check` 全部通过。实现 SHA `91dfb43bd226463381bc54809c26f6a4c6ee635c` 的 PR [#382](https://github.com/bengzhu/project1_lgbt_naxida/pull/382) checks [32555267979](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32555267979) 成功；候选 push full [32555259842](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32555259842) 的 Xcode build、UI/Home/Paste、Japanese benchmark、静态检查与 `AITRANS CI/full-validation=success` receipt 全部通过，并以 merge SHA `f51c289e14c364139dd986c31faa17cc5be84bed` 合入 `smalldata_test`；合入后 push CI [32555789000](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32555789000) 成功，Koharu/GGUF、Xcode/UI 按当前 scope skip。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。本轮只证明该局部自有 OCR 单块复查文字证据门和工程回归通过，不把合同或固定样图外推为通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
 
 ## v3.317：日语 OCR 可靠文字证据门（2026-08-22，已完成）
 
