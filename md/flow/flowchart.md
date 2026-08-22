@@ -1,4 +1,5 @@
 # 项目流程图
+v3.319 日语→简体中文翻译 QA：`block source/target language -> sourceLeakage shared-Han exception -> existing numbers/terms/density/length QA -> scoped commit`；纯汉字日语源允许合法共享 Han 译文，含假名原文仍拒绝原文回显；不重跑 OCR，不改变标签、取消或持久化。
 v3.318 日语 OCR scoped 复查门：`existing block -> bounded Manga/Vision reread -> shared Japanese letter signal -> accept only meaningful text -> existing commit/QA`；单块标点-only 结果不再成为复查替换结果，页面普通 fallback 仍保留。
 v3.317 日语 OCR 可靠文字门：`Vision/Manga OCR -> shared Japanese letter count (exclude punctuation) -> reliable owner/line coverage/scoped candidate gates -> existing fallback/fusion/layout`；标点-only observation 不再单独阻止文字恢复，普通候选流仍保留，不增加 OCR 请求或改变翻译/持久化边界。
 v3.316 日语 OCR 浊音保真：`canonical Unicode -> Japanese width folding without diacritic stripping -> overlap dedupe/fusion/layout`；`か/が`、`は/ぱ` 等不同 kana 不因去重比较被合并，全角/半角仍可比较为同一形式，不增加 OCR 请求或改变翻译/持久化边界。

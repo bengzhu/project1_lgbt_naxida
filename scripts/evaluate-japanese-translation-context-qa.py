@@ -290,6 +290,7 @@ def validate_input(payload: Any) -> dict[str, Any]:
 def text_failures(
     source: str,
     output: str,
+    source_language: str,
     target: str,
     max_chars: int,
     terms: list[dict[str, Any]],
@@ -300,7 +301,13 @@ def text_failures(
     output_normalized = normalize_text(output)
     if is_placeholder_response(output):
         failures.append("placeholderOutput")
-    if len(source_normalized) > 1 and not source_normalized.isdigit() and source_normalized in output_normalized:
+    if is_source_leakage(
+        source,
+        source_normalized,
+        output_normalized,
+        source_language,
+        target,
+    ):
         failures.append("sourceLeakage")
     if number_tokens(source) != number_tokens(output):
         failures.append("numberMismatch")
@@ -324,6 +331,44 @@ def text_failures(
     if target_density(output, target) < 0.35:
         failures.append("targetLanguageDensity")
     return failures
+
+
+def is_source_leakage(
+    source: str,
+    normalized_source: str,
+    normalized_output: str,
+    source_language: str,
+    target_language: str,
+) -> bool:
+    if (
+        len(normalized_source) <= 1
+        or normalized_source.isdigit()
+        or normalized_source not in normalized_output
+    ):
+        return False
+    if (
+        source_language == "ja"
+        and target_language == "zh-CN"
+        and is_shared_han_only_japanese_source(source)
+    ):
+        return False
+    return True
+
+
+def is_shared_han_only_japanese_source(value: str) -> bool:
+    visible = [
+        character
+        for character in value
+        if not character.isspace() and not unicodedata.category(character).startswith("P")
+    ]
+    if not visible:
+        return False
+    return all(
+        "\u3400" <= character <= "\u4dbf"
+        or "\u4e00" <= character <= "\u9fff"
+        or "\uf900" <= character <= "\ufaff"
+        for character in visible
+    )
 
 
 def evaluate_batch(batch: dict[str, Any], context: dict[str, Any]) -> dict[str, Any]:
@@ -375,6 +420,7 @@ def evaluate_batch(batch: dict[str, Any], context: dict[str, Any]) -> dict[str, 
         for reason in text_failures(
             block["sourceText"],
             values[0],
+            context["sourceLanguage"],
             context["targetLanguage"],
             block["maxOutputCharacters"],
             confirmed_terms,
