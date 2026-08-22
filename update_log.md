@@ -1,10 +1,14 @@
-## v3.316：日语 OCR 浊音/半浊音保真（2026-08-22，进行中）
+## v3.316：日语 OCR 浊音/半浊音保真（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。v3.315 为处理全角/半角等价形式在日语 dedupe 中加入了 `widthInsensitive`，但同时使用 `diacriticInsensitive`；Unicode canonical composition 后，这会把日语浊音/半浊音差异当作可忽略的附加标记，重叠 observation 可能把 `か/が`、`は/ぱ` 等不同文字错误合并，直接造成 OCR 漏字/错字并污染翻译输入。
 
 可证伪假设：**若日语 observation 先保持 canonical composition，再只做 case/width-insensitive folding 而保留 diacritic，则全角/半角等价输出仍可稳定去重，而带 dakuten/handakuten 的不同 kana 不会因比较规则被吞掉。**
 
-实现：`VisionOCRService.normalizedOCRText(widthInsensitive:)` 的日语比较移除 `.diacriticInsensitive`，保留 `.caseInsensitive` 与 `.widthInsensitive`；非日语比较、canonical 文本后处理、候选选择、OCR 请求、geometry/layout、翻译 QA、取消与持久化不变。新增 `scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py`，工程版本推进至 `3.316`，CI Japanese benchmark route 接入。本轮仍待本地安全回归与云端 receipt，不把静态合同或固定样图外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证据。
+实现：`VisionOCRService.normalizedOCRText(widthInsensitive:)` 的日语比较移除 `.diacriticInsensitive`，保留 `.caseInsensitive` 与 `.widthInsensitive`；非日语比较、canonical 文本后处理、候选选择、OCR 请求、geometry/layout、翻译 QA、取消与持久化不变。新增 `scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py`，工程版本推进至 `3.316`，CI Japanese benchmark route 接入。
+
+本地安全回归：315 个确认无外部进程/编译入口的合同全部通过；27 个含外部进程/编译入口的历史合同按约束跳过；Python AST `362/362`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
+实现 SHA `c875658f0758de93e1c7c34bd5c8d0f9fc4a879e` 的 PR [#380](https://github.com/bengzhu/project1_lgbt_naxida/pull/380) checks [32537768657](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32537768657) 成功，并以 merge SHA `7b636f71f587b41eb1db7d7d595493fbda64aee1` 合入 `smalldata_test`；合入后 push full CI [32537956361](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32537956361) 成功，Japanese benchmark、静态检查、Speech/UI/Home/Paste、Xcode build、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过，Koharu parity、GGUF 与漫画 probe 按当前配置跳过。`main` 未修改，研发分支已清理。本轮不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
 
 ## v3.315：日语 OCR Unicode 规范化（2026-08-22，已完成）
 

@@ -1,8 +1,9 @@
-### v3.316 日语 OCR 浊音/半浊音保真合同（进行中）
+### v3.316 日语 OCR 浊音/半浊音保真合同（已完成）
 
 - v3.315 的宽度无关去重同时使用 `diacriticInsensitive`，会在重叠 geometry 下抹掉日语 combining dakuten/handakuten 的差异；本轮保留 Unicode canonical composition 与 width-insensitive folding，但移除 diacritic-insensitive 选项，使 `か/が`、`は/ぱ` 等不同 kana 不被误合并。
 - 只改变日语 observation 比较，不增加 OCR 请求、crop/warp、detector、candidate 分数、geometry/layout、owner、预算、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证明。
-- 新合同：`scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py`，工程版本为 `3.316`；云端 Japanese benchmark route 已接入。本轮尚未记录云端 receipt，不把静态合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py`，工程版本为 `3.316`；云端 Japanese benchmark route 已接入。本地安全回归为 315 个无外部进程/编译入口合同全部通过，27 个含外部进程/编译入口的历史合同跳过；Python AST `362/362`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `c875658f0758de93e1c7c34bd5c8d0f9fc4a879e` 的 PR [#380](https://github.com/bengzhu/project1_lgbt_naxida/pull/380) checks [32537768657](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32537768657) 成功；merge SHA `7b636f71f587b41eb1db7d7d595493fbda64aee1` 合入 `smalldata_test` 后，push full CI [32537956361](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32537956361) 的 Japanese benchmark、静态检查、Speech/UI/Home/Paste、Xcode build、JUnit/manifest 与 full receipt 全部通过，Koharu parity、GGUF 与漫画 probe 按当前配置跳过。`main` 未修改；本轮不外推通用 OCR/CER、翻译盲评、真实 Koharu parity、授权语料、目标设备或 v3.289 holdout 质量证据。
 
 ### v3.315 日语 OCR Unicode 规范化合同（已完成）
 
