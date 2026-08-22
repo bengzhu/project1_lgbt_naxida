@@ -1,8 +1,9 @@
-### v3.317 日语 OCR 可靠文字证据门合同（进行中）
+### v3.317 日语 OCR 可靠文字证据门合同（已完成）
 
 - 既有 `japaneseScriptDensity >= 0.5` 会把 `！！`、`…` 等纯标点当作日语质量；本轮新增共享 `JapaneseOCRTextNormalizer.japaneseLetterCount`/`containsJapaneseLetter`，只在 detector owner、vertical line coverage 和 scoped block acceptance 中要求至少一个实际日语书写字符。
 - 标点-only observation 仍留在普通 OCR fallback/候选流中，不增加 OCR 请求、crop/warp、detector、预算、geometry/layout、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证明。
-- 新合同：`scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py`，工程版本为 `3.317`；云端 Japanese benchmark route 已接入。本轮尚未记录本地回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+- 新合同：`scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py`，工程版本为 `3.317`；云端 Japanese benchmark route 已接入。本地安全回归为 316 个无外部进程/编译入口合同全部通过，27 个含外部进程/编译入口的历史合同按约束跳过；Python AST `363/363`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project lint `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `a6c9fa5c0161620b640e1b2aa5c2db6ebdf19004` 的 PR [#381](https://github.com/bengzhu/project1_lgbt_naxida/pull/381) checks [32554057083](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32554057083) 成功；候选 push full [32554040280](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32554040280) 的 Xcode build、UI/Home/Paste、Japanese benchmark、静态检查与 full receipt 全部通过，并以 merge SHA `7761c6186c10aa7ef971ebaba46df5e577ba88fa` 合入 `smalldata_test`；合入后 push CI [32554498117](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32554498117) 的 Japanese benchmark、静态检查、receipt 与状态检查全部成功，Koharu/GGUF、Xcode/UI 按当前 scope skip。`main` 未修改，研发分支已清理。本轮只证明该局部自有 OCR 文字证据门和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.316 日语 OCR 浊音/半浊音保真合同（已完成）
 
