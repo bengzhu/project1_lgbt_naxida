@@ -3567,6 +3567,7 @@ jobs:
           python3 -B scripts/test-v3314-japanese-ocr-candidate-content-contract.py
           python3 -B scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py
           python3 -B scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py
+          python3 -B scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3754,7 +3755,9 @@ jobs:
           # japanese-benchmark-v3.313-
           # japanese-benchmark-v3.314-
           # japanese-benchmark-v3.315-
-          name: japanese-benchmark-v3.316-${{ github.run_id }}
+          # japanese-benchmark-v3.316-
+          # japanese-benchmark-v3.317-
+          name: japanese-benchmark-v3.317-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json
