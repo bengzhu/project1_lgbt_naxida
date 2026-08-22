@@ -1,3 +1,9 @@
+### v3.318 日语 OCR 单块复查 meaningful-text 门合同（进行中）
+
+- v3.317 已收紧页面 owner、line coverage 和双候选 scoped replacement，但单块 `recognizeTextBlockDetached` 的 Manga crop 仍只按 `japaneseScriptDensity` 接受，单边 Vision 返回也可能提交标点-only 复查结果；本轮让 scoped reread 的两条单边/双边路径都复用共享 `JapaneseOCRTextNormalizer.containsJapaneseLetter`，实际日语书写字符缺失时保持原 block。
+- 页面普通 OCR candidate 选择继续保留 punctuation-only fallback；不增加 OCR 请求、crop/warp、detector、预算、geometry/layout、翻译 QA、取消、持久化或非日语路径；Koharu/GGUF/授权语料/目标设备仍是可选研究/质量证明。
+- 新合同：`scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py`，工程版本推进至 `3.318`；云端 Japanese benchmark route 已接入。本轮待安全回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评或 v3.289 holdout 证据。
+
 ### v3.317 日语 OCR 可靠文字证据门合同（已完成）
 
 - 既有 `japaneseScriptDensity >= 0.5` 会把 `！！`、`…` 等纯标点当作日语质量；本轮新增共享 `JapaneseOCRTextNormalizer.japaneseLetterCount`/`containsJapaneseLetter`，只在 detector owner、vertical line coverage 和 scoped block acceptance 中要求至少一个实际日语书写字符。

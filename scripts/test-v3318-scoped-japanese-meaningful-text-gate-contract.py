@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.317 Japanese OCR meaningful-text quality gates."""
+"""Static contract for v3.318 scoped Japanese OCR meaningful-text gates."""
 
 from pathlib import Path
 import re
@@ -29,12 +29,13 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
+class ScopedJapaneseMeaningfulTextGateContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.normalizer = read("AITRANS/Models/JapaneseOCRTextNormalizer.swift")
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
+        cls.normalizer = read("AITRANS/Models/JapaneseOCRTextNormalizer.swift")
         cls.manga = read("AITRANS/Services/MangaOCRService.swift")
+        cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.flow = read("md/flow/flow.md") + read("md/flow/flowchart.md")
@@ -44,66 +45,62 @@ class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
         cls.test_log = read("md/test/test.md")
         cls.update_log = read("update_log.md")
 
-    def test_shared_letter_signal_excludes_japanese_punctuation(self) -> None:
-        count = function_body(
-            self.normalizer,
-            "static func japaneseLetterCount(_ text: String) -> Int",
-        )
-        self.assertIn("0x3041...0x3096", count)
-        self.assertIn("0x30A1...0x30FA", count)
-        self.assertIn("0x4E00...0x9FFF", count)
-        self.assertNotIn("0x3000...0x303F", count)
-        self.assertIn("static func containsJapaneseLetter(_ text: String) -> Bool", self.normalizer)
-
-    def test_reliable_manga_owner_requires_meaningful_japanese_text(self) -> None:
+    def test_scoped_manga_crop_requires_a_japanese_letter(self) -> None:
         body = function_body(
             self.vision,
-            "private static func isReliableJapaneseMangaOCRResult(\n",
+            "private static func recognizeTextBlockDetached(\n        image: CGImage",
         )
-        self.assertIn("JapaneseOCRTextNormalizer.containsJapaneseLetter(result.text)", body)
-        self.assertIn("japaneseScriptDensity(in: result.text) >= 0.5", body)
+        self.assertIn(
+            "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
+            body,
+        )
+        self.assertIn("Self.japaneseScriptDensity(in: text) >= 0.5", body)
         self.assertLess(
             body.index("containsJapaneseLetter"),
-            body.index("japaneseScriptDensity"),
+            body.index("Self.japaneseScriptDensity"),
         )
 
-    def test_line_coverage_requires_meaningful_japanese_text(self) -> None:
-        body = function_body(
+    def test_one_sided_scoped_selection_rejects_punctuation_only_vision(self) -> None:
+        selector = function_body(
             self.vision,
-            "private static func isReliableJapaneseLineCoverageResult(\n",
+            "private static func selectJapaneseScopedBlockCandidate(\n",
         )
-        self.assertIn("JapaneseOCRTextNormalizer.containsJapaneseLetter(text)", body)
-        self.assertIn("japaneseScriptDensity(in: text) >= 0.5", body)
-        self.assertIn("candidateLength < 2 || resultLength >= 2", body)
+        self.assertIn("isMeaningfulJapaneseScopedBlockCandidate(visionCandidate)", selector)
+        self.assertIn("return nil", selector)
+        self.assertLess(
+            selector.index("isMeaningfulJapaneseScopedBlockCandidate(visionCandidate)"),
+            selector.index("return visionCandidate"),
+        )
 
-    def test_scoped_candidate_gate_cannot_promote_punctuation_only_text(self) -> None:
-        body = function_body(
+    def test_scoped_meaningful_helper_uses_shared_normalizer(self) -> None:
+        helper = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isMeaningfulJapaneseScopedBlockCandidate(\n",
         )
-        self.assertIn("JapaneseOCRTextNormalizer.containsJapaneseLetter(text)", body)
-        self.assertIn("candidate.confidence >= 0.55", body)
-        self.assertIn("japaneseScriptDensity(in: text) >= 0.5", body)
+        self.assertIn("postProcessJapaneseOCRText(candidate.original)", helper)
+        self.assertIn("JapaneseOCRTextNormalizer.containsJapaneseLetter(text)", helper)
+        self.assertNotIn("japaneseScriptDensity", helper)
 
-    def test_punctuation_observations_remain_available_as_fallback(self) -> None:
+    def test_page_candidate_fallback_still_allows_punctuation_only_text(self) -> None:
         selector = function_body(
             self.vision,
             "private static func selectOCRCandidate(\n",
         )
         self.assertNotIn("containsJapaneseLetter", selector)
-        self.assertIn("let candidatesToScore = letterBearingCandidates.isEmpty", selector)
-        self.assertIn("? confidenceWindow", selector)
         self.assertIn("punctuation-only Japanese text is still valid input", selector)
 
-    def test_budget_and_translation_boundaries_remain_unchanged(self) -> None:
+    def test_ocr_translation_and_budget_boundaries_remain_unchanged(self) -> None:
         self.assertIn("maximumJapaneseMangaLineOCRRequests = 8", self.vision)
         self.assertIn("maximumJapaneseWeakBlockRecoveryRequests = 4", self.vision)
-        for source in (self.normalizer, self.vision, self.manga):
+        for source in (self.vision, self.normalizer, self.manga):
             self.assertNotIn("groundTruth", source)
             self.assertNotIn("KOHARU_DATA_ROOT", source)
             self.assertNotIn("sub" + "process", source)
             self.assertNotIn("Po" + "pen", source)
-        self.assertIn("translateImageBlockWithQA(", read("AITRANS/Services/TranslationSessionStore.swift"))
+        self.assertIn(
+            "translateImageBlockWithQA(",
+            self.store,
+        )
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
@@ -111,9 +108,9 @@ class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
             ["3.318", "3.318"],
         )
         for marker in (
-            "scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py",
-            "v3.317",
-            "japanese-benchmark-v3.317-",
+            "scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py",
+            "v3.318",
+            "japanese-benchmark-v3.318-",
         ):
             self.assertIn(
                 marker,
@@ -122,7 +119,7 @@ class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
 
     def test_contract_has_no_process_entry(self) -> None:
         contract = read(
-            "scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py"
+            "scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py"
         )
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)

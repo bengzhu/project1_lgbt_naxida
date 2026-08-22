@@ -1,3 +1,11 @@
+## v3.318：日语 OCR 单块复查 meaningful-text 门（2026-08-22，进行中）
+
+本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。v3.317 已收紧页面 detector owner、line coverage 和双候选 scoped replacement，但单块 `recognizeTextBlockDetached` 的 bundled Manga crop 仍只以 `japaneseScriptDensity >= 0.5` 接受；当 Manga/Vision 只有一侧结果时，标点-only 结果仍可能作为复查结果替换现有 block，绕过实际文字证据边界。
+
+实现：单块 Manga crop 增加共享 `JapaneseOCRTextNormalizer.containsJapaneseLetter`；`selectJapaneseScopedBlockCandidate` 对 Manga-only、Vision-only 和双候选路径统一拒绝 punctuation-only 文本，含实际日语文字的弱候选仍沿用既有 confidence/quality 选择。页面普通 `selectOCRCandidate`、OCR 请求/crop/warp/预算、detector/geometry/layout、翻译 QA、取消、持久化和非日语路径不变。
+
+新增 `scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py`，工程版本推进至 `3.318`，CI Japanese benchmark route 已接入。本轮待本地安全回归与云端 receipt，不把合同或固定样图外推为通用 OCR/CER、翻译盲评、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.317：日语 OCR 可靠文字证据门（2026-08-22，已完成）
 
 本轮继续只优化 AITRANS 普通图片 OCR→翻译主路径，不等待或引入 Koharu artifact。审计发现既有 `japaneseScriptDensity >= 0.5` 会把 `！！`、`…` 等纯日语标点按“日语质量”计满；因此标点-only 的 Manga OCR 结果可能被提升为可靠 detector owner、单独证明 vertical line coverage，或进入 scoped block 候选替换，压住后续真实文字恢复。
