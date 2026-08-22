@@ -378,6 +378,7 @@ struct VisionOCRService: Sendable {
                    !text.isEmpty,
                    result.confidence.isFinite,
                    result.confidence >= 0.55,
+                   JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
                    Self.japaneseScriptDensity(in: text) >= 0.5 {
                     mangaCandidate = Self.recognizedBlock(
                         block,
@@ -762,8 +763,24 @@ struct VisionOCRService: Sendable {
         mangaCandidate: ImageTranslationBlock?,
         visionCandidate: ImageTranslationBlock?
     ) -> ImageTranslationBlock? {
-        guard let mangaCandidate else { return visionCandidate }
-        guard let visionCandidate else { return mangaCandidate }
+        guard let mangaCandidate else {
+            guard let visionCandidate,
+                  isMeaningfulJapaneseScopedBlockCandidate(visionCandidate) else {
+                return nil
+            }
+            return visionCandidate
+        }
+        guard let visionCandidate else {
+            return isMeaningfulJapaneseScopedBlockCandidate(mangaCandidate)
+                ? mangaCandidate
+                : nil
+        }
+        guard isMeaningfulJapaneseScopedBlockCandidate(visionCandidate) else {
+            return mangaCandidate
+        }
+        guard isMeaningfulJapaneseScopedBlockCandidate(mangaCandidate) else {
+            return visionCandidate
+        }
         guard isUsableJapaneseScopedBlockCandidate(visionCandidate) else {
             return mangaCandidate
         }
@@ -774,6 +791,18 @@ struct VisionOCRService: Sendable {
             visionCandidate,
             than: mangaCandidate
         ) ? visionCandidate : mangaCandidate
+    }
+
+    /// Scoped rereads may replace an existing block only with actual Japanese
+    /// writing evidence. Punctuation-only output remains available to the
+    /// ordinary page candidate flow, but it must not become a successful
+    /// single-block reread when the other engine is empty or weak.
+    private static func isMeaningfulJapaneseScopedBlockCandidate(
+        _ candidate: ImageTranslationBlock
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(candidate.original)
+        return !text.isEmpty
+            && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
     }
 
     private static func isUsableJapaneseScopedBlockCandidate(
