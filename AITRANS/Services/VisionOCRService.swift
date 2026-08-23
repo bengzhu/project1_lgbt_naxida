@@ -4425,7 +4425,15 @@ struct VisionOCRService: Sendable {
             let preservesDetectorTextRegionBoundary =
                 observation.preservesDetectorTextRegionBoundary
                 || output[duplicateIndex].preservesDetectorTextRegionBoundary
-            if isBetterObservation(
+            if prefersJapanese,
+               shouldPreferMeaningfulJapaneseDuplicate(
+                   observation,
+                   over: output[duplicateIndex]
+               ) {
+                var winner = observation
+                winner.verticalTextRegionOwner = inheritedOwner
+                output[duplicateIndex] = winner
+            } else if isBetterObservation(
                 observation,
                 than: output[duplicateIndex],
                 prefersJapanese: prefersJapanese
@@ -4441,6 +4449,34 @@ struct VisionOCRService: Sendable {
             }
         }
         return output
+    }
+
+    /// Geometry can prove that two ordinary Vision observations describe the
+    /// same Japanese text, while the generic length/confidence score can still
+    /// favor a long mixed-Latin read or punctuation-only noise. Within Vision's
+    /// existing 0.14 confidence window, prefer the duplicate that contains
+    /// meaningful Japanese writing. A lower-confidence hallucination cannot
+    /// displace a strong punctuation result, and punctuation remains available
+    /// when there is no qualified duplicate. Detector and compact candidates
+    /// retain their dedicated replacement policies above this generic branch.
+    private static func shouldPreferMeaningfulJapaneseDuplicate(
+        _ candidate: VisionOCRObservation,
+        over incumbent: VisionOCRObservation
+    ) -> Bool {
+        guard candidate.observationRole != .detectorTextRegion,
+              incumbent.observationRole != .detectorTextRegion,
+              !candidate.isCompactJapaneseRecovery,
+              !incumbent.isCompactJapaneseRecovery,
+              isMeaningfulJapaneseRecoveryText(candidate.text),
+              !isMeaningfulJapaneseRecoveryText(incumbent.text),
+              candidate.confidence.isFinite,
+              candidate.confidence >= 0.40 else {
+            return false
+        }
+        let incumbentConfidence = incumbent.confidence.isFinite
+            ? incumbent.confidence
+            : 0
+        return candidate.confidence >= incumbentConfidence - 0.14
     }
 
     private static func isUsableCompactJapaneseRecovery(
