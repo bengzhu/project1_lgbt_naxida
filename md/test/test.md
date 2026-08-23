@@ -1,9 +1,9 @@
-### v3.328 普通日语 recovery Vision 候选池质量合同（研发中）
+### v3.328 普通日语 recovery Vision 候选池质量合同（已完成）
 
 - 普通 pixel-first、tile、block、axis line 与 perspective line 的 Vision top-5 alternatives 先执行共享 meaningful 文本门，再进入既有 Japanese comparator；高分 `。、`／`日本abcde` 不再遮蔽较低分但合格的日文 alternative。
 - 候选池门只要求真实日文字母、letter density `>=.5` 与 script density `>=.5`，不新增统一 confidence floor；compact `.40`、line/coverage `.48`、Manga `.55` 等既有路径策略保留。
 - page OCR 默认关闭 recovery gate，标点-only 页面 fallback 保留；v3.327 scoped `.55` 完整门独立。请求/方向预算、crop/warp、owner/geometry/layout、翻译 QA、取消、generation、持久化和非日语路径不变。
-- 新合同：`scripts/test-v3328-japanese-recovery-vision-pool-quality-contract.py`；工程版本为 `3.328`，云端 Japanese benchmark route 已接入。新合同 `10/10`、327 个无外部进程/编译入口合同（1,721 tests）、Python AST `374/374`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个 `subprocess` 合同跳过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR 与合入 receipt 待验证。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
+- 新合同：`scripts/test-v3328-japanese-recovery-vision-pool-quality-contract.py`；工程版本为 `3.328`，云端 Japanese benchmark route 已接入。新合同 `10/10`、327 个无外部进程/编译入口合同（1,721 tests）、Python AST `374/374`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个 `subprocess` 合同跳过。实现 SHA `7bf5f6dce04c1ff409b1cb61cb962c0897d87e52` 的 PR [#392](https://github.com/bengzhu/project1_lgbt_naxida/pull/392) CI [32639010373](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32639010373) 成功；exact-SHA full [32638358868](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32638358868) 的 benchmark job `97191406298` 与主 job `97191450820` 成功，覆盖静态、Speech、UI/Home/Paste、云端 Xcode、manifest、JUnit `10/10` 与 full receipt，Koharu/GGUF 按非必需策略跳过。PR 以 merge SHA `33140b73bac00ed0ba9903721076d96c14903fef` 合入 `smalldata_test`；合入后 push CI [32639066290](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32639066290) 的 v3.328 benchmark、静态与复用 full receipt 成功。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；`main` 未修改。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
 
 ### v3.327 日语 scoped Vision 候选池质量合同（已完成）
 
