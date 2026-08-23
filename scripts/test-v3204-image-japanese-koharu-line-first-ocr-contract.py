@@ -70,7 +70,7 @@ class JapaneseKoharuLineFirstOCRContractTests(unittest.TestCase):
             or all(
                 marker in self.crops
                 for marker in (
-                    "var blockFallback = primary",
+                    "var blockFallback = meaningfulPrimary",
                     "refined.append(contentsOf: blockFallback)",
                 )
             )

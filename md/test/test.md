@@ -1,3 +1,10 @@
+### v3.323 日语整块 Vision fallback 返回 meaningful-density 合同（进行中）
+
+- line coverage 不完整后的 block primary/opposite crop observations 在提交、owner coverage proof 与 partial-line replacement 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再成为整块 fallback。
+- primary 过滤后为空仍触发现有 opposite orientation；opposite 过滤后为空则保留既有 partial lines。最多 16 个 block、8 次 block orientation fallback、line/pixel/tile 请求、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
+- 新合同：`scripts/test-v3323-japanese-block-fallback-density-contract.py`；工程版本为 `3.323`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
+- 本地新合同 `9/9`、322 个无进程合同、Python AST `369/369`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA 工程验证待完成。
+
 ### v3.322 日语 Vision geometry recovery 返回 meaningful-density 合同（已完成）
 
 - pixel-first 与 vertical-tile Vision crop observations 在提交到 `refined` 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再进入 recovery dedupe/fusion/layout。

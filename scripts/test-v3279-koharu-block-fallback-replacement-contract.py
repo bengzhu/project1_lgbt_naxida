@@ -66,14 +66,14 @@ class KoharuBlockFallbackReplacementContractTests(unittest.TestCase):
     def test_incomplete_coverage_collects_one_block_fallback_source(self) -> None:
         coverage = self.crops.index("let hasCompleteLineCoverage")
         crop = self.crops.index("koharuVerticalBlockCropRect(")
-        collect = self.crops.index("var blockFallback = primary")
+        collect = self.crops.index("var blockFallback = meaningfulPrimary")
         replace = self.crops.index("refined.removeAll")
         append = self.crops.index("refined.append(contentsOf: blockFallback)")
         self.assertLess(coverage, crop)
         self.assertLess(crop, collect)
         self.assertLess(collect, replace)
         self.assertLess(replace, append)
-        self.assertIn("blockFallback.append(contentsOf:", self.crops)
+        self.assertIn("blockFallback.append(", self.crops)
 
     def test_only_exact_owned_vertical_lines_are_replaced(self) -> None:
         self.assertIn("fallbackHasCompleteLineCoverage", self.crops)
@@ -158,7 +158,7 @@ class KoharuBlockFallbackReplacementContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.322", "3.322"],
+            ["3.323", "3.323"],
         )
 
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.322 Vision recovery output."""
+"""Static and pure-policy contract for the v3.323 block fallback gate."""
 
 from pathlib import Path
 import re
@@ -99,7 +99,7 @@ def japanese_script_density(text: str) -> float:
     return japanese_count / len(text)
 
 
-def is_meaningful_recovery_text(text: str) -> bool:
+def commits_block_fallback(text: str) -> bool:
     cleaned = text.strip()
     return (
         bool(cleaned)
@@ -109,7 +109,7 @@ def is_meaningful_recovery_text(text: str) -> bool:
     )
 
 
-class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
+class JapaneseBlockFallbackDensityContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
@@ -123,49 +123,35 @@ class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
         cls.test_log = read("md/test/test.md")
         cls.update_log = read("update_log.md")
 
-    def test_legacy_density_noise_is_not_meaningful_recovery_text(self) -> None:
+    def test_punctuation_heavy_results_are_not_block_fallbacks(self) -> None:
         self.assertEqual(japanese_script_density("。、"), 1.0)
         self.assertEqual(japanese_script_density("日。、"), 1.0)
-        self.assertFalse(is_meaningful_recovery_text("。、"))
-        self.assertFalse(is_meaningful_recovery_text("日。、"))
-        self.assertTrue(is_meaningful_recovery_text("日本語。"))
-        self.assertTrue(is_meaningful_recovery_text("ニコッ"))
+        self.assertFalse(commits_block_fallback("。、"))
+        self.assertFalse(commits_block_fallback("日。、"))
+        self.assertTrue(commits_block_fallback("日本語。"))
+        self.assertTrue(commits_block_fallback("ニコッ"))
 
-    def test_shared_recovery_filter_requires_actual_meaningful_text(self) -> None:
+    def test_block_primary_is_filtered_before_fallback_and_commit(self) -> None:
         body = function_body(
             self.vision,
-            "private static func meaningfulJapaneseRecoveryObservations(\n",
-        )
-        for marker in (
-            "observation.text.trimmingCharacters(",
-            "!text.isEmpty",
-            "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
-            "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5",
-            "japaneseScriptDensity(in: text) >= 0.5",
-        ):
-            self.assertIn(marker, body)
-
-    def test_pixel_first_primary_is_filtered_before_commit_and_fallback(self) -> None:
-        body = function_body(
-            self.vision,
-            "private static func recognizeJapanesePixelFirstVerticalCrops(\n",
+            "private static func recognizeJapaneseVerticalCrops(\n",
         )
         for marker in (
             "let meaningfulPrimary = meaningfulJapaneseRecoveryObservations(",
-            "refined.append(contentsOf: meaningfulPrimary)",
+            "var blockFallback = meaningfulPrimary",
             "needsJapaneseOrientationFallback(meaningfulPrimary)",
         ):
             self.assertIn(marker, body)
-        self.assertNotIn("refined.append(contentsOf: primary)", body)
+        self.assertNotIn("var blockFallback = primary", body)
         self.assertLess(
             body.index("let meaningfulPrimary = meaningfulJapaneseRecoveryObservations("),
             body.index("needsJapaneseOrientationFallback(meaningfulPrimary)"),
         )
 
-    def test_pixel_first_opposite_is_filtered_before_commit(self) -> None:
+    def test_block_opposite_is_filtered_before_commit(self) -> None:
         body = function_body(
             self.vision,
-            "private static func recognizeJapanesePixelFirstVerticalCrops(\n",
+            "private static func recognizeJapaneseVerticalCrops(\n",
         )
         for marker in (
             "let opposite = recognizeJapaneseCropPass(",
@@ -177,61 +163,64 @@ class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
             body.index("meaningfulJapaneseRecoveryObservations(opposite)"),
         )
 
-    def test_tile_text_filter_runs_before_existing_geometry_gate(self) -> None:
+    def test_only_filtered_fallback_can_replace_lines_or_reach_fusion(self) -> None:
         body = function_body(
-            self.vision,
-            "private static func filterJapaneseVerticalTileObservations(\n",
-        )
-        for marker in (
-            "meaningfulJapaneseRecoveryObservations(observations).filter",
-            "let region = observation.lineRegionRect ?? observation.rect",
-            "guard scriptDensity >= 0.5 else { return false }",
-            "let isTallColumn",
-            "let isCompactFragment",
-        ):
-            self.assertIn(marker, body)
-        self.assertLess(
-            body.index("meaningfulJapaneseRecoveryObservations(observations)"),
-            body.index("let region = observation.lineRegionRect"),
-        )
-
-    def test_recovery_request_and_block_fallback_budgets_are_unchanged(self) -> None:
-        pixel = function_body(
-            self.vision,
-            "private static func recognizeJapanesePixelFirstVerticalCrops(\n",
-        )
-        tile = function_body(
-            self.vision,
-            "private static func recognizeJapaneseVerticalTileFallback(\n",
-        )
-        page = function_body(
             self.vision,
             "private static func recognizeJapaneseVerticalCrops(\n",
         )
         for marker in (
-            "candidates.prefix(12)",
-            "var orientationFallbacksRemaining = 4",
+            "blockFallback = deduplicateJapaneseObservations(blockFallback)",
+            "lineRefined: blockFallback",
+            "fallbackOwners: blockFallback.map(\\.verticalTextRegionOwner)",
+            "refined.append(contentsOf: blockFallback)",
         ):
-            self.assertIn(marker, pixel)
-        for marker in (
-            "let maximumTiles = 6",
-            "let maximumWindows = 18",
-            "var orientationFallbacksRemaining = 4",
-            "filterJapaneseVerticalTileObservations(primary)",
-            "filterJapaneseVerticalTileObservations(opposite)",
-        ):
-            self.assertIn(marker, tile)
-        self.assertIn("var orientationFallbacksRemaining = 8", page)
+            self.assertIn(marker, body)
+        self.assertLess(
+            body.index("var blockFallback = meaningfulPrimary"),
+            body.index("lineRefined: blockFallback"),
+        )
+        self.assertLess(
+            body.index("lineRefined: blockFallback"),
+            body.index("refined.append(contentsOf: blockFallback)"),
+        )
 
-    def test_translation_persistence_and_research_boundaries_stay_separate(self) -> None:
+    def test_empty_filtered_fallback_keeps_partial_lines(self) -> None:
+        body = function_body(
+            self.vision,
+            "private static func recognizeJapaneseVerticalCrops(\n",
+        )
+        for marker in (
+            "blockFallbackCanReplacePartialLines(",
+            "refined.removeAll {",
+            "$0.observationRole == .verticalLine",
+            "$0.verticalTextRegionOwner == blockOwner",
+        ):
+            self.assertIn(marker, body)
+        self.assertLess(
+            body.index("blockFallbackCanReplacePartialLines("),
+            body.index("refined.removeAll {"),
+        )
+
+    def test_block_request_owner_and_coverage_bounds_are_unchanged(self) -> None:
+        body = function_body(
+            self.vision,
+            "private static func recognizeJapaneseVerticalCrops(\n",
+        )
+        for marker in (
+            ".prefix(16)",
+            "var orientationFallbacksRemaining = 8",
+            "verticalTextRegionOwner: block.verticalTextRegionOwner",
+            "allowsBlockCropResults: true",
+        ):
+            self.assertIn(marker, body)
+        self.assertEqual(body.count("orientationFallbacksRemaining -= 1"), 1)
+
+    def test_translation_persistence_and_research_bounds_are_unchanged(self) -> None:
         self.assertIn("translateImageBlockWithQA(", self.store)
         self.assertIn("persist()", self.store)
         self.assertNotIn("groundTruth", self.vision)
         self.assertNotIn("KOHARU_DATA_ROOT", self.vision)
         self.assertNotIn("test/koharu_artifacts", self.vision)
-        fixture = ROOT / "test/jap.jpg"
-        self.assertTrue(fixture.is_file())
-        self.assertGreater(len(fixture.read_bytes()), 100_000)
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
@@ -246,15 +235,15 @@ class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
             + self.update_log
         )
         for marker in (
-            "scripts/test-v3322-japanese-vision-recovery-density-contract.py",
-            "v3.322",
-            "japanese-benchmark-v3.322-",
+            "scripts/test-v3323-japanese-block-fallback-density-contract.py",
+            "v3.323",
+            "japanese-benchmark-v3.323-",
         ):
             self.assertIn(marker, combined)
 
     def test_contract_has_no_process_entry(self) -> None:
         contract = read(
-            "scripts/test-v3322-japanese-vision-recovery-density-contract.py"
+            "scripts/test-v3323-japanese-block-fallback-density-contract.py"
         )
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)

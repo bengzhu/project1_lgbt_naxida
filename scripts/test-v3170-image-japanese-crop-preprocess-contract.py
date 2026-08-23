@@ -51,7 +51,7 @@ class JapaneseCropPreprocessContractTests(unittest.TestCase):
             "crop: preparedCrop.image",
             "cropScale: preparedCrop.scale",
             "minimumTextHeight: 0.004",
-            "needsJapaneseOrientationFallback(primary)",
+            "needsJapaneseOrientationFallback(meaningfulPrimary)",
         ]:
             self.assertIn(marker, self.blocks)
 

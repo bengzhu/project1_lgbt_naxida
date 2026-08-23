@@ -1,3 +1,11 @@
+## v3.323：日语整块 Vision fallback 返回 meaningful-density 门（2026-08-23，进行中）
+
+本轮继续优化 AITRANS 普通图片 OCR→翻译主路径。v3.321/v3.322 已依次收紧 Manga line 与 pixel-first/tile recovery 返回，但 line coverage 不完整时的整块 Vision crop 仍把 primary/opposite 原始 observations 直接用于 owner coverage、partial-line replacement 与最终 `refined`；因此 `。、`、`日。、` 等标点主导结果仍可能作为 block fallback 残留。
+
+实现边界：整块 crop 的 primary 先复用 `meaningfulJapaneseRecoveryObservations`，再以过滤结果决定既有 opposite fallback；opposite 也经过同一实际日语字母、`japaneseLetterDensity >=0.5` 与 script-density 门，只有合格集合才能证明 owner complete coverage、替换 partial lines 或提交 fusion/layout。被拒 fallback 保留已有 line observations；最多 16 个 vertical blocks、8 次 block orientation fallback、line/pixel/tile 请求、crop/warp、owner geometry、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3323-japanese-block-fallback-density-contract.py`，工程版本推进至 `3.323`，Japanese benchmark route 已接入；Koharu/GGUF/授权语料/目标设备不阻塞本轮普通 OCR 修复。
+
+本地安全回归为 322 个无外部进程/编译入口合同全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；新合同 `9/9`、Python AST `369/369`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA 工程验证待完成。
+
 ## v3.322：日语 Vision geometry recovery 返回 meaningful-density 门（2026-08-23，已完成）
 
 本轮继续优化 AITRANS 普通图片 OCR→翻译主路径。v3.321 已收紧 bundled Manga line 返回提交，但 Vision pixel-first 和 vertical-tile recovery 仍把 crop pass 的原始 observations 直接加入 `refined`；meaningful-density 只参与 fallback/coverage 判断，旧 `japaneseScriptDensity` 可让 `。、` 或 `日。、` 等标点主导结果残留进后续 dedupe、fusion 与 layout。
