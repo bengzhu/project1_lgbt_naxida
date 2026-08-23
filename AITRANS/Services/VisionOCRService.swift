@@ -379,6 +379,7 @@ struct VisionOCRService: Sendable {
                    result.confidence.isFinite,
                    result.confidence >= 0.55,
                    JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
+                   JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
                    Self.japaneseScriptDensity(in: text) >= 0.5 {
                     mangaCandidate = Self.recognizedBlock(
                         block,
@@ -716,6 +717,7 @@ struct VisionOCRService: Sendable {
         let letters = japaneseLetterCountForRecovery(text)
         return !block.confidence.isFinite
             || block.confidence < 0.60
+            || JapaneseOCRTextNormalizer.japaneseLetterDensity(text) < 0.5
             || japaneseScriptDensity(in: text) < 0.5
             || (directionIsWeak && letters <= 3)
             || (direction == .vertical && letters <= 2)
@@ -729,6 +731,8 @@ struct VisionOCRService: Sendable {
         guard !candidateText.isEmpty,
               candidate.confidence.isFinite,
               candidate.confidence >= 0.55,
+              JapaneseOCRTextNormalizer.containsJapaneseLetter(candidateText),
+              JapaneseOCRTextNormalizer.japaneseLetterDensity(candidateText) >= 0.5,
               japaneseScriptDensity(in: candidateText) >= 0.5 else {
             return false
         }
@@ -803,6 +807,7 @@ struct VisionOCRService: Sendable {
         let text = postProcessJapaneseOCRText(candidate.original)
         return !text.isEmpty
             && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
+            && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
     }
 
     private static func isUsableJapaneseScopedBlockCandidate(
@@ -813,6 +818,7 @@ struct VisionOCRService: Sendable {
             && candidate.confidence.isFinite
             && candidate.confidence >= 0.55
             && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
+            && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
             && japaneseScriptDensity(in: text) >= 0.5
     }
 
@@ -1381,6 +1387,7 @@ struct VisionOCRService: Sendable {
         guard confidence.isFinite,
               confidence >= 0.55,
               JapaneseOCRTextNormalizer.containsJapaneseLetter(result.text),
+              JapaneseOCRTextNormalizer.japaneseLetterDensity(result.text) >= 0.5,
               japaneseScriptDensity(in: result.text) >= 0.5 else {
             return false
         }
@@ -2619,6 +2626,7 @@ struct VisionOCRService: Sendable {
             let lineRegion = observation.lineRegionRect ?? observation.rect
             guard block.direction == .vertical,
                   block.directionConfidence >= 0.25,
+                  JapaneseOCRTextNormalizer.japaneseLetterDensity(block.text) >= 0.5,
                   japaneseScriptDensity(in: block.text) >= 0.5,
                   overlapRatio(observation.rect, block.rect) >= 0.25,
                   japaneseLineRegionOverlapsBlock(observation, block: block),
@@ -2648,6 +2656,7 @@ struct VisionOCRService: Sendable {
             let text = candidate.text.trimmingCharacters(in: .whitespacesAndNewlines)
             return isVerticalLineCandidate(region)
                 && !text.isEmpty
+                && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
                 && japaneseScriptDensity(in: text) >= 0.5
         }
         let textBacked = textBackedCandidates.sorted { lhs, rhs in
@@ -2749,6 +2758,7 @@ struct VisionOCRService: Sendable {
             let matchingBlocks = blocks.filter { block in
                 guard block.direction == .vertical,
                       block.directionConfidence >= 0.25,
+                      JapaneseOCRTextNormalizer.japaneseLetterDensity(block.text) >= 0.5,
                       japaneseScriptDensity(in: block.text) >= 0.5 else {
                     return false
                 }
@@ -3021,6 +3031,7 @@ struct VisionOCRService: Sendable {
               result.confidence.isFinite,
               result.confidence >= 0.48,
               JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
+              JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
               japaneseScriptDensity(in: text) >= 0.5 else {
             return false
         }
@@ -3157,6 +3168,7 @@ struct VisionOCRService: Sendable {
         let ratio = region.height / max(region.width, 0.001)
         return scalarCount > 0
             && scalarCount <= 2
+            && JapaneseOCRTextNormalizer.japaneseLetterDensity(observation.text) >= 0.5
             && japaneseScriptDensity(in: observation.text) >= 0.5
             && region.height >= 0.012
             && ratio >= 0.75
@@ -3247,6 +3259,7 @@ struct VisionOCRService: Sendable {
         }
         let textLength = best.text.unicodeScalars.count
         return best.confidence < 0.48
+            || JapaneseOCRTextNormalizer.japaneseLetterDensity(best.text) < 0.5
             || japaneseScriptDensity(in: best.text) < 0.5
             || textLength <= 1
     }
@@ -3615,6 +3628,8 @@ struct VisionOCRService: Sendable {
               !text.isEmpty,
               observation.confidence.isFinite,
               observation.confidence >= 0.48,
+              JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
+              JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
               japaneseScriptDensity(in: text) >= 0.5 else {
             return nil
         }
@@ -4147,6 +4162,7 @@ struct VisionOCRService: Sendable {
                           candidate.sourceDirectionHint == .vertical,
                           candidate.confidence.isFinite,
                           candidate.confidence >= 0.40,
+                          JapaneseOCRTextNormalizer.japaneseLetterDensity(candidate.text) >= 0.5,
                           japaneseScriptDensity(in: candidate.text) >= 0.5,
                           japaneseLetterCountForRecovery(candidate.text)
                               > ownerLetters,
@@ -4205,6 +4221,7 @@ struct VisionOCRService: Sendable {
                   candidate.confidence >= 0.40,
                   candidate.rect.width <= 0.05,
                   candidate.rect.height <= 0.02,
+                  JapaneseOCRTextNormalizer.japaneseLetterDensity(candidate.text) >= 0.5,
                   japaneseScriptDensity(in: candidate.text) >= 0.5,
                   (2...4).contains(japaneseLetterCountForRecovery(candidate.text)) else {
                 continue
@@ -4214,6 +4231,7 @@ struct VisionOCRService: Sendable {
                       neighbor.observationRole == .verticalLine
                           || neighbor.sourceDirectionHint == .vertical,
                       neighbor.confidence.isFinite,
+                      JapaneseOCRTextNormalizer.japaneseLetterDensity(neighbor.text) >= 0.5,
                       japaneseScriptDensity(in: neighbor.text) >= 0.5 else {
                     return false
                 }
@@ -4335,6 +4353,7 @@ struct VisionOCRService: Sendable {
     ) -> Bool {
         observation.confidence.isFinite
             && observation.confidence >= 0.40
+            && JapaneseOCRTextNormalizer.japaneseLetterDensity(observation.text) >= 0.5
             && japaneseScriptDensity(in: observation.text) >= 0.5
             && japaneseLetterCountForRecovery(observation.text) >= 3
     }
@@ -4643,7 +4662,8 @@ struct VisionOCRService: Sendable {
         // heuristics instead of inheriting rotation provenance blindly.
         let directionRect = originalLineRegionRect ?? originalRect
         let verticalSourceHint: ImageOCRLayoutDirection? =
-            japaneseScriptDensity(in: observation.text) >= 0.5
+            JapaneseOCRTextNormalizer.japaneseLetterDensity(observation.text) >= 0.5
+                && japaneseScriptDensity(in: observation.text) >= 0.5
                 && directionRect.height / max(directionRect.width, 0.001) >= 1.05
                 ? .vertical
                 : nil
