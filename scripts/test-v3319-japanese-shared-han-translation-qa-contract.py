@@ -115,7 +115,7 @@ class JapaneseSharedHanTranslationQAContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.320", "3.320"],
+            ["3.321", "3.321"],
         )
         for marker in (
             "scripts/test-v3319-japanese-shared-han-translation-qa-contract.py",

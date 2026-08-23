@@ -1,3 +1,10 @@
+### v3.321 日语 Manga line OCR 返回 meaningful-density 合同（进行中）
+
+- bundled Manga line OCR 的返回值在匹配 owner/line geometry 并 append `.verticalLine` 之前，统一要求真实日语字母、`japaneseLetterDensity >=0.5`、既有 `japaneseScriptDensity >=0.5` 与有限 confidence `>=0.55`；`。、`、`日。、` 不再成为成功 line observation。
+- 被拒结果保持 line 缺口，既有 Vision line、pixel-first/tile 与整块 block crop fallback 继续运行；最多 8 个 Manga line 请求、12 次 Vision line orientation fallback、crop/warp、owner/coverage、layout、翻译 QA、取消和持久化不变。
+- 新合同：`scripts/test-v3321-japanese-line-result-density-contract.py`；工程版本为 `3.321`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备仍是可选研究/质量证据，不阻塞普通 OCR 修复。
+- 本地新合同 `9/9`、320 个无进程合同、Python AST `367/367`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
 ### v3.320 日语 OCR 恢复 meaningful-density 合同（已完成）
 
 - 共享 `JapaneseOCRTextNormalizer.japaneseLetterDensity` 将日语标点保留在非技术可见字符分母中，拉丁/数字 token 不惩罚，长音/组合记号需依附真实日语字母；`！！`、`日！！` 不能通过 `>=0.5`，`日本語。`、`GPT-4日本語`、`キャー！！` 可以通过。

@@ -1,4 +1,5 @@
 # 项目流程图
+v3.321 日语 line OCR 返回门：`bounded Manga line result -> meaningful Japanese density -> owner match -> verticalLine commit OR existing Vision/block fallback`；高置信标点噪声不再进入 line fusion/layout，不增加请求或改变 geometry/翻译/持久化边界。
 v3.320 日语 OCR meaningful-density：`Vision/Manga text -> Japanese writing / nontechnical visible scalars -> bounded orientation + weak/scoped recovery -> line candidate budget -> owner/coverage/frontier -> existing fusion/layout/translation`；标点主导结果不再冒充可靠文字证据，mixed technical token、普通 fallback 与请求上限保持。
 v3.319 日语→简体中文翻译 QA：`block source/target language -> sourceLeakage shared-Han exception -> existing numbers/terms/density/length QA -> scoped commit`；纯汉字日语源允许合法共享 Han 译文，含假名原文仍拒绝原文回显；不重跑 OCR，不改变标签、取消或持久化。
 v3.318 日语 OCR scoped 复查门：`existing block -> bounded Manga/Vision reread -> shared Japanese letter signal -> accept only meaningful text -> existing commit/QA`；单块标点-only 结果不再成为复查替换结果，页面普通 fallback 仍保留。

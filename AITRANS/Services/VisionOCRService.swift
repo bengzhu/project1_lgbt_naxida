@@ -2892,6 +2892,8 @@ struct VisionOCRService: Sendable {
             guard let text = Self.cleanRecognizedBlockText(result.text),
                   result.confidence.isFinite,
                   result.confidence >= 0.55,
+                  JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
+                  JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
                   japaneseScriptDensity(in: text) >= 0.5 else {
                 continue
             }
