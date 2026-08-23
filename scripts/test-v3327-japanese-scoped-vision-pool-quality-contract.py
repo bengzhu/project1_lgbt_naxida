@@ -211,15 +211,12 @@ class JapaneseScopedVisionPoolQualityContractTests(unittest.TestCase):
         self.assertIsNone(select_scoped_top_candidate([("日本語", math.nan)]))
 
     def test_usable_filter_precedes_existing_top_candidate_comparator(self) -> None:
+        self.assertIn("if requiresUsableJapaneseScopedText", self.recognize)
         self.assertIn(
-            "let candidate = requiresUsableJapaneseScopedText",
+            "candidate = Self.selectJapaneseScopedVisionCandidate(",
             self.recognize,
         )
-        self.assertIn(
-            "? Self.selectJapaneseScopedVisionCandidate(from: candidates)",
-            self.recognize,
-        )
-        self.assertIn(": Self.selectOCRCandidate(", self.recognize)
+        self.assertIn("candidate = Self.selectOCRCandidate(", self.recognize)
         self.assertIn("let usableCandidates = candidates.filter", self.pool_selector)
         gate = self.pool_selector.index("isUsableJapaneseScopedText(")
         compare = self.pool_selector.index(
@@ -289,7 +286,7 @@ class JapaneseScopedVisionPoolQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.327", "3.327"],
+            ["3.328", "3.328"],
         )
         combined = (
             self.workflow

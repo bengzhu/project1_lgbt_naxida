@@ -513,7 +513,8 @@ struct VisionOCRService: Sendable {
         postProcessJapaneseText: Bool = false,
         usesLanguageCorrection: Bool = true,
         observationRole: VisionOCRObservationRole = .page,
-        requiresUsableJapaneseScopedText: Bool = false
+        requiresUsableJapaneseScopedText: Bool = false,
+        requiresMeaningfulJapaneseRecoveryText: Bool = false
     ) throws -> [VisionOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -542,12 +543,21 @@ struct VisionOCRService: Sendable {
 
         return (request.results ?? []).compactMap { observation in
             let candidates = observation.topCandidates(postProcessJapaneseText ? 5 : 1)
-            let candidate = requiresUsableJapaneseScopedText
-                ? Self.selectJapaneseScopedVisionCandidate(from: candidates)
-                : Self.selectOCRCandidate(
+            let candidate: VNRecognizedText?
+            if requiresUsableJapaneseScopedText {
+                candidate = Self.selectJapaneseScopedVisionCandidate(
+                    from: candidates
+                )
+            } else if requiresMeaningfulJapaneseRecoveryText {
+                candidate = Self.selectJapaneseRecoveryVisionCandidate(
+                    from: candidates
+                )
+            } else {
+                candidate = Self.selectOCRCandidate(
                     from: candidates,
                     japanese: postProcessJapaneseText
                 )
+            }
             guard let candidate else { return nil }
             guard let rect = Self.normalizedRect(from: observation.boundingBox) else { return nil }
             let text = postProcessJapaneseText
@@ -979,6 +989,20 @@ struct VisionOCRService: Sendable {
             )
         }
         return selectOCRCandidate(from: usableCandidates, japanese: true)
+    }
+
+    /// Ordinary Japanese crop recovery keeps each caller's existing confidence
+    /// policy, but punctuation-only or low-density alternatives cannot mask a
+    /// lower-scored candidate that contains meaningful Japanese writing. Page
+    /// OCR does not opt into this filter, so punctuation-only page content keeps
+    /// the historical fallback in `selectOCRCandidate`.
+    private static func selectJapaneseRecoveryVisionCandidate(
+        from candidates: [VNRecognizedText]
+    ) -> VNRecognizedText? {
+        let meaningfulCandidates = candidates.filter { candidate in
+            isMeaningfulJapaneseRecoveryText(candidate.string)
+        }
+        return selectOCRCandidate(from: meaningfulCandidates, japanese: true)
     }
 
     private static func japaneseCandidateScore(_ candidate: VNRecognizedText) -> Double {
@@ -1656,14 +1680,18 @@ struct VisionOCRService: Sendable {
         _ observations: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
         observations.filter { observation in
-            let text = observation.text.trimmingCharacters(
-                in: .whitespacesAndNewlines
-            )
-            return !text.isEmpty
-                && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
-                && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
-                && japaneseScriptDensity(in: text) >= 0.5
+            isMeaningfulJapaneseRecoveryText(observation.text)
         }
+    }
+
+    private static func isMeaningfulJapaneseRecoveryText(
+        _ sourceText: String
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(sourceText)
+        return !text.isEmpty
+            && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
+            && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
+            && japaneseScriptDensity(in: text) >= 0.5
     }
 
     /// Use Vision's pixel-first text rectangle detector as a bounded recovery
@@ -3283,7 +3311,8 @@ struct VisionOCRService: Sendable {
                   rotationApplied: angle,
                   postProcessJapaneseText: true,
                   usesLanguageCorrection: usesLanguageCorrection,
-                  observationRole: observationRole
+                  observationRole: observationRole,
+                  requiresMeaningfulJapaneseRecoveryText: true
               ) else {
             return []
         }
@@ -3415,7 +3444,8 @@ struct VisionOCRService: Sendable {
                   rotationApplied: angle,
                   postProcessJapaneseText: true,
                   usesLanguageCorrection: false,
-                  observationRole: .verticalLine
+                  observationRole: .verticalLine,
+                  requiresMeaningfulJapaneseRecoveryText: true
               ) else {
             return nil
         }

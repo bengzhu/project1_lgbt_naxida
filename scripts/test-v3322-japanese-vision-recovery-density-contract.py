@@ -132,12 +132,20 @@ class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
         self.assertTrue(is_meaningful_recovery_text("ニコッ"))
 
     def test_shared_recovery_filter_requires_actual_meaningful_text(self) -> None:
-        body = function_body(
+        wrapper = function_body(
             self.vision,
             "private static func meaningfulJapaneseRecoveryObservations(\n",
         )
+        self.assertIn(
+            "isMeaningfulJapaneseRecoveryText(observation.text)",
+            wrapper,
+        )
+        body = function_body(
+            self.vision,
+            "private static func isMeaningfulJapaneseRecoveryText(\n",
+        )
         for marker in (
-            "observation.text.trimmingCharacters(",
+            "postProcessJapaneseOCRText(sourceText)",
             "!text.isEmpty",
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
             "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5",
@@ -236,7 +244,7 @@ class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.327", "3.327"],
+            ["3.328", "3.328"],
         )
         combined = (
             self.workflow
