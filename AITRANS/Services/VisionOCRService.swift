@@ -1487,13 +1487,18 @@ struct VisionOCRService: Sendable {
         detectorRegions: [ComicTextDetectorRegion],
         visionRegions: [JapanesePixelFirstRegion]
     ) -> [JapanesePixelFirstRegion] {
-        let primary = detectorRegions.map { detectorRegion in
-            JapanesePixelFirstRegion(
+        let primary = detectorRegions.compactMap { detectorRegion in
+            guard let detectorConfidence = validOCRConfidence(
+                detectorRegion.confidence
+            ) else {
+                return nil
+            }
+            return JapanesePixelFirstRegion(
                 rect: detectorRegion.rect,
                 detectorRotation: 0,
                 characterCount: 0,
                 detector: .comicTextBubble,
-                detectorConfidence: detectorRegion.confidence,
+                detectorConfidence: detectorConfidence,
                 regionID: detectorRegion.regionID,
                 cropRectHint: japaneseDetectorCropHint(
                     detectorRegion.rect,
@@ -1611,8 +1616,8 @@ struct VisionOCRService: Sendable {
         )
         let bandCount = min(max(detectorSliceCount, 1), requestLimit)
         let primary = regions.filter {
-            if case .comicTextBubble = $0.detector { return true }
-            return false
+            guard case .comicTextBubble = $0.detector else { return false }
+            return validOCRConfidence($0.detectorConfidence) != nil
         }
         var selected = verticallyBalancedJapaneseMangaOCRRegions(
             primary,
@@ -1677,8 +1682,15 @@ struct VisionOCRService: Sendable {
         _ lhs: JapanesePixelFirstRegion,
         _ rhs: JapanesePixelFirstRegion
     ) -> Bool {
-        if lhs.detectorConfidence != rhs.detectorConfidence {
-            return lhs.detectorConfidence > rhs.detectorConfidence
+        let lhsDetectorConfidence = validOCRConfidence(lhs.detectorConfidence)
+        let rhsDetectorConfidence = validOCRConfidence(rhs.detectorConfidence)
+        if (lhsDetectorConfidence != nil) != (rhsDetectorConfidence != nil) {
+            return lhsDetectorConfidence != nil
+        }
+        if let lhsDetectorConfidence,
+           let rhsDetectorConfidence,
+           lhsDetectorConfidence != rhsDetectorConfidence {
+            return lhsDetectorConfidence > rhsDetectorConfidence
         }
         if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
         if lhs.rect.x != rhs.rect.x { return lhs.rect.x > rhs.rect.x }

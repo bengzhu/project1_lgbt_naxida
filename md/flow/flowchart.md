@@ -1,4 +1,6 @@
 # 项目流程图
+v3.333 detector confidence 预算闭包：`raw logit -> finite -> sigmoid -> [0,1] validator -> top-query -> merged TextRegion revalidation -> long-page request ranking`；非法值在占用 detector/Manga OCR 预算前 fail closed，合法 confidence、几何 tie-break、12/48 请求上限、primary precedence、翻译 QA、取消和持久化不变。
+
 v3.332 OCR confidence 合法域：`raw confidence -> finite + [0,1] validator -> candidate/gate/score -> layout/review`；有限越界值与 NaN/±∞ 同样 fail closed，合法 `.14/.40/.48/.55` 语义、12/8/4 orientation、4 weak-block 上限、owner/layout、翻译 QA、取消和持久化不变。
 
 v3.331 日语 OCR confidence 全序：`top-5 alternatives -> finite filter -> existing .14 window -> finite-first observation comparison -> orientation/weak-block recovery -> fusion/layout`；NaN/∞ fail closed，有限候选分数、标点 fallback、12/8/4 orientation 与 4 weak-block 上限、翻译 QA、取消和持久化不变。

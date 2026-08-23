@@ -231,13 +231,13 @@ class OCRConfidenceDomainContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.332", "3.332"],
+            ["3.333", "3.333"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3332-ocr-confidence-domain-contract.py",
             "v3.332",
-            "japanese-benchmark-v3.332-",
+            "japanese-benchmark-v3.333-",
         ):
             self.assertIn(marker, combined)
         contract = read("scripts/test-v3332-ocr-confidence-domain-contract.py")
