@@ -1,10 +1,10 @@
-### v3.327 日语 scoped Vision 候选池质量合同（本地通过，待云端验证）
+### v3.327 日语 scoped Vision 候选池质量合同（已完成）
 
 - 日语单块 Vision 重读先在每个 `VNRecognizedTextObservation` 的 top-5 alternatives 内执行完整 usable gate，再进入既有 Japanese candidate comparator；高分 `。、`、低置信、NaN/∞ 或 `日本abcde` 不再遮蔽同池中的合格日文。
 - 跨方向/文字框 observation pool 在 `max` 前再次执行同一门；弱高分 observation 不再导致次高但合格的 Vision 结果被连带丢弃，无合格 Vision 时仍回到已接受 Manga 或 nil。
 - block 最终返回与 Vision 两级候选池共享有限 confidence `>=.55`、真实日文字母、letter density `>=.5`、script density `>=.5` 语义；page OCR 的标点-only fallback 继续由默认关闭的 scoped gate 保留。
 - 竖排 2 个、横排 1 个、未知方向 3 个 Vision 请求上限、Manga 请求、crop/geometry、既有比较器、取消、翻译 QA、generation、持久化和非日语路径不变。
-- 新合同：`scripts/test-v3327-japanese-scoped-vision-pool-quality-contract.py`；工程版本为 `3.327`，云端 Japanese benchmark route 已接入。新合同 `10/10`、326 个无进程合同（1,711 tests）、Python AST `373/373`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据；云端 exact-SHA full、PR、合并与 receipt 待补齐。
+- 新合同：`scripts/test-v3327-japanese-scoped-vision-pool-quality-contract.py`；工程版本为 `3.327`，云端 Japanese benchmark route 已接入。新合同 `10/10`、326 个无进程合同（1,711 tests）、Python AST `373/373`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过。实现 SHA `8623585d51ae8ba9a458d57b86c24f2daad6fcd1` 的 PR [#391](https://github.com/bengzhu/project1_lgbt_naxida/pull/391) CI [32636890708](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32636890708) 成功；exact-SHA full [32636907182](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32636907182) 的 benchmark job `97187943631` 与主 job `97187995742` 成功，覆盖静态、Speech、UI/Home/Paste、云端 Xcode、manifest、JUnit `10/10` 与 full receipt，Koharu/GGUF 按非必需策略跳过。PR 以 merge SHA `44dbbcfcb9730e68ab607be2a48a4c5f28de86cb` 合入 `smalldata_test`；合入后 push CI [32637520572](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32637520572) 的 v3.327 benchmark、静态与复用 full receipt 成功。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；`main` 未修改。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
 
 ### v3.326 日语 scoped two-sided 候选质量闭包合同（已完成）
 
