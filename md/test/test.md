@@ -1,9 +1,10 @@
-### v3.320 日语 OCR 恢复 meaningful-density 合同（进行中）
+### v3.320 日语 OCR 恢复 meaningful-density 合同（已完成）
 
 - 共享 `JapaneseOCRTextNormalizer.japaneseLetterDensity` 将日语标点保留在非技术可见字符分母中，拉丁/数字 token 不惩罚，长音/组合记号需依附真实日语字母；`！！`、`日！！` 不能通过 `>=0.5`，`日本語。`、`GPT-4日本語`、`キャー！！` 可以通过。
 - bounded orientation/弱块/scoped/compact recovery、text-backed line OCR 预算、vertical owner/coverage/frontier 和 rotated vertical provenance 使用同一门；标点主导结果不再替换现有块、占 line OCR 名额或抑制 pixel-first/tile recovery。
 - 普通 `selectOCRCandidate` 仍保留 punctuation-only fallback；8 个 line OCR、4 个弱块与既有方向 fallback cap、crop/warp、geometry/layout、翻译 QA、取消和持久化不变。新合同：`scripts/test-v3320-japanese-line-meaningful-density-contract.py`，工程版本为 `3.320`，云端 Japanese benchmark route 已接入；Koharu/GGUF 不作为普通 OCR 修复门槛。
 - 本地新合同 `12/12`、319 个无进程合同、Python AST `366/366`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `1bea321fdda888114b433aa4fe41e57195d9c1e2` 的 PR [#384](https://github.com/bengzhu/project1_lgbt_naxida/pull/384) CI [32626678511](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32626678511) 成功；exact-SHA full [32626756520](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32626756520) 的 Japanese benchmark、静态检查、Speech、UI interaction、Home/Paste、云端 Xcode build、manifest 与 full-validation receipt 全部通过，Koharu/GGUF 按非必需策略跳过。以 merge SHA `17557aa37e9a9753966366aecd8b326cdf7d4a5a` 合入 `smalldata_test` 后，push CI [32627387135](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32627387135) 的 v3.320 benchmark、静态检查与 receipt 成功，Xcode/UI/Speech 等按 merge scope 跳过。`main` 未修改，候选分支已清理。本轮只证明该局部自有 OCR 恢复密度门和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.319 日语→简体中文翻译 QA shared-Han 门合同（已完成）
 
