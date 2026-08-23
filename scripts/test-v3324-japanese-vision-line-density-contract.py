@@ -142,9 +142,17 @@ class JapaneseVisionLineDensityContractTests(unittest.TestCase):
         self.assertFalse(commits_vision_line("AI"))
 
     def test_shared_recovery_gate_requires_actual_letters_and_density(self) -> None:
-        body = function_body(
+        wrapper = function_body(
             self.vision,
             "private static func meaningfulJapaneseRecoveryObservations(\n",
+        )
+        self.assertIn(
+            "isMeaningfulJapaneseRecoveryText(observation.text)",
+            wrapper,
+        )
+        body = function_body(
+            self.vision,
+            "private static func isMeaningfulJapaneseRecoveryText(\n",
         )
         for marker in (
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
@@ -234,7 +242,7 @@ class JapaneseVisionLineDensityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.327", "3.327"],
+            ["3.328", "3.328"],
         )
         combined = (
             self.workflow

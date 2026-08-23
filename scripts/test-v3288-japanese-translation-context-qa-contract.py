@@ -248,7 +248,7 @@ class TranslationContextQAContractTests(unittest.TestCase):
         self.assertIn("TranslationContextQuality.swift in Sources", self.project)
         self.assertIn("TranslationContextQuality.swift", self.project)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.327", "3.327"])
+        self.assertEqual(versions, ["3.328", "3.328"])
         self.assertIn("v3.288", self.route)
         self.assertIn("v3.288", self.update_log)
         for marker in (

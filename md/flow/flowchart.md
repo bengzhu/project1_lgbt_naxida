@@ -1,4 +1,5 @@
 # 项目流程图
+v3.328 普通日语 recovery Vision 候选池门：`top-5 alternatives -> meaningful Japanese text filter -> bounded candidate score -> existing observation/fallback/coverage policy`；不统一 compact/line/Manga confidence，整页标点 fallback、请求预算、crop/owner/layout、翻译和持久化边界不扩大。
 v3.327 日语单块 Vision 候选池门：`top-5 alternatives -> full usable filter -> bounded candidate score -> cross-angle usable filter -> observation score -> Manga/Vision scoped selector`；弱高分噪声不再遮蔽同池或其它方向的合格日文，整页标点 fallback、请求预算、取消、翻译和持久化边界不扩大。
 v3.326 日语单块 two-sided 返回门：`Manga + Vision scoped candidates -> full usable gate per engine -> one usable candidate / bounded comparator / nil`；弱双候选不再绕过完整质量门，整页标点 fallback、请求预算、取消、翻译和持久化边界不扩大。
 v3.325 日语单块 one-sided 返回门：`bounded Manga/Vision scoped reread -> sole candidate -> finite confidence + actual-letter + letter/script-density gate -> replace existing block OR preserve failure state`；双候选比较、整页标点 fallback、请求预算、取消、翻译和持久化边界不扩大。

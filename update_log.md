@@ -1,3 +1,9 @@
+## v3.328：普通日语 recovery Vision 候选池 meaningful 门（2026-08-23，研发中）
+
+v3.322–v3.324 已在普通 pixel-first、tile、block 与 line recovery 结果提交前过滤标点-only/低 density observation；继续静态审计发现，每个 `VNRecognizedTextObservation` 内仍先从 top-5 alternatives 选出单一候选，再执行结果级 meaningful 过滤。高分 `。、` 或 `日本abcde` 因而可能遮蔽较低分但合格的 `ニコッ`／`今度こそ`，随后自身被过滤，造成既有 recovery 机会丢失。
+
+本轮让所有 `recognizeJapaneseCropPass` 与 perspective line Vision 请求在单框候选池内先按真实日文字母、letter density `>=.5`、script density `>=.5` 过滤，再复用既有 Japanese comparator；结果级 `meaningfulJapaneseRecoveryObservations` 委托同一文本 helper。候选池不引入统一 confidence floor，compact `.40`、line/coverage `.48`、Manga `.55` 等各调用路径的既有置信策略保持不变。page OCR 默认关闭 recovery gate 并保留标点-only fallback；scoped `.55` 门仍独立，crop/warp、请求与方向预算、owner/layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3328-japanese-recovery-vision-pool-quality-contract.py`，工程版本推进至 `3.328`，Japanese benchmark route 已接入；本地新合同 `10/10`、327 个无外部进程/编译入口合同（1,721 tests）通过，27 个 `subprocess` 合同按约束跳过；Python AST `374/374`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR 与合入 receipt 待验证。Koharu/GGUF、授权语料和目标设备继续是可选研究/质量证明。
+
 ## v3.327：日语 scoped Vision 候选池完整质量门（2026-08-23，已完成）
 
 v3.325/v3.326 已闭合 scoped 最终 one-sided/two-sided 返回；静态审计继续发现 Vision 每个文字框的 top-5 alternatives 与跨方向/文字框 observation pool 都先选最佳，之后才执行完整 usable gate。高分标点、低置信、非有限或低 density 噪声可能先遮蔽合格日文，再被最终门拒绝，造成可恢复结果丢失。
