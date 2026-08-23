@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for the v3.321 Manga line result gate."""
+"""Static and pure-policy contract for the v3.324 Vision line return gate."""
 
 from pathlib import Path
 import re
@@ -45,25 +45,25 @@ def is_japanese_letter(character: str) -> bool:
     )
 
 
+def is_technical_word(character: str) -> bool:
+    codepoint = ord(character)
+    return any(
+        lower <= codepoint <= upper
+        for lower, upper in (
+            (0x30, 0x39),
+            (0x41, 0x5A),
+            (0x61, 0x7A),
+            (0xFF10, 0xFF19),
+            (0xFF21, 0xFF3A),
+            (0xFF41, 0xFF5A),
+        )
+    )
+
+
 def japanese_letter_density(text: str) -> float:
     letter_count = sum(is_japanese_letter(character) for character in text)
     if not letter_count:
         return 0.0
-
-    def is_technical_word(character: str) -> bool:
-        codepoint = ord(character)
-        return any(
-            lower <= codepoint <= upper
-            for lower, upper in (
-                (0x30, 0x39),
-                (0x41, 0x5A),
-                (0x61, 0x7A),
-                (0xFF10, 0xFF19),
-                (0xFF21, 0xFF3A),
-                (0xFF41, 0xFF5A),
-            )
-        )
-
     visible = [
         character
         for character in text
@@ -99,18 +99,17 @@ def japanese_script_density(text: str) -> float:
     return japanese_count / len(text)
 
 
-def commits_manga_line_result(text: str, confidence: float) -> bool:
+def commits_vision_line(text: str) -> bool:
     cleaned = text.strip()
     return (
         bool(cleaned)
-        and confidence >= 0.55
         and any(is_japanese_letter(character) for character in cleaned)
         and japanese_letter_density(cleaned) >= 0.5
         and japanese_script_density(cleaned) >= 0.5
     )
 
 
-class JapaneseLineResultDensityContractTests(unittest.TestCase):
+class JapaneseVisionLineDensityContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
@@ -123,66 +122,85 @@ class JapaneseLineResultDensityContractTests(unittest.TestCase):
         )
         cls.test_log = read("md/test/test.md")
         cls.update_log = read("update_log.md")
+        cls.line = function_body(
+            cls.vision,
+            "private static func recognizeJapaneseVerticalLineCrops(\n",
+        )
 
-    def test_legacy_script_density_alone_accepts_japanese_punctuation(self) -> None:
+    def test_punctuation_noise_does_not_commit_as_a_vision_line(self) -> None:
         self.assertEqual(japanese_script_density("。、"), 1.0)
-        self.assertEqual(japanese_script_density("日。、"), 1.0)
         self.assertEqual(japanese_letter_density("。、"), 0.0)
         self.assertAlmostEqual(japanese_letter_density("日。、"), 1 / 3)
-        self.assertFalse(commits_manga_line_result("。、", 0.99))
-        self.assertFalse(commits_manga_line_result("日。、", 0.99))
+        self.assertFalse(commits_vision_line("。、"))
+        self.assertFalse(commits_vision_line("日。、"))
+        self.assertFalse(commits_vision_line("ーー"))
 
-    def test_meaningful_line_results_and_confidence_remain_accepted(self) -> None:
-        self.assertTrue(commits_manga_line_result("日本語。", 0.55))
-        self.assertTrue(commits_manga_line_result("ニコッ", 0.80))
-        self.assertFalse(commits_manga_line_result("日本語。", 0.549))
-        self.assertFalse(commits_manga_line_result("", 0.99))
+    def test_meaningful_japanese_line_text_remains_eligible(self) -> None:
+        self.assertTrue(commits_vision_line("日本語。"))
+        self.assertTrue(commits_vision_line("ニコッ"))
+        self.assertTrue(commits_vision_line("AI日本語"))
+        self.assertFalse(commits_vision_line("AI"))
 
-    def test_manga_line_commit_requires_shared_meaningful_density(self) -> None:
+    def test_shared_recovery_gate_requires_actual_letters_and_density(self) -> None:
         body = function_body(
             self.vision,
-            "private static func recognizeJapaneseMangaLineOCR(\n",
+            "private static func meaningfulJapaneseRecoveryObservations(\n",
         )
-        markers = (
-            "let text = Self.cleanRecognizedBlockText(result.text)",
-            "result.confidence.isFinite",
-            "result.confidence >= 0.55",
+        for marker in (
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
             "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5",
             "japaneseScriptDensity(in: text) >= 0.5",
-        )
-        for marker in markers:
-            self.assertIn(marker, body)
-        self.assertLess(
-            body.index("japaneseLetterDensity(text)"),
-            body.index("unmatchedCandidates.firstIndex"),
-        )
-        self.assertLess(
-            body.index("japaneseScriptDensity(in: text)"),
-            body.index("unmatchedCandidates.firstIndex"),
-        )
-
-    def test_only_matched_accepted_results_become_vertical_lines(self) -> None:
-        body = function_body(
-            self.vision,
-            "private static func recognizeJapaneseMangaLineOCR(\n",
-        )
-        for marker in (
-            "unmatchedCandidates.remove(at: candidateIndex)",
-            "observations.append(",
-            "sourceDirectionHint: .vertical",
-            "observationRole: .verticalLine",
-            "verticalTextRegionOwner: result.verticalTextRegionOwner",
-            "engine: .bundledMangaOCR",
         ):
             self.assertIn(marker, body)
-        self.assertLess(
-            body.index("unmatchedCandidates.remove(at: candidateIndex)"),
-            body.index("observations.append("),
-        )
 
-    def test_rejected_line_keeps_existing_block_fallback_boundary(self) -> None:
-        body = function_body(
+    def test_perspective_line_is_filtered_before_commit_or_axis_suppression(self) -> None:
+        perspective = self.line.index("recognizeJapanesePerspectiveLineCrop(")
+        gate = self.line.index("let meaningfulPerspective")
+        commit = self.line.index(
+            "refined.append(contentsOf: meaningfulPerspective)"
+        )
+        suppress = self.line.index(
+            "needsJapaneseOrientationFallback(meaningfulPerspective)"
+        )
+        self.assertLess(perspective, gate)
+        self.assertLess(gate, commit)
+        self.assertLess(commit, suppress)
+        self.assertIn(
+            "meaningfulJapaneseRecoveryObservations(\n                    [perspective]",
+            self.line,
+        )
+        self.assertNotIn("refined.append(perspective)", self.line)
+        self.assertNotIn("needsJapaneseOrientationFallback([perspective])", self.line)
+
+    def test_axis_primary_and_opposite_are_filtered_before_commit(self) -> None:
+        axis_start = self.line.index("let primary = recognizeJapaneseCropPass(")
+        axis = self.line[axis_start:]
+        for marker in (
+            "let meaningfulPrimary = meaningfulJapaneseRecoveryObservations(",
+            "refined.append(contentsOf: meaningfulPrimary)",
+            "needsJapaneseOrientationFallback(meaningfulPrimary)",
+            "let opposite = recognizeJapaneseCropPass(",
+            "contentsOf: meaningfulJapaneseRecoveryObservations(opposite)",
+        ):
+            self.assertIn(marker, axis)
+        self.assertLess(
+            axis.index("let meaningfulPrimary"),
+            axis.index("refined.append(contentsOf: meaningfulPrimary)"),
+        )
+        self.assertLess(
+            axis.index("needsJapaneseOrientationFallback(meaningfulPrimary)"),
+            axis.index("let opposite = recognizeJapaneseCropPass("),
+        )
+        self.assertNotIn("refined.append(contentsOf: primary)", axis)
+        self.assertNotIn("needsJapaneseOrientationFallback(primary)", axis)
+
+    def test_rejected_line_keeps_existing_orientation_and_block_recovery(self) -> None:
+        self.assertEqual(
+            self.line.count("meaningfulJapaneseRecoveryObservations("),
+            3,
+        )
+        self.assertIn("var orientationFallbacksRemaining = 12", self.line)
+        page = function_body(
             self.vision,
             "private static func recognizeJapaneseVerticalCrops(\n",
         )
@@ -190,39 +208,28 @@ class JapaneseLineResultDensityContractTests(unittest.TestCase):
             "let lineRefined = try await Self.recognizeJapaneseVerticalLineCrops(",
             "hasCompleteJapaneseLineCoverage(",
             "guard !hasLineOCRResult else { continue }",
-            "var orientationFallbacksRemaining = 8",
             "var blockFallback = meaningfulPrimary",
         ):
-            self.assertIn(marker, body)
-        self.assertLess(
-            body.index("let lineRefined"),
-            body.index("hasCompleteJapaneseLineCoverage("),
-        )
-        self.assertLess(
-            body.index("guard !hasLineOCRResult else { continue }"),
-            body.index("var blockFallback = meaningfulPrimary"),
-        )
+            self.assertIn(marker, page)
 
-    def test_request_cancel_translation_and_persistence_bounds_are_unchanged(self) -> None:
-        line_body = function_body(
+    def test_page_ocr_and_request_budgets_are_not_expanded(self) -> None:
+        page_selector = function_body(
             self.vision,
-            "private static func recognizeJapaneseMangaLineOCR(\n",
+            "private static func selectOCRCandidate(\n",
         )
+        self.assertNotIn("meaningfulJapaneseRecoveryObservations", page_selector)
         self.assertIn("maximumJapaneseMangaLineOCRRequests = 8", self.vision)
-        self.assertIn("var orientationFallbacksRemaining = 12", self.vision)
-        self.assertEqual(line_body.count("MangaOCRService.shared.recognize("), 1)
-        self.assertIn("catch is CancellationError", line_body)
-        self.assertIn("throw CancellationError()", line_body)
+        self.assertIn("Array(uniqueCandidates.prefix(24))", self.line)
+        self.assertIn(".prefix(24)", self.line)
+        axis_start = self.line.index("let primary = recognizeJapaneseCropPass(")
+        self.assertEqual(self.line[axis_start:].count("recognizeJapaneseCropPass("), 2)
+
+    def test_translation_persistence_and_research_boundaries_stay_separate(self) -> None:
         self.assertIn("translateImageBlockWithQA(", self.store)
         self.assertIn("persist()", self.store)
-
-    def test_research_and_product_boundaries_remain_separate(self) -> None:
         self.assertNotIn("groundTruth", self.vision)
         self.assertNotIn("KOHARU_DATA_ROOT", self.vision)
         self.assertNotIn("test/koharu_artifacts", self.vision)
-        fixture = ROOT / "test/jap.jpg"
-        self.assertTrue(fixture.is_file())
-        self.assertGreater(len(fixture.read_bytes()), 100_000)
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
@@ -237,14 +244,14 @@ class JapaneseLineResultDensityContractTests(unittest.TestCase):
             + self.update_log
         )
         for marker in (
-            "scripts/test-v3321-japanese-line-result-density-contract.py",
-            "v3.321",
-            "japanese-benchmark-v3.321-",
+            "scripts/test-v3324-japanese-vision-line-density-contract.py",
+            "v3.324",
+            "japanese-benchmark-v3.324-",
         ):
             self.assertIn(marker, combined)
 
     def test_contract_has_no_process_entry(self) -> None:
-        contract = read("scripts/test-v3321-japanese-line-result-density-contract.py")
+        contract = read("scripts/test-v3324-japanese-vision-line-density-contract.py")
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)
 

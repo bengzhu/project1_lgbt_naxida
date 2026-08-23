@@ -68,8 +68,8 @@ class JapaneseKoharuVerticalLineOrientationContractTests(unittest.TestCase):
     def test_weak_line_results_still_use_bounded_opposite_fallback(self) -> None:
         for marker in [
             "var orientationFallbacksRemaining = 12",
-            "needsJapaneseOrientationFallback([perspective])",
-            "needsJapaneseOrientationFallback(primary)",
+            "needsJapaneseOrientationFallback(meaningfulPerspective)",
+            "needsJapaneseOrientationFallback(meaningfulPrimary)",
             "orientationFallbacksRemaining -= 1",
             "oppositeJapaneseOrientation(angle)",
         ]:
