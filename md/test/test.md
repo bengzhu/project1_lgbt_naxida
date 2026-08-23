@@ -1,9 +1,9 @@
-### v3.326 日语 scoped two-sided 候选质量闭包合同（本地通过，待云端验证）
+### v3.326 日语 scoped two-sided 候选质量闭包合同（已完成）
 
 - Manga 与 Vision 候选同时存在时，两者必须分别通过完整 usable gate；Vision 弱时只有 usable Manga 可返回，两者都弱则返回 nil，Manga 弱时只返回已证明 usable 的 Vision。`。、`、低于 `0.55`、NaN/∞ 与 `日本abcde` 不能再借 meaningful-first 分支成为成功 scoped reread。
 - 两个 usable 候选继续进入既有 measurable comparator，平局保留 Manga；普通 page punctuation fallback、最多 2/1/3 个 scoped Vision 方向、Manga 请求、取消、翻译 QA、generation 与持久化不变。
 - 新合同：`scripts/test-v3326-japanese-scoped-two-sided-quality-contract.py`；工程版本为 `3.326`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
-- 本地新合同 `10/10`、325 个无进程合同（1,701 tests）、Python AST `372/372`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA full、PR、合并与合入后证据待候选提交后补齐。
+- 本地新合同 `10/10`、325 个无进程合同（1,701 tests）、Python AST `372/372`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过。实现 SHA `d3b398f4ae8dc4d6d9b6bb3f319f681b3157f63f` 的 PR [#390](https://github.com/bengzhu/project1_lgbt_naxida/pull/390) CI [32634626054](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32634626054) 成功；exact-SHA full [32634685247](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32634685247) 的 benchmark job `97182550438` 与主 job `97182584811` 成功，覆盖静态、Speech、UI/Home/Paste、云端 Xcode、manifest、JUnit `10/10` 与 full receipt，Koharu/GGUF 按非必需策略跳过。PR 以 merge SHA `712be2b5e7692039c3a2da25af4eaa0088646ed5` 合入 `smalldata_test`；合入后 push CI [32635689143](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32635689143) 的 v3.326 benchmark、静态与复用 full receipt 成功。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；`main` 未修改。
 
 ### v3.325 日语 scoped one-sided 候选质量合同（已完成）
 
