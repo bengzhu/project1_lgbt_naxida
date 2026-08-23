@@ -1220,15 +1220,18 @@ struct VisionOCRService: Sendable {
                 cropScale: preparedCrop.scale,
                 verticalTextRegionOwner: block.verticalTextRegionOwner
             )
-            var blockFallback = primary
+            let meaningfulPrimary = meaningfulJapaneseRecoveryObservations(
+                primary
+            )
+            var blockFallback = meaningfulPrimary
 
             // A block can be laid out correctly while its first crop orientation
             // is still reversed. Retry only weak/empty crops and keep a strict
             // page-level budget so dense manga pages do not double their OCR cost.
             if orientationFallbacksRemaining > 0,
-               needsJapaneseOrientationFallback(primary) {
+               needsJapaneseOrientationFallback(meaningfulPrimary) {
                 orientationFallbacksRemaining -= 1
-                blockFallback.append(contentsOf: recognizeJapaneseCropPass(
+                let opposite = recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
@@ -1237,7 +1240,10 @@ struct VisionOCRService: Sendable {
                     minimumTextHeight: 0.004,
                     cropScale: preparedCrop.scale,
                     verticalTextRegionOwner: block.verticalTextRegionOwner
-                ))
+                )
+                blockFallback.append(
+                    contentsOf: meaningfulJapaneseRecoveryObservations(opposite)
+                )
             }
             blockFallback = deduplicateJapaneseObservations(blockFallback)
 

@@ -1,4 +1,5 @@
 # 项目流程图
+v3.323 日语 block fallback 返回门：`incomplete line coverage -> bounded block crop -> meaningful Japanese observation filter -> owner coverage/partial-line replacement/fusion OR keep existing lines`；低密度标点噪声不提交，16 block、8 orientation fallback、crop/owner、layout/翻译、取消和持久化边界不扩大。
 v3.322 日语 Vision recovery 返回门：`pixel-first/tile crop -> meaningful Japanese observation filter -> geometry/fusion OR bounded opposite/block fallback`；低密度标点噪声不提交，请求、crop/owner、layout/翻译、取消和持久化边界不扩大。
 v3.321 日语 line OCR 返回门：`bounded Manga line result -> meaningful Japanese density -> owner match -> verticalLine commit OR existing Vision/block fallback`；高置信标点噪声不再进入 line fusion/layout，不增加请求或改变 geometry/翻译/持久化边界。
 v3.320 日语 OCR meaningful-density：`Vision/Manga text -> Japanese writing / nontechnical visible scalars -> bounded orientation + weak/scoped recovery -> line candidate budget -> owner/coverage/frontier -> existing fusion/layout/translation`；标点主导结果不再冒充可靠文字证据，mixed technical token、普通 fallback 与请求上限保持。

@@ -52,7 +52,7 @@ class JapaneseCropOrientationFallbackContractTests(unittest.TestCase):
     def test_block_crop_retries_only_weak_results_with_a_small_budget(self) -> None:
         for marker in [
             "var orientationFallbacksRemaining = 8",
-            "needsJapaneseOrientationFallback(primary)",
+            "needsJapaneseOrientationFallback(meaningfulPrimary)",
             "orientationFallbacksRemaining -= 1",
             "oppositeJapaneseOrientation(angle)",
             "minimumTextHeight: 0.004",

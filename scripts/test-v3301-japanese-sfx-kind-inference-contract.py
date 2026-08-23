@@ -172,7 +172,7 @@ class JapaneseSFXKindInferenceContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.322", "3.322"],
+            ["3.323", "3.323"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:

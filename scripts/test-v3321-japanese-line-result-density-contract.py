@@ -191,7 +191,7 @@ class JapaneseLineResultDensityContractTests(unittest.TestCase):
             "hasCompleteJapaneseLineCoverage(",
             "guard !hasLineOCRResult else { continue }",
             "var orientationFallbacksRemaining = 8",
-            "var blockFallback = primary",
+            "var blockFallback = meaningfulPrimary",
         ):
             self.assertIn(marker, body)
         self.assertLess(
@@ -200,7 +200,7 @@ class JapaneseLineResultDensityContractTests(unittest.TestCase):
         )
         self.assertLess(
             body.index("guard !hasLineOCRResult else { continue }"),
-            body.index("var blockFallback = primary"),
+            body.index("var blockFallback = meaningfulPrimary"),
         )
 
     def test_request_cancel_translation_and_persistence_bounds_are_unchanged(self) -> None:
@@ -227,7 +227,7 @@ class JapaneseLineResultDensityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.322", "3.322"],
+            ["3.323", "3.323"],
         )
         combined = (
             self.workflow
