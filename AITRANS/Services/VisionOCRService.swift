@@ -1619,6 +1619,24 @@ struct VisionOCRService: Sendable {
         return lhs.rect.width < rhs.rect.width
     }
 
+    /// Recovery observations may enter final fusion/layout only when their
+    /// cleaned text contains meaningful Japanese writing.  Keep this shared by
+    /// pixel-first and tile reconnaissance so punctuation-heavy crop output is
+    /// treated as a miss and the existing opposite/block fallback can continue.
+    private static func meaningfulJapaneseRecoveryObservations(
+        _ observations: [VisionOCRObservation]
+    ) -> [VisionOCRObservation] {
+        observations.filter { observation in
+            let text = observation.text.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            )
+            return !text.isEmpty
+                && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
+                && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
+                && japaneseScriptDensity(in: text) >= 0.5
+        }
+    }
+
     /// Use Vision's pixel-first text rectangle detector as a bounded recovery
     /// path for dedicated TextRegions that fail or miss a region. The detector
     /// contributes geometry only; recognition still runs through the existing
@@ -1672,12 +1690,16 @@ struct VisionOCRService: Sendable {
                 isCompactJapaneseRecovery: isCompactCandidate,
                 usesLanguageCorrection: isCompactCandidate
             )
-            refined.append(contentsOf: primary)
+            let meaningfulPrimary = meaningfulJapaneseRecoveryObservations(
+                primary
+            )
+            refined.append(contentsOf: meaningfulPrimary)
 
             if orientationFallbacksRemaining > 0,
-               (isCompactCandidate || needsJapaneseOrientationFallback(primary)) {
+               (isCompactCandidate
+                    || needsJapaneseOrientationFallback(meaningfulPrimary)) {
                 orientationFallbacksRemaining -= 1
-                refined.append(contentsOf: recognizeJapaneseCropPass(
+                let opposite = recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
@@ -1691,7 +1713,10 @@ struct VisionOCRService: Sendable {
                     preservesDetectorTextRegionBoundary: isCompactCandidate,
                     isCompactJapaneseRecovery: isCompactCandidate,
                     usesLanguageCorrection: isCompactCandidate
-                ))
+                )
+                refined.append(
+                    contentsOf: meaningfulJapaneseRecoveryObservations(opposite)
+                )
             }
         }
 
@@ -2406,7 +2431,7 @@ struct VisionOCRService: Sendable {
     private static func filterJapaneseVerticalTileObservations(
         _ observations: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
-        observations.filter { observation in
+        meaningfulJapaneseRecoveryObservations(observations).filter { observation in
             let region = observation.lineRegionRect ?? observation.rect
             let ratio = region.height / max(region.width, 0.001)
             let scriptDensity = japaneseScriptDensity(in: observation.text)

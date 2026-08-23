@@ -177,7 +177,7 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.321", "3.321"],
+            ["3.322", "3.322"],
         )
         for marker in (
             "scripts/test-v3308-image-japanese-scoped-candidate-contract.py",
