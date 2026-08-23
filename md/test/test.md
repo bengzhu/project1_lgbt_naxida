@@ -1,9 +1,10 @@
-### v3.321 日语 Manga line OCR 返回 meaningful-density 合同（进行中）
+### v3.321 日语 Manga line OCR 返回 meaningful-density 合同（已完成）
 
 - bundled Manga line OCR 的返回值在匹配 owner/line geometry 并 append `.verticalLine` 之前，统一要求真实日语字母、`japaneseLetterDensity >=0.5`、既有 `japaneseScriptDensity >=0.5` 与有限 confidence `>=0.55`；`。、`、`日。、` 不再成为成功 line observation。
 - 被拒结果保持 line 缺口，既有 Vision line、pixel-first/tile 与整块 block crop fallback 继续运行；最多 8 个 Manga line 请求、12 次 Vision line orientation fallback、crop/warp、owner/coverage、layout、翻译 QA、取消和持久化不变。
 - 新合同：`scripts/test-v3321-japanese-line-result-density-contract.py`；工程版本为 `3.321`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备仍是可选研究/质量证据，不阻塞普通 OCR 修复。
 - 本地新合同 `9/9`、320 个无进程合同、Python AST `367/367`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `be1bffd312e510c075d9ddbadfc560c6771c4863` 的 PR [#385](https://github.com/bengzhu/project1_lgbt_naxida/pull/385) CI [32628268493](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32628268493) 成功；exact-SHA full [32628280375](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32628280375) 的 Japanese benchmark、静态检查、Speech、UI interaction、Home/Paste、云端 Xcode build、manifest、JUnit 与 full-validation receipt 全部通过，Koharu/GGUF 按非必需策略跳过。以 merge SHA `92ccca31c7e7f4ece61d86afe1eb99607988bc90` 合入 `smalldata_test` 后，push CI [32628812103](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32628812103) 的 v3.321 benchmark、静态检查与 receipt 成功，Xcode/UI/Speech 等按 merge scope 跳过。`main` 未修改，候选分支已清理。本轮只证明该局部自有 Manga line 返回提交门和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.320 日语 OCR 恢复 meaningful-density 合同（已完成）
 

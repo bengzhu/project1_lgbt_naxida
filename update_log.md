@@ -1,10 +1,10 @@
-## v3.321：日语 Manga line OCR 返回 meaningful-density 门（2026-08-23，进行中）
+## v3.321：日语 Manga line OCR 返回 meaningful-density 门（2026-08-23，已完成）
 
 本轮继续优化 AITRANS 普通图片 OCR→翻译主路径。v3.320 已阻止标点主导文本触发或证明 line recovery，但 bundled Manga 的最多 8 个 line OCR 请求在返回结果提交时仍只检查旧 `japaneseScriptDensity`；因此高置信 `。、` 或 `日。、` 仍可能被写成 `.verticalLine` observation，参与后续融合、owner grouping 与布局。
 
 实现边界：`recognizeJapaneseMangaLineOCR` 在 owner/line 几何匹配和 observation append 之前，要求清洗后的结果同时包含真实日语字母、`japaneseLetterDensity >= 0.5`、既有 `japaneseScriptDensity >= 0.5` 且 confidence `>=0.55`。不合格结果不提交，缺失 line 继续由既有 Vision line、pixel-first/tile 与整块 crop fallback 接管；8-request line budget、12 orientation fallback、crop/warp、owner matching、coverage、layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3321-japanese-line-result-density-contract.py`，工程版本推进至 `3.321`，Japanese benchmark route 已接入；Koharu/GGUF/授权语料/目标设备不作为本轮普通 OCR 修复门槛。
 
-本地安全回归为 320 个无外部进程/编译入口合同全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；新合同 `9/9`、Python AST `367/367`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+本地安全回归为 320 个无外部进程/编译入口合同全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；新合同 `9/9`、Python AST `367/367`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 全部通过。实现 SHA `be1bffd312e510c075d9ddbadfc560c6771c4863` 的 PR [#385](https://github.com/bengzhu/project1_lgbt_naxida/pull/385) CI [32628268493](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32628268493) 成功；exact-SHA full [32628280375](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32628280375) 的 Japanese benchmark、静态检查、Speech、UI interaction、Home/Paste、云端 Xcode build、manifest、JUnit 与 `AITRANS CI/full-validation=success` receipt 全部通过，Koharu/GGUF 按非必需策略跳过。PR 以 merge SHA `92ccca31c7e7f4ece61d86afe1eb99607988bc90` 合入 `smalldata_test`；合入后 push CI [32628812103](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32628812103) 的 v3.321 benchmark、静态检查与 full-validation receipt 成功，Xcode/UI/Speech 等按 merge scope 跳过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；`main` 未修改，候选分支已清理。本轮只证明该局部自有 Manga line 返回提交门与工程回归通过，不把合同外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
 
 ## v3.320：日语 OCR 恢复 meaningful-density 门（2026-08-23，已完成）
 
