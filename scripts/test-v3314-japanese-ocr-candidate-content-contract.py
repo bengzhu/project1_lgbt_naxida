@@ -49,14 +49,14 @@ class JapaneseOCRCandidateContentContractTests(unittest.TestCase):
             self.vision,
             "private static func selectOCRCandidate(\n",
         )
-        self.assertIn("let finiteCandidates = candidates.filter", body)
-        self.assertIn("$0.confidence.isFinite", body)
+        self.assertIn("let validCandidates = candidates.filter", body)
+        self.assertIn("validOCRConfidence($0.confidence) != nil", body)
         self.assertIn(
-            "let bestConfidence = finiteCandidates.map(\\.confidence).max()",
+            "let bestConfidence = validCandidates.map(\\.confidence).max()",
             body,
         )
         self.assertIn(
-            "let confidenceWindow = finiteCandidates.filter {",
+            "let confidenceWindow = validCandidates.filter {",
             body,
         )
         self.assertIn("$0.confidence >= bestConfidence - 0.14", body)
@@ -104,7 +104,7 @@ class JapaneseOCRCandidateContentContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
         for marker in (
             "scripts/test-v3314-japanese-ocr-candidate-content-contract.py",

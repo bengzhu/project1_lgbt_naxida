@@ -104,8 +104,8 @@ class KoharuMangaOCRLineRegionContractTests(unittest.TestCase):
     def test_output_gate_rejects_weak_or_non_japanese_line_reads(self) -> None:
         for marker in [
             "cleanRecognizedBlockText(result.text)",
-            "result.confidence.isFinite",
-            "result.confidence >= 0.55",
+            "let confidence = Self.validOCRConfidence(result.confidence)",
+            "confidence >= 0.55",
             "japaneseScriptDensity(in: text) >= 0.5",
         ]:
             self.assertIn(marker, self.line_ocr)
@@ -113,7 +113,7 @@ class KoharuMangaOCRLineRegionContractTests(unittest.TestCase):
 
     def test_project_version_and_ci_route_follow_v3266(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.331", "3.331"])
+        self.assertEqual(versions, ["3.332", "3.332"])
         previous = "python3 -B scripts/test-v3266-image-ocr-inline-rerecognition-cancel-contract.py"
         current = "python3 -B scripts/test-v3267-koharu-manga-ocr-line-region-contract.py"
         self.assertIn(previous, self.workflow)

@@ -102,8 +102,8 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
         self.assertNotIn("preservesDetectorTextRegionBoundary: true", self.geometry)
         for marker in [
             "cleanRecognizedBlockText(result.text)",
-            "result.confidence.isFinite",
-            "result.confidence >= 0.55",
+            "let confidence = Self.validOCRConfidence(result.confidence)",
+            "confidence >= 0.55",
             "japaneseScriptDensity(in: text) >= 0.5",
         ]:
             self.assertIn(marker, self.line_ocr)
@@ -118,7 +118,7 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
 
     def test_version_and_ci_route(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.331", "3.331"])
+        self.assertEqual(versions, ["3.332", "3.332"])
         current = "python3 -B scripts/test-v3268-koharu-geometry-only-line-recall-contract.py"
         self.assertIn(current, self.workflow)
         self.assertIn(

@@ -66,7 +66,7 @@ class JapaneseKoharuLineCoverageQualityContractTests(unittest.TestCase):
 
     def test_quality_gate_requires_confidence_and_japanese_script_evidence(self) -> None:
         for marker in [
-            "result.confidence.isFinite",
+            "validOCRConfidence(result.confidence) != nil",
             "result.confidence >= 0.48",
             "japaneseScriptDensity(in: text) >= 0.5",
             "let candidateLength = candidate.text.unicodeScalars.count",

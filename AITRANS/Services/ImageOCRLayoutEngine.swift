@@ -794,8 +794,11 @@ enum ImageOCRLayoutEngine {
     }
 
     private static func normalizedConfidence(_ rawConfidence: Float) -> Float {
-        guard rawConfidence.isFinite else { return 0 }
-        return min(max(rawConfidence, 0), 1)
+        guard rawConfidence.isFinite,
+              (0...1).contains(rawConfidence) else {
+            return 0
+        }
+        return rawConfidence
     }
 }
 

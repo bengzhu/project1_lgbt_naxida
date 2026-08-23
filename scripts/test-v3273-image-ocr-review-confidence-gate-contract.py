@@ -52,11 +52,11 @@ class ImageOCRReviewConfidenceGateContractTests(unittest.TestCase):
         )
         self.assertIn("block(confidence: 0.55, direction: .vertical)", self.legacy_evaluator)
         self.assertIn(
-            "let expectedAverage = (Double(Float(0.55)) + 1.0 + 0.25) / 4.0",
+            "let expectedAverage = (Double(Float(0.55)) + 0.25) / 4.0",
             self.legacy_evaluator,
         )
         self.assertIn(
-            'threshold is strict and excludes exactly 55 percent',
+            'exactly 55 percent must pass',
             self.legacy_evaluator,
         )
         self.assertIn(
@@ -83,7 +83,7 @@ class ImageOCRReviewConfidenceGateContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
 
 

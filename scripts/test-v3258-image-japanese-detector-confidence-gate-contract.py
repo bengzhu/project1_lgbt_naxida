@@ -62,16 +62,16 @@ class ImageJapaneseDetectorConfidenceGateContractTests(unittest.TestCase):
             "private static func isReliableJapaneseMangaOCRResult(\n",
         )
         for marker in [
-            "confidence.isFinite",
+            "validOCRConfidence(result.confidence)",
             "confidence >= 0.55",
             "japaneseScriptDensity(in: result.text) >= 0.5",
             "if let detectorConfidence = result.detectorConfidence",
-            "detectorScore.isFinite",
+            "validOCRConfidence(detectorConfidence)",
             "detectorScore >= 0.55",
         ]:
             self.assertIn(marker, gate)
         self.assertLess(
-            gate.index("detectorScore.isFinite"),
+            gate.index("validOCRConfidence(detectorConfidence)"),
             gate.index("return true"),
         )
 
@@ -123,7 +123,7 @@ class ImageJapaneseDetectorConfidenceGateContractTests(unittest.TestCase):
 
     def test_project_version_is_v3258(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.331", "3.331"])
+        self.assertEqual(versions, ["3.332", "3.332"])
 
 
 if __name__ == "__main__":

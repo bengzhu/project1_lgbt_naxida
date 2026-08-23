@@ -195,7 +195,8 @@ class JapaneseRecoveryVisionPoolQualityContractTests(unittest.TestCase):
         self.assertNotIn("confidence", self.shared_gate)
         self.assertIn("observation.confidence >= 0.40", self.vision)
         self.assertIn("observation.confidence >= 0.48", self.vision)
-        self.assertIn("result.confidence >= 0.55", self.vision)
+        self.assertIn("confidence >= 0.55", self.vision)
+        self.assertIn("validOCRConfidence(result.confidence)", self.vision)
 
     def test_candidate_and_observation_filters_share_text_semantics(self) -> None:
         for marker in (
@@ -237,7 +238,7 @@ class JapaneseRecoveryVisionPoolQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
         combined = self.workflow + self.flow + self.route + self.test_log + self.update_log
         for marker in (

@@ -402,8 +402,8 @@ actor MangaOCRService {
                     ? PreferredRecognition(recognition: lineQuadFallback, cropVariant: .lineQuad, geometrySource: .lineQuad)
                     : PreferredRecognition(recognition: boundingBox, cropVariant: boundingBoxVariant, geometrySource: .bbox)
             }
-            let boundingBoxConfidence = finiteConfidence(boundingBox.confidence)
-            let fallbackConfidence = finiteConfidence(lineQuadFallback.confidence)
+            let boundingBoxConfidence = validConfidenceRank(boundingBox.confidence)
+            let fallbackConfidence = validConfidenceRank(lineQuadFallback.confidence)
             if fallbackConfidence != boundingBoxConfidence {
                 return fallbackConfidence > boundingBoxConfidence
                     ? PreferredRecognition(recognition: lineQuadFallback, cropVariant: .lineQuad, geometrySource: .lineQuad)
@@ -416,13 +416,15 @@ actor MangaOCRService {
         }
     }
 
-    private static func finiteConfidence(_ confidence: Float) -> Float {
-        confidence.isFinite ? confidence : -.infinity
+    private static func validConfidenceRank(_ confidence: Float) -> Float {
+        guard confidence.isFinite, (0...1).contains(confidence) else {
+            return -.infinity
+        }
+        return confidence
     }
 
     private static func isPreferredRecognition(_ recognition: Recognition) -> Bool {
-        recognition.confidence.isFinite
-            && recognition.confidence >= preferredCropConfidence
+        validConfidenceRank(recognition.confidence) >= preferredCropConfidence
             && containsJapaneseLetter(recognition.text)
             && japaneseScriptDensity(in: recognition.text)
                 >= preferredJapaneseScriptDensity

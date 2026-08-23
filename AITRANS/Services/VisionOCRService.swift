@@ -376,15 +376,15 @@ struct VisionOCRService: Sendable {
                     .first,
                    let text = Self.cleanRecognizedBlockText(result.text),
                    !text.isEmpty,
-                   result.confidence.isFinite,
-                   result.confidence >= 0.55,
+                   let confidence = Self.validOCRConfidence(result.confidence),
+                   confidence >= 0.55,
                    JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
                    JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
                    Self.japaneseScriptDensity(in: text) >= 0.5 {
                     mangaCandidate = Self.recognizedBlock(
                         block,
                         text: text,
-                        confidence: result.confidence,
+                        confidence: confidence,
                         candidateProvenance: ImageOCRCandidateProvenance(
                             engine: .bundledMangaOCR,
                             role: result.lineID == nil ? .detectorTextRegion : .verticalLine,
@@ -661,9 +661,9 @@ struct VisionOCRService: Sendable {
             retainedProvenance.lineID = block.ocrProvenance?.candidates.compactMap(\.lineID).first
         }
         recognized.original = text
-        recognized.confidence = confidence.isFinite
-            ? min(max(confidence, 0), 1)
-            : block.confidence
+        recognized.confidence = validOCRConfidence(confidence)
+            ?? validOCRConfidence(block.confidence)
+            ?? 0
         recognized.ocrProvenance = ImageOCRBlockProvenance.make(
             from: [retainedProvenance],
             selectionReason: selectionReason
@@ -694,12 +694,10 @@ struct VisionOCRService: Sendable {
         let candidates = blocks.enumerated()
             .filter { needsJapaneseWeakBlockRecovery($0.element) }
             .sorted { lhs, rhs in
-                let lhsConfidence = lhs.element.confidence.isFinite
-                    ? lhs.element.confidence
-                    : -.infinity
-                let rhsConfidence = rhs.element.confidence.isFinite
-                    ? rhs.element.confidence
-                    : -.infinity
+                let lhsConfidence = validOCRConfidence(lhs.element.confidence)
+                    ?? -.infinity
+                let rhsConfidence = validOCRConfidence(rhs.element.confidence)
+                    ?? -.infinity
                 if lhsConfidence != rhsConfidence {
                     return lhsConfidence < rhsConfidence
                 }
@@ -746,7 +744,7 @@ struct VisionOCRService: Sendable {
             || direction == .unknown
             || (block.directionConfidence ?? 1) < 0.45
         let letters = japaneseLetterCountForRecovery(text)
-        return !block.confidence.isFinite
+        return validOCRConfidence(block.confidence) == nil
             || block.confidence < 0.60
             || JapaneseOCRTextNormalizer.japaneseLetterDensity(text) < 0.5
             || japaneseScriptDensity(in: text) < 0.5
@@ -760,7 +758,7 @@ struct VisionOCRService: Sendable {
     ) -> Bool {
         let candidateText = postProcessJapaneseOCRText(candidate.original)
         guard !candidateText.isEmpty,
-              candidate.confidence.isFinite,
+              validOCRConfidence(candidate.confidence) != nil,
               candidate.confidence >= 0.55,
               JapaneseOCRTextNormalizer.containsJapaneseLetter(candidateText),
               JapaneseOCRTextNormalizer.japaneseLetterDensity(candidateText) >= 0.5,
@@ -772,9 +770,7 @@ struct VisionOCRService: Sendable {
         let candidateLetters = japaneseLetterCountForRecovery(candidateText)
         let originalLetters = japaneseLetterCountForRecovery(originalText)
         let originalDensity = japaneseScriptDensity(in: originalText)
-        let originalConfidence = original.confidence.isFinite
-            ? original.confidence
-            : 0
+        let originalConfidence = validOCRConfidence(original.confidence) ?? 0
 
         if originalDensity < 0.5,
            candidateLetters >= max(originalLetters, 1) {
@@ -839,7 +835,7 @@ struct VisionOCRService: Sendable {
     ) -> Bool {
         let text = postProcessJapaneseOCRText(sourceText)
         return !text.isEmpty
-            && confidence.isFinite
+            && validOCRConfidence(confidence) != nil
             && confidence >= 0.55
             && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
             && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
@@ -950,13 +946,22 @@ struct VisionOCRService: Sendable {
         return output
     }
 
+    private static func validOCRConfidence(_ confidence: Float) -> Float? {
+        guard confidence.isFinite, (0...1).contains(confidence) else {
+            return nil
+        }
+        return confidence
+    }
+
     private static func selectOCRCandidate(
         from candidates: [VNRecognizedText],
         japanese: Bool
     ) -> VNRecognizedText? {
         guard japanese else { return candidates.first }
-        let finiteCandidates = candidates.filter { $0.confidence.isFinite }
-        guard let bestConfidence = finiteCandidates.map(\.confidence).max() else {
+        let validCandidates = candidates.filter {
+            validOCRConfidence($0.confidence) != nil
+        }
+        guard let bestConfidence = validCandidates.map(\.confidence).max() else {
             return nil
         }
 
@@ -964,7 +969,7 @@ struct VisionOCRService: Sendable {
         // Japanese-script candidate. This avoids replacing a strong result with
         // a speculative alternative while recovering common vertical glyph
         // substitutions that Vision reports just below top-1.
-        let confidenceWindow = finiteCandidates.filter {
+        let confidenceWindow = validCandidates.filter {
             $0.confidence >= bestConfidence - 0.14
         }
         // Vision can return a high-confidence punctuation or symbol-only
@@ -986,7 +991,7 @@ struct VisionOCRService: Sendable {
     }
 
     /// A scoped reread replaces an existing block, so punctuation-only,
-    /// low-confidence, non-finite, or low-density alternatives cannot mask a
+    /// low-confidence, out-of-domain, or low-density alternatives cannot mask a
     /// usable nearby Vision candidate. Page OCR keeps its historical fallback
     /// because punctuation-only Japanese is still valid page content.
     private static func selectJapaneseScopedVisionCandidate(
@@ -1446,8 +1451,7 @@ struct VisionOCRService: Sendable {
     private static func isReliableJapaneseMangaOCRResult(
         _ result: MangaOCRResult
     ) -> Bool {
-        let confidence = Double(result.confidence)
-        guard confidence.isFinite,
+        guard let confidence = validOCRConfidence(result.confidence),
               confidence >= 0.55,
               JapaneseOCRTextNormalizer.containsJapaneseLetter(result.text),
               JapaneseOCRTextNormalizer.japaneseLetterDensity(result.text) >= 0.5,
@@ -1455,8 +1459,8 @@ struct VisionOCRService: Sendable {
             return false
         }
         if let detectorConfidence = result.detectorConfidence {
-            let detectorScore = Double(detectorConfidence)
-            guard detectorScore.isFinite, detectorScore >= 0.55 else {
+            guard let detectorScore = validOCRConfidence(detectorConfidence),
+                  detectorScore >= 0.55 else {
                 return false
             }
         }
@@ -2284,7 +2288,7 @@ struct VisionOCRService: Sendable {
         _ observation: VisionOCRObservation
     ) -> Bool {
         observation.observationRole == .detectorTextRegion
-            && observation.confidence.isFinite
+            && validOCRConfidence(observation.confidence) != nil
             && observation.confidence < 0.80
             && observation.rect.width <= 0.08
             && observation.rect.height <= 0.08
@@ -2991,8 +2995,8 @@ struct VisionOCRService: Sendable {
         observations.reserveCapacity(results.count)
         for result in results {
             guard let text = Self.cleanRecognizedBlockText(result.text),
-                  result.confidence.isFinite,
-                  result.confidence >= 0.55,
+                  let confidence = Self.validOCRConfidence(result.confidence),
+                  confidence >= 0.55,
                   JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
                   JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
                   japaneseScriptDensity(in: text) >= 0.5 else {
@@ -3009,7 +3013,7 @@ struct VisionOCRService: Sendable {
             observations.append(
                 VisionOCRObservation(
                     text: text,
-                    confidence: result.confidence,
+                    confidence: confidence,
                     rect: candidate.rect,
                     lineRegionRect: candidate.lineRegionRect ?? candidate.rect,
                     lineRegionQuad: candidate.lineRegionQuad,
@@ -3131,7 +3135,7 @@ struct VisionOCRService: Sendable {
     ) -> Bool {
         let text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty,
-              result.confidence.isFinite,
+              validOCRConfidence(result.confidence) != nil,
               result.confidence >= 0.48,
               JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
               JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
@@ -3362,7 +3366,7 @@ struct VisionOCRService: Sendable {
             return true
         }
         let textLength = best.text.unicodeScalars.count
-        return !best.confidence.isFinite
+        return validOCRConfidence(best.confidence) == nil
             || best.confidence < 0.48
             || JapaneseOCRTextNormalizer.japaneseLetterDensity(best.text) < 0.5
             || japaneseScriptDensity(in: best.text) < 0.5
@@ -3732,7 +3736,7 @@ struct VisionOCRService: Sendable {
         let text = observation.text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard observation.observationRole == .verticalLine,
               !text.isEmpty,
-              observation.confidence.isFinite,
+              validOCRConfidence(observation.confidence) != nil,
               observation.confidence >= 0.48,
               JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
               JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
@@ -4250,7 +4254,7 @@ struct VisionOCRService: Sendable {
             )
             let ownerLetters = japaneseLetterCountForRecovery(ownerText)
             guard owner.preservesDetectorTextRegionBoundary,
-                  owner.confidence.isFinite,
+                  validOCRConfidence(owner.confidence) != nil,
                   owner.confidence < 0.80,
                   owner.rect.width <= 0.08,
                   owner.rect.height <= 0.08,
@@ -4266,7 +4270,7 @@ struct VisionOCRService: Sendable {
                               || candidate.observationRole == .verticalLine,
                           verticalTextRegionOwnersCompatible(candidate, owner),
                           candidate.sourceDirectionHint == .vertical,
-                          candidate.confidence.isFinite,
+                          validOCRConfidence(candidate.confidence) != nil,
                           candidate.confidence >= 0.40,
                           JapaneseOCRTextNormalizer.japaneseLetterDensity(candidate.text) >= 0.5,
                           japaneseScriptDensity(in: candidate.text) >= 0.5,
@@ -4323,7 +4327,7 @@ struct VisionOCRService: Sendable {
             let candidate = output[index]
             guard candidate.observationRole == .page,
                   candidate.sourceDirectionHint != .vertical,
-                  candidate.confidence.isFinite,
+                  validOCRConfidence(candidate.confidence) != nil,
                   candidate.confidence >= 0.40,
                   candidate.rect.width <= 0.05,
                   candidate.rect.height <= 0.02,
@@ -4336,7 +4340,7 @@ struct VisionOCRService: Sendable {
                 guard neighborIndex != index,
                       neighbor.observationRole == .verticalLine
                           || neighbor.sourceDirectionHint == .vertical,
-                      neighbor.confidence.isFinite,
+                      validOCRConfidence(neighbor.confidence) != nil,
                       JapaneseOCRTextNormalizer.japaneseLetterDensity(neighbor.text) >= 0.5,
                       japaneseScriptDensity(in: neighbor.text) >= 0.5 else {
                     return false
@@ -4480,20 +4484,18 @@ struct VisionOCRService: Sendable {
               !incumbent.isCompactJapaneseRecovery,
               isMeaningfulJapaneseRecoveryText(candidate.text),
               !isMeaningfulJapaneseRecoveryText(incumbent.text),
-              candidate.confidence.isFinite,
+              validOCRConfidence(candidate.confidence) != nil,
               candidate.confidence >= 0.40 else {
             return false
         }
-        let incumbentConfidence = incumbent.confidence.isFinite
-            ? incumbent.confidence
-            : 0
+        let incumbentConfidence = validOCRConfidence(incumbent.confidence) ?? 0
         return candidate.confidence >= incumbentConfidence - 0.14
     }
 
     private static func isUsableCompactJapaneseRecovery(
         _ observation: VisionOCRObservation
     ) -> Bool {
-        observation.confidence.isFinite
+        validOCRConfidence(observation.confidence) != nil
             && observation.confidence >= 0.40
             && JapaneseOCRTextNormalizer.japaneseLetterDensity(observation.text) >= 0.5
             && japaneseScriptDensity(in: observation.text) >= 0.5
@@ -4552,8 +4554,10 @@ struct VisionOCRService: Sendable {
         _ rhs: VisionOCRObservation,
         prefersJapanese: Bool = false
     ) -> Bool {
-        if lhs.confidence.isFinite != rhs.confidence.isFinite {
-            return lhs.confidence.isFinite
+        let lhsHasValidConfidence = validOCRConfidence(lhs.confidence) != nil
+        let rhsHasValidConfidence = validOCRConfidence(rhs.confidence) != nil
+        if lhsHasValidConfidence != rhsHasValidConfidence {
+            return lhsHasValidConfidence
         }
         let lhsScore = observationScore(lhs, prefersJapanese: prefersJapanese)
         let rhsScore = observationScore(rhs, prefersJapanese: prefersJapanese)
@@ -4606,9 +4610,9 @@ struct VisionOCRService: Sendable {
         } else {
             rotationBonus = observation.rotationApplied == 90 ? 0.15 : 0
         }
-        let confidence = observation.confidence.isFinite
-            ? Double(observation.confidence)
-            : 0
+        let confidence = validOCRConfidence(observation.confidence)
+            .map { Double($0) }
+            ?? 0
         let baseScore = Double(observation.text.unicodeScalars.count)
             + confidence * 8
             + Double(cjkCount) * 0.25

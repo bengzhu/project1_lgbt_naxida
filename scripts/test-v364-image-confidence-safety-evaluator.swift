@@ -33,7 +33,7 @@ private func block(_ confidence: Float) -> ImageTranslationBlock {
     )
 }
 
-private func testNonFiniteConfidenceFallsBackToReviewableZero() {
+private func testInvalidConfidenceFallsBackToReviewableZero() {
     let summary = ImageOCRResultSummary(blocks: [
         block(.nan),
         block(.infinity),
@@ -43,16 +43,18 @@ private func testNonFiniteConfidenceFallsBackToReviewableZero() {
     ])
 
     require(summary.averageConfidence?.isFinite == true, "average confidence must remain finite")
-    require(abs((summary.averageConfidence ?? -1) - 0.2) < 0.000_001, "non-finite confidence must normalize to zero")
-    require(summary.lowConfidenceBlockCount == 4, "non-finite confidence must remain reviewable")
+    require(summary.averageConfidence == 0, "invalid confidence must normalize to zero")
+    require(summary.lowConfidenceBlockCount == 5, "invalid confidence must remain reviewable")
     require(ImageOCRResultSummary.normalizedConfidence(.nan) == 0, "NaN must normalize to zero")
     require(ImageOCRResultSummary.normalizedConfidence(.infinity) == 0, "infinity must normalize to zero")
+    require(ImageOCRResultSummary.normalizedConfidence(-0.2) == 0, "negative confidence must normalize to zero")
+    require(ImageOCRResultSummary.normalizedConfidence(1.4) == 0, "oversized confidence must normalize to zero")
 }
 
 @main
 private struct ImageConfidenceSafetyEvaluator {
     static func main() {
-        testNonFiniteConfidenceFallsBackToReviewableZero()
+        testInvalidConfidenceFallsBackToReviewableZero()
         print("v3.64 image confidence safety evaluator passed")
     }
 }

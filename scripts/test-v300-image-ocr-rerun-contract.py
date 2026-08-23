@@ -61,6 +61,7 @@ class ImageOCRRerunContractTests(unittest.TestCase):
         self.assertIn("blocks.count(where: { !$0.translation.isEmpty })", summary)
         self.assertIn("Self.hasLowConfidence($0, lowConfidenceThreshold: lowConfidenceThreshold)", summary)
         self.assertIn("return confidence < threshold", summary)
+        self.assertIn("(0...1).contains(rawConfidence)", summary)
         self.assertTrue(
             "$0.effectiveSourceDirection == .vertical" in summary
             or "$0.sourceDirection == .vertical" in summary

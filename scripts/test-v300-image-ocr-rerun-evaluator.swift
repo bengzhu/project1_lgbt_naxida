@@ -54,9 +54,9 @@ private func testConfidenceAndTranslationSummary() {
 
     require(summary.totalBlockCount == 4, "all blocks must be counted")
     require(summary.translatedBlockCount == 2, "only non-empty translations count")
-    let expectedAverage = (Double(Float(0.55)) + 1.0 + 0.25) / 4.0
-    require(summary.averageConfidence == expectedAverage, "confidence must be clamped before averaging")
-    require(summary.lowConfidenceBlockCount == 2, "threshold is strict and excludes exactly 55 percent")
+    let expectedAverage = (Double(Float(0.55)) + 0.25) / 4.0
+    require(summary.averageConfidence == expectedAverage, "invalid confidence must fail closed before averaging")
+    require(summary.lowConfidenceBlockCount == 3, "invalid confidence must remain reviewable and exactly 55 percent must pass")
 }
 
 private func testDirectionPartition() {

@@ -59,26 +59,30 @@ def old_select_alternative(
     return max(window, key=lambda item: item.score) if window else None
 
 
-def select_finite_alternative(
+def is_valid_confidence(confidence: float) -> bool:
+    return math.isfinite(confidence) and 0.0 <= confidence <= 1.0
+
+
+def select_valid_alternative(
     alternatives: list[Alternative],
 ) -> Alternative | None:
-    finite = [item for item in alternatives if math.isfinite(item.confidence)]
-    if not finite:
+    valid = [item for item in alternatives if is_valid_confidence(item.confidence)]
+    if not valid:
         return None
-    best_confidence = max(item.confidence for item in finite)
+    best_confidence = max(item.confidence for item in valid)
     window = [
         item
-        for item in finite
+        for item in valid
         if item.confidence >= best_confidence - 0.14
     ]
     return max(window, key=lambda item: item.score) if window else None
 
 
 def is_better_observation(lhs: Observation, rhs: Observation) -> bool:
-    lhs_finite = math.isfinite(lhs.confidence)
-    rhs_finite = math.isfinite(rhs.confidence)
-    if lhs_finite != rhs_finite:
-        return lhs_finite
+    lhs_valid = is_valid_confidence(lhs.confidence)
+    rhs_valid = is_valid_confidence(rhs.confidence)
+    if lhs_valid != rhs_valid:
+        return lhs_valid
     if lhs.score != rhs.score:
         return lhs.score > rhs.score
     return lhs.text < rhs.text
@@ -96,11 +100,11 @@ def best_observation(observations: list[Observation]) -> Observation | None:
 
 def needs_orientation_fallback(observations: list[Observation]) -> bool:
     best = best_observation(observations)
-    return best is None or not math.isfinite(best.confidence) or best.confidence < 0.48
+    return best is None or not is_valid_confidence(best.confidence) or best.confidence < 0.48
 
 
 def weak_recovery_priority(confidence: float) -> float:
-    return confidence if math.isfinite(confidence) else -math.inf
+    return confidence if is_valid_confidence(confidence) else -math.inf
 
 
 class JapaneseConfidenceTotalOrderContractTests(unittest.TestCase):
@@ -143,19 +147,19 @@ class JapaneseConfidenceTotalOrderContractTests(unittest.TestCase):
         infinity = Alternative("無限ノイズ", math.inf, 100.0)
         self.assertIsNone(old_select_alternative([nan, finite]))
         self.assertEqual(old_select_alternative([infinity, finite]), infinity)
-        self.assertEqual(select_finite_alternative([nan, finite]), finite)
-        self.assertEqual(select_finite_alternative([infinity, finite]), finite)
-        self.assertIsNone(select_finite_alternative([nan, infinity]))
+        self.assertEqual(select_valid_alternative([nan, finite]), finite)
+        self.assertEqual(select_valid_alternative([infinity, finite]), finite)
+        self.assertIsNone(select_valid_alternative([nan, infinity]))
 
     def test_finite_page_window_and_punctuation_fallback_stay_bounded(self) -> None:
         punctuation = Alternative("。、", 0.92, 0.90)
         nearby = Alternative("今度こそ", 0.82, 0.95)
         distant = Alternative("遠い候補", 0.70, 1.00)
         self.assertEqual(
-            select_finite_alternative([punctuation, nearby, distant]),
+            select_valid_alternative([punctuation, nearby, distant]),
             nearby,
         )
-        self.assertEqual(select_finite_alternative([punctuation]), punctuation)
+        self.assertEqual(select_valid_alternative([punctuation]), punctuation)
 
     def test_finite_observation_always_beats_nonfinite_in_any_order(self) -> None:
         finite = Observation("今度こそ", 0.70, 10.0)
@@ -180,29 +184,27 @@ class JapaneseConfidenceTotalOrderContractTests(unittest.TestCase):
         self.assertEqual(prioritized[2:], [0.42, 0.45])
 
     def test_product_candidate_pool_filters_nonfinite_before_window(self) -> None:
-        finite = self.selector.index("let finiteCandidates = candidates.filter")
-        best = self.selector.index("finiteCandidates.map(\\.confidence).max()")
-        window = self.selector.index("let confidenceWindow = finiteCandidates.filter")
-        self.assertLess(finite, best)
+        valid = self.selector.index("let validCandidates = candidates.filter")
+        best = self.selector.index("validCandidates.map(\\.confidence).max()")
+        window = self.selector.index("let confidenceWindow = validCandidates.filter")
+        self.assertLess(valid, best)
         self.assertLess(best, window)
-        self.assertIn("$0.confidence.isFinite", self.selector[finite:best])
+        self.assertIn("validOCRConfidence($0.confidence) != nil", self.selector[valid:best])
         self.assertIn("$0.confidence >= bestConfidence - 0.14", self.selector)
         self.assertIn("guard japanese else { return candidates.first }", self.selector)
 
     def test_observation_comparator_has_finite_first_total_order(self) -> None:
-        finite = self.comparator.index(
-            "if lhs.confidence.isFinite != rhs.confidence.isFinite"
-        )
+        valid = self.comparator.index("let lhsHasValidConfidence")
         score = self.comparator.index("let lhsScore = observationScore(")
-        self.assertLess(finite, score)
-        self.assertIn("return lhs.confidence.isFinite", self.comparator)
-        self.assertIn("let confidence = observation.confidence.isFinite", self.score)
-        self.assertIn("? Double(observation.confidence)", self.score)
-        self.assertIn(": 0", self.score)
+        self.assertLess(valid, score)
+        self.assertIn("let rhsHasValidConfidence", self.comparator)
+        self.assertIn("return lhsHasValidConfidence", self.comparator)
+        self.assertIn("validOCRConfidence(observation.confidence)", self.score)
+        self.assertIn("?? 0", self.score)
         self.assertIn("+ confidence * 8", self.score)
 
     def test_orientation_thresholds_and_request_budgets_are_unchanged(self) -> None:
-        self.assertIn("!best.confidence.isFinite", self.orientation)
+        self.assertIn("validOCRConfidence(best.confidence) == nil", self.orientation)
         self.assertIn("best.confidence < 0.48", self.orientation)
         for marker in (
             "var orientationFallbacksRemaining = 12",
@@ -212,9 +214,9 @@ class JapaneseConfidenceTotalOrderContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.vision)
         for marker in (
-            "let lhsConfidence = lhs.element.confidence.isFinite",
-            "let rhsConfidence = rhs.element.confidence.isFinite",
-            ": -.infinity",
+            "let lhsConfidence = validOCRConfidence(lhs.element.confidence)",
+            "let rhsConfidence = validOCRConfidence(rhs.element.confidence)",
+            "?? -.infinity",
             "return lhsConfidence < rhsConfidence",
             "return lhs.offset < rhs.offset",
         ):
@@ -234,13 +236,13 @@ class JapaneseConfidenceTotalOrderContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
         combined = self.workflow + self.flow + self.route + self.test_log + self.update_log
         for marker in (
             "scripts/test-v3331-japanese-confidence-total-order-contract.py",
             "v3.331",
-            "japanese-benchmark-v3.331-",
+            "japanese-benchmark-v3.332-",
         ):
             self.assertIn(marker, combined)
         contract = read(

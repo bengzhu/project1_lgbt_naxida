@@ -51,8 +51,7 @@ class JapaneseMangaOCRQualityGateContractTests(unittest.TestCase):
 
     def test_detector_owner_requires_finite_confidence_and_japanese_evidence(self) -> None:
         for marker in [
-            "let confidence = Double(result.confidence)",
-            "confidence.isFinite",
+            "let confidence = validOCRConfidence(result.confidence)",
             "confidence >= 0.55",
             "japaneseScriptDensity(in: result.text) >= 0.5",
         ]:
