@@ -64,7 +64,9 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
         for marker in (
             ".filter { needsJapaneseWeakBlockRecovery($0.element) }",
             ".sorted { lhs, rhs in",
-            "lhs.element.confidence < rhs.element.confidence",
+            "let lhsConfidence = lhs.element.confidence.isFinite",
+            "let rhsConfidence = rhs.element.confidence.isFinite",
+            "return lhsConfidence < rhsConfidence",
             "return lhs.offset < rhs.offset",
             ".prefix(Self.maximumJapaneseWeakBlockRecoveryRequests)",
             "Task.checkCancellation()",
@@ -172,7 +174,7 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.330", "3.330"],
+            ["3.331", "3.331"],
         )
 
     def test_static_contract_has_no_process_entry(self) -> None:
