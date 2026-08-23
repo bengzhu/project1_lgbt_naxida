@@ -1,4 +1,5 @@
 # 项目流程图
+v3.331 日语 OCR confidence 全序：`top-5 alternatives -> finite filter -> existing .14 window -> finite-first observation comparison -> orientation/weak-block recovery -> fusion/layout`；NaN/∞ fail closed，有限候选分数、标点 fallback、12/8/4 orientation 与 4 weak-block 上限、翻译 QA、取消和持久化不变。
 v3.330 OCR observation best reducer：`observation pool -> candidate-first descending reducer -> strongest observation -> scoped Vision selection / orientation fallback / synthesized provenance / diagnostics`；强结果不再被误选的弱项触发多余 opposite request 或单块弱选，竖列合成的 rotation/role 来自最强 fragment，文字、平均 confidence、rect/owner、请求上限、翻译 QA、取消与持久化不变。
 v3.329 普通日语 duplicate fusion 门：`geometry duplicate -> exclude detector/compact dedicated policy -> meaningful Japanese candidate + confidence >=.40 + within incumbent -.14 -> replace noisy ordinary Vision incumbent -> preserve owner/boundary`；无合格重复项时保留标点，远低置信日文不替换，非日语、请求预算、翻译 QA、取消与持久化不变。
 v3.328 普通日语 recovery Vision 候选池门：`top-5 alternatives -> meaningful Japanese text filter -> bounded candidate score -> existing observation/fallback/coverage policy`；不统一 compact/line/Manga confidence，整页标点 fallback、请求预算、crop/owner/layout、翻译和持久化边界不扩大。

@@ -694,8 +694,14 @@ struct VisionOCRService: Sendable {
         let candidates = blocks.enumerated()
             .filter { needsJapaneseWeakBlockRecovery($0.element) }
             .sorted { lhs, rhs in
-                if lhs.element.confidence != rhs.element.confidence {
-                    return lhs.element.confidence < rhs.element.confidence
+                let lhsConfidence = lhs.element.confidence.isFinite
+                    ? lhs.element.confidence
+                    : -.infinity
+                let rhsConfidence = rhs.element.confidence.isFinite
+                    ? rhs.element.confidence
+                    : -.infinity
+                if lhsConfidence != rhsConfidence {
+                    return lhsConfidence < rhsConfidence
                 }
                 return lhs.offset < rhs.offset
             }
@@ -949,13 +955,16 @@ struct VisionOCRService: Sendable {
         japanese: Bool
     ) -> VNRecognizedText? {
         guard japanese else { return candidates.first }
-        guard let bestConfidence = candidates.map(\.confidence).max() else { return nil }
+        let finiteCandidates = candidates.filter { $0.confidence.isFinite }
+        guard let bestConfidence = finiteCandidates.map(\.confidence).max() else {
+            return nil
+        }
 
         // Keep alternatives close to Vision's best score, then prefer the
         // Japanese-script candidate. This avoids replacing a strong result with
         // a speculative alternative while recovering common vertical glyph
         // substitutions that Vision reports just below top-1.
-        let confidenceWindow = candidates.filter {
+        let confidenceWindow = finiteCandidates.filter {
             $0.confidence >= bestConfidence - 0.14
         }
         // Vision can return a high-confidence punctuation or symbol-only
@@ -3353,7 +3362,8 @@ struct VisionOCRService: Sendable {
             return true
         }
         let textLength = best.text.unicodeScalars.count
-        return best.confidence < 0.48
+        return !best.confidence.isFinite
+            || best.confidence < 0.48
             || JapaneseOCRTextNormalizer.japaneseLetterDensity(best.text) < 0.5
             || japaneseScriptDensity(in: best.text) < 0.5
             || textLength <= 1
@@ -4542,6 +4552,9 @@ struct VisionOCRService: Sendable {
         _ rhs: VisionOCRObservation,
         prefersJapanese: Bool = false
     ) -> Bool {
+        if lhs.confidence.isFinite != rhs.confidence.isFinite {
+            return lhs.confidence.isFinite
+        }
         let lhsScore = observationScore(lhs, prefersJapanese: prefersJapanese)
         let rhsScore = observationScore(rhs, prefersJapanese: prefersJapanese)
         if lhsScore != rhsScore {
@@ -4593,8 +4606,11 @@ struct VisionOCRService: Sendable {
         } else {
             rotationBonus = observation.rotationApplied == 90 ? 0.15 : 0
         }
+        let confidence = observation.confidence.isFinite
+            ? Double(observation.confidence)
+            : 0
         let baseScore = Double(observation.text.unicodeScalars.count)
-            + Double(observation.confidence) * 8
+            + confidence * 8
             + Double(cjkCount) * 0.25
             + rotationBonus
         guard prefersJapanese else { return baseScore }

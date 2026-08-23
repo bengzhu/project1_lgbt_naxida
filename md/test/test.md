@@ -1,3 +1,10 @@
+### v3.331 日语 OCR confidence 全序合同（当前工作树）
+
+- 日语 Vision top-5 alternatives 在既有 `0.14` confidence window 前先排除 NaN/∞；有限标点-only 页面 fallback 与窗口内 letter-bearing preference 保留，非日语 top-1 不变。
+- observation comparator 先执行 finite-first，再进入原 score/rotation/text tie-break；score 对两个都非有限的候选使用零 confidence 贡献，避免 NaN 破坏 strict ordering。仅有非有限 best 时明确触发既有 opposite orientation。
+- 最多 4 个 weak-block recovery 请求把非有限 confidence 作为最高恢复优先级，同类按原页序稳定选择；12/8/4 orientation fallback、`.14`/`.48`/`.55` 阈值、OCR/layout、翻译 QA、取消和持久化不变。
+- 新合同：`scripts/test-v3331-japanese-confidence-total-order-contract.py`；工程版本为 `3.331`，Japanese benchmark route 已接入。新合同 `10/10`、330 个无进程合同（1,751 tests）、Python AST `377/377`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过，27 个实际导入 `subprocess` 的合同按约束跳过。实现 SHA `181596f0aad49b259540b88d22c9ead0ccad27d3` 的 exact-SHA full [32645527449](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32645527449) 成功，Japanese benchmark job `97209099067`、主 job `97209146168`、静态、Speech、UI/Home/Paste、云端 Xcode `26.6 (17F113)`、manifest、JUnit `10/10` 与 full-validation receipt 全部通过；commit status 为 `AITRANS CI/full-validation=success`。Koharu/GGUF/探针按非必需策略跳过，授权语料/目标设备继续只作可选研究或质量证据。
+
 ### v3.330 OCR observation best reducer 合同（已完成）
 
 - Swift `Sequence.max(by:)` 需要升序谓词，不能直接接收表示“lhs 更好”的 observation comparator；v3.330 统一改为 candidate-first generic reducer，避免 scoped block、diagnostic、orientation 与竖列 synthesis 在混合强弱 observation 时把最弱项当作 best。
