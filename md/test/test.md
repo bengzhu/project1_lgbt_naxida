@@ -1,7 +1,7 @@
-### v3.333 detector confidence 预算合法域合同（当前研发分支）
+### v3.333 detector confidence 预算合法域合同（已完成）
 
 - 覆盖 RT-DETR 非有限 logit、sigmoid 后有限闭区间 `[0,1]`、top-query 前过滤、merge 后 TextRegion 再校验、Vision detector→Manga request 交接和 long-page overflow 合法值优先全序；非法 score 不得占用 detector query 或 Manga OCR 请求。
-- 新合同：`scripts/test-v3333-detector-confidence-domain-contract.py`；工程版本推进至 `3.333`，Japanese benchmark route 接入。新合同 `9/9`、332 个无进程合同（1,770 tests）、Python AST `379/379`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过，27 个导入 `subprocess` 的历史合同按约束跳过。本地未运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR 和合入后 receipt 待实现候选完成后补记。
+- 新合同：`scripts/test-v3333-detector-confidence-domain-contract.py`；工程版本推进至 `3.333`，Japanese benchmark route 接入。新合同 `9/9`、332 个无进程合同（1,770 tests）、Python AST `379/379`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过，27 个导入 `subprocess` 的历史合同按约束跳过。本地未运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime；精确实现 SHA `02e1a609473b457eef8c8f3517be09ffda527b78` 的 exact-SHA full [32652128752](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32652128752) 成功，Japanese benchmark、UI、Xcode、manga probe、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过；PR [#397](https://github.com/bengzhu/project1_lgbt_naxida/pull/397) checks [32653281338](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32653281338) 成功，以 merge SHA `682f86d1af65cda5a88afdb5adca315fb17b87bc` 合入 `smalldata_test`；合入后 push CI [32653358995](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32653358995) 的 benchmark job `97228250726`、主 job `97228299811` 与复用候选 full receipt 全部成功。Koharu parity 按普通 OCR 独立策略跳过。
 - 既有 12/48 Manga OCR 请求上限、分带 quota、detector primary-before-Vision supplemental、合法 confidence 排序、geometry tie-break、crop/warp、owner/layout、翻译 QA、取消、generation、持久化和非图片路径保持不变；Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
 
 ### v3.332 OCR confidence 合法域合同（已完成）
