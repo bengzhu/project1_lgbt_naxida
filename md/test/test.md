@@ -1,9 +1,10 @@
-### v3.324 日语 Vision line crop 返回 meaningful-density 合同（本地通过，待云端验证）
+### v3.324 日语 Vision line crop 返回 meaningful-density 合同（已完成）
 
 - perspective、axis primary 与 axis opposite Vision line observations 在提交到 fusion/coverage 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再成为 `.verticalLine` 结果。
 - 被过滤 perspective 不能抑制 axis request，axis primary 过滤为空仍触发现有 opposite；缺口继续进入既有 block fallback。24 perspective、24 axis、12 line orientation fallback、8 Manga line 请求、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
 - 新合同：`scripts/test-v3324-japanese-vision-line-density-contract.py`；工程版本为 `3.324`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
-- 本地新合同 `10/10`、323 个无进程合同（1,681 tests）、Python AST `370/370`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA full、PR、合并与合入后证据待候选提交后补齐。
+- 本地新合同 `10/10`、323 个无进程合同（1,681 tests）、Python AST `370/370`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `ba89d2bb777198136d2e3a426fbce3de8c3dd597` 的 PR [#388](https://github.com/bengzhu/project1_lgbt_naxida/pull/388) CI [32632083038](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32632083038) 成功；exact-SHA full [32632093454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32632093454) 的 v3.324 benchmark、静态、Speech、UI/Home/Paste、云端 Xcode、manifest、JUnit `10/10` 与 full-validation receipt 全部通过，Koharu/GGUF 按非必需策略跳过。以 merge SHA `b7dfcf17eca33028a572fd8604f59271b9e00fd4` 合入 `smalldata_test` 后，push CI [32632802178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32632802178) 的 benchmark、静态检查与复用 receipt 成功；`main` 未修改。本轮不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.323 日语整块 Vision fallback 返回 meaningful-density 合同（已完成）
 
