@@ -1,9 +1,9 @@
-### v3.325 日语 scoped one-sided 候选质量合同（本地通过，待云端验证）
+### v3.325 日语 scoped one-sided 候选质量合同（已完成）
 
 - Manga 或 Vision 任一候选缺失时，唯一候选从 meaningful-only 改为复用完整 usable gate：有限 confidence `>=.55`、真实日文字母、`japaneseLetterDensity >=.5`、`japaneseScriptDensity >=.5`；低置信、非有限值、`日本abcde` 和标点-only 不再替换已有 block。
 - 双候选 meaningful/usable 比较、普通 page punctuation fallback、既有最多 2/1/3 个 scoped Vision 方向、Manga 请求、取消、翻译 QA、generation 与持久化不变。
 - 新合同：`scripts/test-v3325-japanese-scoped-one-sided-quality-contract.py`；工程版本为 `3.325`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
-- 本地新合同 `10/10`、324 个无进程合同（1,691 tests）、Python AST `371/371`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA full、PR、合并与合入后证据待候选提交后补齐。
+- 本地新合同 `10/10`、324 个无进程合同（1,691 tests）、Python AST `371/371`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过。实现 SHA `554b65c4ee2f6ab135a5348beb3eb31f2cc721ff` 的 PR [#389](https://github.com/bengzhu/project1_lgbt_naxida/pull/389) CI [32633537678](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32633537678) 成功；exact-SHA full [32633561784](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32633561784) 的 benchmark job `97179853166` 与主 job `97179887362` 成功，覆盖静态、Speech、UI/Home/Paste、云端 Xcode、manifest、JUnit `10/10` 与 full receipt，Koharu/GGUF 按非必需策略跳过。PR 以 merge SHA `305bc199554a33c9a709146da4ad998cbc67b1df` 合入 `smalldata_test`；合入后 push CI [32634107689](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32634107689) 的 v3.325 benchmark、静态与复用 full receipt 成功。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；`main` 未修改。
 
 ### v3.324 日语 Vision line crop 返回 meaningful-density 合同（已完成）
 
