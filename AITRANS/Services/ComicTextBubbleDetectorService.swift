@@ -125,11 +125,16 @@ private struct ComicTextBubbleDetectorRuntime {
         }
 
         let merged = Self.mergeTextRegions(Self.mergeSliceRegions(detections))
-            .compactMap {
-                guard let confidence = Self.validDetectorConfidence($0.confidence) else {
+            .compactMap { prediction -> ComicTextDetectorRegion? in
+                guard let confidence = Self.validDetectorConfidence(
+                    prediction.confidence
+                ) else {
                     return nil
                 }
-                return ComicTextDetectorRegion(rect: $0.rect, confidence: confidence)
+                return ComicTextDetectorRegion(
+                    rect: prediction.rect,
+                    confidence: confidence
+                )
             }
         let sorted = merged.sorted {
             let lhsConfidence = Self.detectorConfidenceRank($0.confidence)

@@ -141,8 +141,14 @@ class DetectorConfidenceDomainContractTests(unittest.TestCase):
         self.assertIn("(0...1).contains(confidence)", self.detector_validator)
         self.assertIn("return nil", self.detector_validator)
         self.assertIn("validDetectorConfidence(confidence) ?? -.infinity", self.detector_rank)
-        self.assertIn(".compactMap", self.detector_regions)
-        self.assertIn("Self.validDetectorConfidence($0.confidence)", self.detector_regions)
+        self.assertIn(
+            ".compactMap { prediction -> ComicTextDetectorRegion? in",
+            self.detector_regions,
+        )
+        self.assertIn(
+            "Self.validDetectorConfidence(\n                    prediction.confidence",
+            self.detector_regions,
+        )
         self.assertIn("Self.detectorConfidenceRank($0.confidence)", self.detector_regions)
         self.assertIn("Self.detectorConfidenceRank($1.confidence)", self.detector_regions)
 
