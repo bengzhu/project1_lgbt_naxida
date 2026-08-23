@@ -1,9 +1,10 @@
-### v3.322 日语 Vision geometry recovery 返回 meaningful-density 合同（进行中）
+### v3.322 日语 Vision geometry recovery 返回 meaningful-density 合同（已完成）
 
 - pixel-first 与 vertical-tile Vision crop observations 在提交到 `refined` 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再进入 recovery dedupe/fusion/layout。
 - pixel-first primary 过滤后为空仍触发现有 opposite orientation；tile primary 继续按过滤结果决定 opposite，整块 fallback 不变。12 pixel candidates、4 pixel orientation、6 tile/18 window/4 tile orientation、crop/warp、owner/coverage、翻译 QA、取消和持久化不变。
 - 新合同：`scripts/test-v3322-japanese-vision-recovery-density-contract.py`；工程版本为 `3.322`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
 - 本地新合同 `9/9`、321 个无进程合同、Python AST `368/368`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `f6490e90f979d1ec793c9e1bbaf362479e9b12ae` 的 PR [#386](https://github.com/bengzhu/project1_lgbt_naxida/pull/386) CI [32629338814](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32629338814) 成功；exact-SHA full [32629373873](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32629373873) 的 Japanese benchmark、静态检查、Speech、UI interaction、Home/Paste、云端 Xcode build、manifest、JUnit 与 full-validation receipt 全部通过，Koharu/GGUF 按非必需策略跳过。以 merge SHA `14e4e4aeeb95c59e30422f06ef171c8849213b6a` 合入 `smalldata_test` 后，push CI [32630010542](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32630010542) 的 v3.322 benchmark、静态检查与 receipt 成功，Xcode/UI/Speech 等按 merge scope 跳过。`main` 未修改。本轮只证明该局部自有 Vision recovery 返回门和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.321 日语 Manga line OCR 返回 meaningful-density 合同（已完成）
 
