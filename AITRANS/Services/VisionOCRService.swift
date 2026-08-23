@@ -116,9 +116,9 @@ struct VisionOCRService: Sendable {
                     observationRole: .verticalLine,
                     usesLanguageCorrection: true
                 )
-                guard let best = observations.max(by: {
-                    isBetterObservation($0, $1, prefersJapanese: true)
-                }) else { continue }
+                guard let best = bestJapaneseObservation(in: observations) else {
+                    continue
+                }
                 reads.append(
                     JapaneseCompactCropReadDiagnostic(
                         rect: candidate.rect,
@@ -480,9 +480,10 @@ struct VisionOCRService: Sendable {
                 )
             }
             : observations
-        guard let best = eligibleObservations.max(by: {
-            Self.isBetterObservation($0, $1, prefersJapanese: japanese)
-        }),
+        guard let best = Self.bestObservation(
+            in: eligibleObservations,
+            prefersJapanese: japanese
+        ),
         let text = Self.cleanRecognizedBlockText(best.text),
         !text.isEmpty else {
             return japanese ? mangaCandidate : nil
@@ -3223,9 +3224,9 @@ struct VisionOCRService: Sendable {
                     continue
                 }
 
-                let best = ordered
-                    .map(\.observation)
-                    .max(by: { isBetterJapaneseObservation($0, $1) }) ?? ordered[0].observation
+                let best = bestJapaneseObservation(
+                    in: ordered.map(\.observation)
+                ) ?? ordered[0].observation
                 let ownerCandidates = Set(
                     ordered.compactMap { $0.observation.verticalTextRegionOwner }
                 )
@@ -3348,7 +3349,7 @@ struct VisionOCRService: Sendable {
     private static func needsJapaneseOrientationFallback(
         _ observations: [VisionOCRObservation]
     ) -> Bool {
-        guard let best = observations.max(by: { isBetterJapaneseObservation($0, $1) }) else {
+        guard let best = bestJapaneseObservation(in: observations) else {
             return true
         }
         let textLength = best.text.unicodeScalars.count
@@ -4507,6 +4508,33 @@ struct VisionOCRService: Sendable {
         _ rhs: VisionOCRObservation
     ) -> Bool {
         isBetterObservation(lhs, rhs, prefersJapanese: true)
+    }
+
+    /// The observation comparators are descending, while `Sequence.max(by:)`
+    /// expects an ascending-order predicate. Keep reduction explicit so scoped
+    /// selection, orientation fallback, synthesized provenance, and diagnostic
+    /// evidence all use the strongest observation rather than the weakest one.
+    private static func bestJapaneseObservation(
+        in observations: [VisionOCRObservation]
+    ) -> VisionOCRObservation? {
+        bestObservation(in: observations, prefersJapanese: true)
+    }
+
+    private static func bestObservation(
+        in observations: [VisionOCRObservation],
+        prefersJapanese: Bool = false
+    ) -> VisionOCRObservation? {
+        guard var best = observations.first else { return nil }
+        for candidate in observations.dropFirst() {
+            if isBetterObservation(
+                candidate,
+                best,
+                prefersJapanese: prefersJapanese
+            ) {
+                best = candidate
+            }
+        }
+        return best
     }
 
     private static func isBetterObservation(
