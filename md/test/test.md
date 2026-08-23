@@ -1,9 +1,9 @@
-### v3.330 OCR observation best reducer 合同（当前工作树）
+### v3.330 OCR observation best reducer 合同（候选已验证）
 
 - Swift `Sequence.max(by:)` 需要升序谓词，不能直接接收表示“lhs 更好”的 observation comparator；v3.330 统一改为 candidate-first generic reducer，避免 scoped block、diagnostic、orientation 与竖列 synthesis 在混合强弱 observation 时把最弱项当作 best。
 - scoped/diagnostic 现在返回既有 comparator 认定的最强 observation；orientation fallback 只由真实最强项的 `.48` confidence、letter/script density `.5` 与单字门决定，强项旁边的弱项不再误触发 opposite request，空集合或全弱集合仍沿用既有 fallback。
 - 合成竖列的 rotation/role provenance 来自最强 fragment；文字按原顺序无分隔拼接、confidence 算术平均、rect/owner、dedupe/layout、12/8/4 fallback 上限、翻译 QA、取消、generation、持久化和非日语路径不变。
-- 新合同：`scripts/test-v3330-japanese-best-observation-reducer-contract.py`；工程版本为 `3.330`，Japanese benchmark route 已接入。新合同 `10/10`、329 个无进程合同（1,741 tests）、Python AST `376/376`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个实际导入 `subprocess` 的合同跳过。历史 v3.173/v3.327 合同已改为验证 reducer，不再固化旧 `.max(by:)` bug。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime，exact-SHA full 待补；Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
+- 新合同：`scripts/test-v3330-japanese-best-observation-reducer-contract.py`；工程版本为 `3.330`，Japanese benchmark route 已接入。新合同 `10/10`、329 个无进程合同（1,741 tests）、Python AST `376/376`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个实际导入 `subprocess` 的合同跳过。历史 v3.173/v3.327 合同已改为验证 reducer，不再固化旧 `.max(by:)` bug。实现 SHA `7636d441e3246f2fa6bc3afe6de302d6bcda47ff` 的 exact-SHA full [32642708201](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32642708201) 成功，benchmark job `97202155198` 与主 job `97202194469` 覆盖 benchmark schema/fixture、静态、Speech、UI/Home/Paste、云端 Xcode `26.6 (17F113)`、manifest、JUnit `10/10` 和 full receipt；commit status 为 `AITRANS CI/full-validation=success`，Koharu/GGUF 按非必需策略跳过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；PR/合入 evidence 待补，Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
 
 ### v3.329 普通日语 duplicate fusion 质量合同（已完成）
 
