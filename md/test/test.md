@@ -1,3 +1,9 @@
+### v3.329 普通日语 duplicate fusion 质量合同（实现中）
+
+- 仅在已通过 geometry/text duplicate 判定的普通日语 Vision observation pair 内，meaningful 日文候选可在既有 `0.14` confidence window、有限 confidence `>=.40` 时覆盖非 meaningful incumbent；长 Latin/标点高分噪声不再仅凭通用长度分占位。
+- confidence 差距超过窗口、非有限/低于 `.40` 的日文不能替换强标点；没有合格重复项时纯标点页面结果继续保留。detector TextRegion 与 compact recovery 仍走各自专用替换规则，owner/protected boundary 继承不变。
+- 新合同：`scripts/test-v3329-japanese-duplicate-fusion-quality-contract.py`；工程版本为 `3.329`，Japanese benchmark route 已接入。新合同 `10/10`、328 个无外部进程/编译入口合同（1,731 tests）、Python AST `375/375`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个 `subprocess` 合同按约束跳过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA/full 证据待补。请求预算、crop/warp、geometry/layout、翻译 QA、取消、generation、持久化和非日语路径不变。
+
 ### v3.328 普通日语 recovery Vision 候选池质量合同（已完成）
 
 - 普通 pixel-first、tile、block、axis line 与 perspective line 的 Vision top-5 alternatives 先执行共享 meaningful 文本门，再进入既有 Japanese comparator；高分 `。、`／`日本abcde` 不再遮蔽较低分但合格的日文 alternative。

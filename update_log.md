@@ -1,3 +1,7 @@
+## v3.329：普通日语 duplicate fusion meaningful 偏好（2026-08-23，实现中）
+
+v3.328 已在普通 recovery 的单框 top-5 pool 内先过滤无意义文本；跨 page/rotation/crop/line observation 的最终日语去重仍可能让长 Latin/标点高分项先占位，遮蔽置信度接近的有效日文。v3.329 在 geometry/text 已判定 duplicate 后、普通 score 替换前加入有界 semantic preference：候选必须通过共享真实日文字母与 letter/script density `>=.5` 门、confidence 有限且 `>=.40`，并位于 incumbent `-.14` 的既有 Vision confidence window 内；否则保留 incumbent。detector/compact 专用替换、owner/boundary 继承、无合格重复项的 page 标点 fallback、非日语、请求预算、crop/warp、layout、翻译 QA、取消、generation 和持久化不变。新增 `scripts/test-v3329-japanese-duplicate-fusion-quality-contract.py`，工程版本为 `3.329`，Japanese benchmark route 已接入。新合同 `10/10`、328 个无外部进程/编译入口合同（1,731 tests）通过，27 个 `subprocess` 合同按约束跳过；Python AST `375/375`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA/full evidence 待补。
+
 ## v3.328：普通日语 recovery Vision 候选池 meaningful 门（2026-08-23，已完成）
 
 v3.322–v3.324 已在普通 pixel-first、tile、block 与 line recovery 结果提交前过滤标点-only/低 density observation；继续静态审计发现，每个 `VNRecognizedTextObservation` 内仍先从 top-5 alternatives 选出单一候选，再执行结果级 meaningful 过滤。高分 `。、` 或 `日本abcde` 因而可能遮蔽较低分但合格的 `ニコッ`／`今度こそ`，随后自身被过滤，造成既有 recovery 机会丢失。
