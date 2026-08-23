@@ -1,3 +1,10 @@
+### v3.324 日语 Vision line crop 返回 meaningful-density 合同（本地通过，待云端验证）
+
+- perspective、axis primary 与 axis opposite Vision line observations 在提交到 fusion/coverage 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再成为 `.verticalLine` 结果。
+- 被过滤 perspective 不能抑制 axis request，axis primary 过滤为空仍触发现有 opposite；缺口继续进入既有 block fallback。24 perspective、24 axis、12 line orientation fallback、8 Manga line 请求、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
+- 新合同：`scripts/test-v3324-japanese-vision-line-density-contract.py`；工程版本为 `3.324`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
+- 本地新合同 `10/10`、323 个无进程合同（1,681 tests）、Python AST `370/370`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA full、PR、合并与合入后证据待候选提交后补齐。
+
 ### v3.323 日语整块 Vision fallback 返回 meaningful-density 合同（已完成）
 
 - line coverage 不完整后的 block primary/opposite crop observations 在提交、owner coverage proof 与 partial-line replacement 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再成为整块 fallback。

@@ -63,7 +63,7 @@ class JapaneseCropOrientationFallbackContractTests(unittest.TestCase):
         for marker in [
             "var orientationFallbacksRemaining = 12",
             "recognizeJapaneseCropPass(",
-            "needsJapaneseOrientationFallback(primary)",
+            "needsJapaneseOrientationFallback(meaningfulPrimary)",
             "minimumTextHeight: 0.002",
         ]:
             self.assertIn(marker, self.line_crops)

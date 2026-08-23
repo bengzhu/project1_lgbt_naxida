@@ -44,7 +44,7 @@ class JapaneseLinePathDedupeContractTests(unittest.TestCase):
     def test_strong_perspective_results_cover_matching_axis_candidates(self) -> None:
         for marker in [
             "var perspectiveCoveredCandidates: [VisionOCRObservation] = []",
-            "needsJapaneseOrientationFallback([perspective])",
+            "needsJapaneseOrientationFallback(meaningfulPerspective)",
             "perspectiveCoveredCandidates.append(candidate)",
             "guard !perspectiveCoveredCandidates.contains(where:",
             "isSameJapaneseLineRegion(candidate, as: $0)",
@@ -63,7 +63,10 @@ class JapaneseLinePathDedupeContractTests(unittest.TestCase):
             "overlapRatio(candidateRegion, coveredRegion) >= 0.72",
         ]:
             self.assertIn(marker, self.same_region)
-        self.assertIn("if !needsJapaneseOrientationFallback([perspective])", self.lines)
+        self.assertIn(
+            "if !needsJapaneseOrientationFallback(meaningfulPerspective)",
+            self.lines,
+        )
         self.assertIn("orientationFallbacksRemaining", self.lines)
         self.assertIn("recognizeJapaneseCropPass(", self.lines)
 

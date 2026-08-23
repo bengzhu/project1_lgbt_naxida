@@ -2561,13 +2561,16 @@ struct VisionOCRService: Sendable {
                 recognitionLanguages: recognitionLanguages,
                 consumedPixels: &perspectiveWarpPixels
             ) {
-                refined.append(perspective)
+                let meaningfulPerspective = meaningfulJapaneseRecoveryObservations(
+                    [perspective]
+                )
+                refined.append(contentsOf: meaningfulPerspective)
                 // Koharu's extract_text_block_regions uses a successful line
                 // polygon region instead of rereading the same line bbox. Keep
                 // the axis-aligned path as a quality fallback, but suppress it
                 // for a geometrically matching perspective result that is
                 // already strong enough to avoid a duplicate Vision request.
-                if !needsJapaneseOrientationFallback([perspective]) {
+                if !needsJapaneseOrientationFallback(meaningfulPerspective) {
                     perspectiveCoveredCandidates.append(candidate)
                 }
             }
@@ -2606,11 +2609,14 @@ struct VisionOCRService: Sendable {
                 observationRole: .verticalLine,
                 verticalTextRegionOwner: candidate.verticalTextRegionOwner
             )
-            refined.append(contentsOf: primary)
+            let meaningfulPrimary = meaningfulJapaneseRecoveryObservations(
+                primary
+            )
+            refined.append(contentsOf: meaningfulPrimary)
             if orientationFallbacksRemaining > 0,
-               needsJapaneseOrientationFallback(primary) {
+               needsJapaneseOrientationFallback(meaningfulPrimary) {
                 orientationFallbacksRemaining -= 1
-                refined.append(contentsOf: recognizeJapaneseCropPass(
+                let opposite = recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
@@ -2620,7 +2626,10 @@ struct VisionOCRService: Sendable {
                     cropScale: preparedCrop.scale,
                     observationRole: .verticalLine,
                     verticalTextRegionOwner: candidate.verticalTextRegionOwner
-                ))
+                )
+                refined.append(
+                    contentsOf: meaningfulJapaneseRecoveryObservations(opposite)
+                )
             }
         }
         return refined

@@ -1,3 +1,11 @@
+## v3.324：日语 Vision line crop 返回 meaningful-density 门（2026-08-23，已实现并完成本地安全回归，待云端验证）
+
+v3.321 已过滤 bundled Manga line 返回，v3.322/v3.323 已过滤 pixel-first、tile 与 block fallback 返回；静态审计发现 `recognizeJapaneseVerticalLineCrops` 的 perspective 与 axis Vision line reread 仍把原始 observation 直接追加到 fusion。标点-only/标点主导结果虽不能证明 reliable line coverage，却仍可能成为最终文字块；perspective 噪声也可能参与 axis suppression 判断。
+
+本轮让 perspective、axis primary 与 axis opposite 在提交前统一经过 `meaningfulJapaneseRecoveryObservations`。过滤后的 perspective 才能抑制对应 axis request；过滤后的 axis primary 决定既有 opposite fallback，opposite 同样过滤后才进入 fusion。普通 page OCR 的 punctuation fallback 保留；24 perspective、24 axis、12 line orientation fallback、8 Manga line、16 block/8 block orientation 等请求预算、crop/warp、owner geometry、layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3324-japanese-vision-line-density-contract.py`，工程版本推进至 `3.324`，Japanese benchmark route 已接入；Koharu/GGUF、授权语料和目标设备继续是可选研究/质量证明。
+
+本地新合同 `10/10`、323 个无外部进程/编译入口合同（1,681 tests）全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；Python AST `370/370`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。未运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR、合并与合入后证据待当前候选提交后补齐。本轮只验证该局部自有 Vision line 返回边界，不外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.323：日语整块 Vision fallback 返回 meaningful-density 门（2026-08-23，已完成）
 
 本轮继续优化 AITRANS 普通图片 OCR→翻译主路径。v3.321/v3.322 已依次收紧 Manga line 与 pixel-first/tile recovery 返回，但 line coverage 不完整时的整块 Vision crop 仍把 primary/opposite 原始 observations 直接用于 owner coverage、partial-line replacement 与最终 `refined`；因此 `。、`、`日。、` 等标点主导结果仍可能作为 block fallback 残留。

@@ -1,4 +1,5 @@
 # 项目流程图
+v3.324 日语 Vision line 返回门：`perspective/axis line crop -> meaningful Japanese observation filter -> line fusion/coverage OR bounded axis opposite/block fallback`；低密度标点噪声不提交，24 perspective/24 axis、12 orientation fallback、crop/warp、owner、layout/翻译、取消和持久化边界不扩大。
 v3.323 日语 block fallback 返回门：`incomplete line coverage -> bounded block crop -> meaningful Japanese observation filter -> owner coverage/partial-line replacement/fusion OR keep existing lines`；低密度标点噪声不提交，16 block、8 orientation fallback、crop/owner、layout/翻译、取消和持久化边界不扩大。
 v3.322 日语 Vision recovery 返回门：`pixel-first/tile crop -> meaningful Japanese observation filter -> geometry/fusion OR bounded opposite/block fallback`；低密度标点噪声不提交，请求、crop/owner、layout/翻译、取消和持久化边界不扩大。
 v3.321 日语 line OCR 返回门：`bounded Manga line result -> meaningful Japanese density -> owner match -> verticalLine commit OR existing Vision/block fallback`；高置信标点噪声不再进入 line fusion/layout，不增加请求或改变 geometry/翻译/持久化边界。
