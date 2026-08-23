@@ -153,7 +153,10 @@ class DetectorConfidenceDomainContractTests(unittest.TestCase):
         self.assertIn("Self.detectorConfidenceRank($1.confidence)", self.detector_regions)
 
     def test_vision_revalidates_detector_regions_before_request_budget(self) -> None:
-        compact = self.manga_regions.index("detectorRegions.compactMap")
+        compact = self.manga_regions.index(
+            "detectorRegions.compactMap {\n"
+            "            detectorRegion -> JapanesePixelFirstRegion? in"
+        )
         validate = self.manga_regions.index("validOCRConfidence(")
         combine = self.manga_regions.index("return primary + supplemental")
         self.assertLess(compact, validate)

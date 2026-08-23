@@ -1487,7 +1487,8 @@ struct VisionOCRService: Sendable {
         detectorRegions: [ComicTextDetectorRegion],
         visionRegions: [JapanesePixelFirstRegion]
     ) -> [JapanesePixelFirstRegion] {
-        let primary = detectorRegions.compactMap { detectorRegion in
+        let primary = detectorRegions.compactMap {
+            detectorRegion -> JapanesePixelFirstRegion? in
             guard let detectorConfidence = validOCRConfidence(
                 detectorRegion.confidence
             ) else {
