@@ -1,3 +1,11 @@
+## v3.321：日语 Manga line OCR 返回 meaningful-density 门（2026-08-23，进行中）
+
+本轮继续优化 AITRANS 普通图片 OCR→翻译主路径。v3.320 已阻止标点主导文本触发或证明 line recovery，但 bundled Manga 的最多 8 个 line OCR 请求在返回结果提交时仍只检查旧 `japaneseScriptDensity`；因此高置信 `。、` 或 `日。、` 仍可能被写成 `.verticalLine` observation，参与后续融合、owner grouping 与布局。
+
+实现边界：`recognizeJapaneseMangaLineOCR` 在 owner/line 几何匹配和 observation append 之前，要求清洗后的结果同时包含真实日语字母、`japaneseLetterDensity >= 0.5`、既有 `japaneseScriptDensity >= 0.5` 且 confidence `>=0.55`。不合格结果不提交，缺失 line 继续由既有 Vision line、pixel-first/tile 与整块 crop fallback 接管；8-request line budget、12 orientation fallback、crop/warp、owner matching、coverage、layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3321-japanese-line-result-density-contract.py`，工程版本推进至 `3.321`，Japanese benchmark route 已接入；Koharu/GGUF/授权语料/目标设备不作为本轮普通 OCR 修复门槛。
+
+本地安全回归为 320 个无外部进程/编译入口合同全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；新合同 `9/9`、Python AST `367/367`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 全部通过。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
 ## v3.320：日语 OCR 恢复 meaningful-density 门（2026-08-23，已完成）
 
 本轮继续优化 AITRANS 普通图片 OCR→翻译主路径。v3.317/v3.318 只要求可靠结果至少含一个日语文字；`日！！` 一类标点主导结果仍可通过旧 `japaneseScriptDensity`，进而不触发反向 OCR/弱块恢复、占用最多 8 个 text-backed line OCR 名额、替换 scoped block，或作为 owner/line coverage/frontier 证据抑制 pixel-first/tile fallback。

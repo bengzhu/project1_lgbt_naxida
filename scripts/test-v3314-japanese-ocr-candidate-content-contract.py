@@ -99,7 +99,7 @@ class JapaneseOCRCandidateContentContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.320", "3.320"],
+            ["3.321", "3.321"],
         )
         for marker in (
             "scripts/test-v3314-japanese-ocr-candidate-content-contract.py",
