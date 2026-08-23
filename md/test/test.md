@@ -1,3 +1,9 @@
+### v3.333 detector confidence 预算合法域合同（当前研发分支）
+
+- 覆盖 RT-DETR 非有限 logit、sigmoid 后有限闭区间 `[0,1]`、top-query 前过滤、merge 后 TextRegion 再校验、Vision detector→Manga request 交接和 long-page overflow 合法值优先全序；非法 score 不得占用 detector query 或 Manga OCR 请求。
+- 新合同：`scripts/test-v3333-detector-confidence-domain-contract.py`；工程版本推进至 `3.333`，Japanese benchmark route 接入。新合同 `9/9`、332 个无进程合同（1,770 tests）、Python AST `379/379`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过，27 个导入 `subprocess` 的历史合同按约束跳过。本地未运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR 和合入后 receipt 待实现候选完成后补记。
+- 既有 12/48 Manga OCR 请求上限、分带 quota、detector primary-before-Vision supplemental、合法 confidence 排序、geometry tie-break、crop/warp、owner/layout、翻译 QA、取消、generation、持久化和非图片路径保持不变；Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
+
 ### v3.332 OCR confidence 合法域合同（已完成）
 
 - Vision OCR 统一使用 `validOCRConfidence`：只有有限且位于闭区间 `[0,1]` 的值可以进入日语 top-5 `.14` window、observation comparator/score、orientation 判断、weak-block 排序以及 scoped/Manga/line/compact/dedupe 质量门；`-0.2`、`1.2` 与 NaN/±∞ 都 fail closed。

@@ -77,7 +77,7 @@ class JapaneseMangaOCRBatchEOSEquivalenceTests(unittest.TestCase):
     def test_version_and_ci_route_are_advanced(self) -> None:
         self.assertEqual(
             set(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)),
-            {"3.332"},
+            {"3.333"},
         )
         previous = "python3 -B scripts/test-v3255-image-japanese-manga-ocr-batch-eos-alignment-contract.py"
         current = "python3 -B scripts/test-v3256-image-review-direction-filter-focus-contract.py"

@@ -125,11 +125,21 @@ private struct ComicTextBubbleDetectorRuntime {
         }
 
         let merged = Self.mergeTextRegions(Self.mergeSliceRegions(detections))
-            .map {
-                ComicTextDetectorRegion(rect: $0.rect, confidence: $0.confidence)
+            .compactMap { prediction -> ComicTextDetectorRegion? in
+                guard let confidence = Self.validDetectorConfidence(
+                    prediction.confidence
+                ) else {
+                    return nil
+                }
+                return ComicTextDetectorRegion(
+                    rect: prediction.rect,
+                    confidence: confidence
+                )
             }
         let sorted = merged.sorted {
-            if $0.confidence != $1.confidence { return $0.confidence > $1.confidence }
+            let lhsConfidence = Self.detectorConfidenceRank($0.confidence)
+            let rhsConfidence = Self.detectorConfidenceRank($1.confidence)
+            if lhsConfidence != rhsConfidence { return lhsConfidence > rhsConfidence }
             if $0.rect.y != $1.rect.y { return $0.rect.y < $1.rect.y }
             if $0.rect.x != $1.rect.x { return $0.rect.x > $1.rect.x }
             if $0.rect.width != $1.rect.width { return $0.rect.width < $1.rect.width }
@@ -179,9 +189,16 @@ private struct ComicTextBubbleDetectorRuntime {
         for queryIndex in 0..<Self.queryCount {
             for labelID in 0..<Self.labelCount {
                 let index = queryIndex * Self.labelCount + labelID
+                let logit = logitValues[index]
+                guard logit.isFinite else { continue }
+                guard let score = Self.validDetectorConfidence(
+                    Self.sigmoid(logit)
+                ) else {
+                    continue
+                }
                 scored.append(
                     ScoredPrediction(
-                        score: Self.sigmoid(logitValues[index]),
+                        score: score,
                         queryIndex: queryIndex,
                         labelID: labelID
                     )
@@ -517,6 +534,22 @@ private struct ComicTextBubbleDetectorRuntime {
 
     private static func sigmoid(_ value: Float) -> Float {
         1 / (1 + exp(-value))
+    }
+
+    /// Detector confidence is a probability only when it is finite and within
+    /// the closed unit interval. Reject invalid model output before it can own
+    /// a top-query slot or cross the detector/TextRegion boundary.
+    private static func validDetectorConfidence(_ confidence: Float) -> Float? {
+        guard confidence.isFinite, (0...1).contains(confidence) else {
+            return nil
+        }
+        return confidence
+    }
+
+    /// Keep sorting total and deterministic even if a future merge/input path
+    /// bypasses the normal detector-score validation boundary.
+    private static func detectorConfidenceRank(_ confidence: Float) -> Float {
+        validDetectorConfidence(confidence) ?? -.infinity
     }
 
     private static func normalizedRect(
