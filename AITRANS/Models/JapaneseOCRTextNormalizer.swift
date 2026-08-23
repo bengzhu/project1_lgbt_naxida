@@ -36,6 +36,37 @@ enum JapaneseOCRTextNormalizer {
         japaneseLetterCount(text) > 0
     }
 
+    /// Measures actual Japanese writing against non-technical visible OCR
+    /// output. Unlike `japaneseScriptDensity`, this deliberately keeps
+    /// punctuation in the denominator while excluding Latin/digit word
+    /// scalars, which preserves mixed technical text such as `GPT-4日本語`.
+    /// Kana support marks count only when a real Japanese letter is present,
+    /// so `キャー！！` remains meaningful but standalone marks do not prove a
+    /// line was covered or protect a detector owner from another recovery pass.
+    static func japaneseLetterDensity(_ text: String) -> Double {
+        let letterCount = japaneseLetterCount(text)
+        guard letterCount > 0 else { return 0 }
+
+        let counts = text.unicodeScalars.reduce(
+            into: (visible: 0, support: 0)
+        ) { counts, scalar in
+            guard !CharacterSet.whitespacesAndNewlines.contains(scalar),
+                  !containsASCIIWordScalar(scalar),
+                  !containsFullwidthWordScalar(scalar) else {
+                return
+            }
+            counts.visible += 1
+            switch scalar.value {
+            case 0x3099...0x309C, 0x30FC:
+                counts.support += 1
+            default:
+                break
+            }
+        }
+        guard counts.visible > 0 else { return 0 }
+        return Double(letterCount + counts.support) / Double(counts.visible)
+    }
+
     /// Identifies a Japanese candidate whose Latin/number tokens are part of
     /// the OCR signal, rather than incidental punctuation. Fullwidth Latin
     /// letters and digits are included because Vision may emit `ＡＢＣ１２３`

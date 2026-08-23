@@ -3523,7 +3523,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311/v3.312/v3.313/v3.314/v3.315/v3.316/v3.317/v3.318/v3.319 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311/v3.312/v3.313/v3.314/v3.315/v3.316/v3.317/v3.318/v3.319/v3.320 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3570,6 +3570,7 @@ jobs:
           python3 -B scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py
           python3 -B scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py
           python3 -B scripts/test-v3319-japanese-shared-han-translation-qa-contract.py
+          python3 -B scripts/test-v3320-japanese-line-meaningful-density-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3743,7 +3744,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           # Keep prior artifact markers discoverable for historical
-          # contracts; the emitted artifact itself is versioned at v3.313.
+          # contracts; the emitted artifact itself uses the current version.
           # japanese-benchmark-v3.301-
           # japanese-benchmark-v3.302-
           # japanese-benchmark-v3.305-
@@ -3761,7 +3762,7 @@ jobs:
           # japanese-benchmark-v3.317-
           # japanese-benchmark-v3.318-
           # japanese-benchmark-v3.319-
-          name: japanese-benchmark-v3.319-${{ github.run_id }}
+          name: japanese-benchmark-v3.320-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json
