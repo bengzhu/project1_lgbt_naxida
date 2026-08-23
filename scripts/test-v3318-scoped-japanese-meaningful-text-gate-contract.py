@@ -75,12 +75,17 @@ class ScopedJapaneseMeaningfulTextGateContractTests(unittest.TestCase):
     def test_scoped_usable_helper_uses_shared_normalizer(self) -> None:
         helper = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isUsableJapaneseScopedText(\n",
         )
-        self.assertIn("postProcessJapaneseOCRText(candidate.original)", helper)
+        self.assertIn("postProcessJapaneseOCRText(sourceText)", helper)
         self.assertIn("JapaneseOCRTextNormalizer.containsJapaneseLetter(text)", helper)
         self.assertIn("JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5", helper)
         self.assertIn("japaneseScriptDensity(in: text) >= 0.5", helper)
+        block_helper = function_body(
+            self.vision,
+            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+        )
+        self.assertIn("isUsableJapaneseScopedText(", block_helper)
         self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", self.vision)
 
     def test_page_candidate_fallback_still_allows_punctuation_only_text(self) -> None:
@@ -107,7 +112,7 @@ class ScopedJapaneseMeaningfulTextGateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.326", "3.326"],
+            ["3.327", "3.327"],
         )
         for marker in (
             "scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py",

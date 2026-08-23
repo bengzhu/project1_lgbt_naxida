@@ -88,16 +88,21 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
     def test_accepted_candidate_gate_is_japanese_and_finite(self) -> None:
         gate = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isUsableJapaneseScopedText(\n",
         )
         for marker in (
-            "postProcessJapaneseOCRText(candidate.original)",
+            "postProcessJapaneseOCRText(sourceText)",
             "!text.isEmpty",
-            "candidate.confidence.isFinite",
-            "candidate.confidence >= 0.55",
+            "confidence.isFinite",
+            "confidence >= 0.55",
             "japaneseScriptDensity(in: text) >= 0.5",
         ):
             self.assertIn(marker, gate)
+        block_gate = function_body(
+            self.vision,
+            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+        )
+        self.assertIn("isUsableJapaneseScopedText(", block_gate)
 
     def test_replacement_requires_measurable_bounded_evidence(self) -> None:
         selector = function_body(
@@ -176,7 +181,7 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.326", "3.326"],
+            ["3.327", "3.327"],
         )
         for marker in (
             "scripts/test-v3308-image-japanese-scoped-candidate-contract.py",

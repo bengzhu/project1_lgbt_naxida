@@ -190,7 +190,7 @@ class JapaneseLineMeaningfulDensityContractTests(unittest.TestCase):
         )
         scoped = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isUsableJapaneseScopedText(\n",
         )
         direct_scoped = function_body(
             self.vision,
@@ -200,6 +200,11 @@ class JapaneseLineMeaningfulDensityContractTests(unittest.TestCase):
         self.assertIn("japaneseLetterDensity(candidateText) >= 0.5", weak_candidate)
         self.assertIn("japaneseLetterDensity(text) >= 0.5", scoped)
         self.assertIn("japaneseLetterDensity(text) >= 0.5", direct_scoped)
+        block_scoped = function_body(
+            self.vision,
+            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+        )
+        self.assertIn("isUsableJapaneseScopedText(", block_scoped)
 
     def test_line_budget_and_orientation_recovery_use_meaningful_density(self) -> None:
         candidates = function_body(
@@ -234,7 +239,7 @@ class JapaneseLineMeaningfulDensityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.326", "3.326"],
+            ["3.327", "3.327"],
         )
         for marker in (
             "scripts/test-v3320-japanese-line-meaningful-density-contract.py",
