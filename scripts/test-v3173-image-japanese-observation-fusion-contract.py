@@ -84,7 +84,9 @@ class JapaneseObservationFusionContractTests(unittest.TestCase):
         for marker in [
             "deduplicateJapaneseObservations(observations)",
             "isBetterJapaneseObservation($0, $1)",
-            "max(by: { isBetterJapaneseObservation($0, $1) })",
+            "bestJapaneseObservation(in: observations)",
+            "bestObservation(in: observations, prefersJapanese: true)",
+            "prefersJapanese: prefersJapanese",
         ]:
             self.assertIn(marker, self.vision)
         self.assertTrue(

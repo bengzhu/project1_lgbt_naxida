@@ -231,11 +231,12 @@ class JapaneseScopedVisionPoolQualityContractTests(unittest.TestCase):
         self.assertEqual(selected, ("今度こそ", 0.70, 0.90))
         self.assertIsNone(select_scoped_observation([("。、", 0.99, 1.40)]))
 
-    def test_scoped_pool_filters_before_max_and_preserves_manga_fallback(self) -> None:
+    def test_scoped_pool_filters_before_best_reducer_and_preserves_manga_fallback(self) -> None:
         filter_index = self.scoped.index("let eligibleObservations = japanese")
-        max_index = self.scoped.index("eligibleObservations.max", filter_index)
-        self.assertLess(filter_index, max_index)
-        self.assertIn("Self.isUsableJapaneseScopedText(", self.scoped[filter_index:max_index])
+        best_index = self.scoped.index("Self.bestObservation(", filter_index)
+        self.assertLess(filter_index, best_index)
+        self.assertIn("Self.isUsableJapaneseScopedText(", self.scoped[filter_index:best_index])
+        self.assertIn("prefersJapanese: japanese", self.scoped[best_index:])
         self.assertIn("return japanese ? mangaCandidate : nil", self.scoped)
 
     def test_scoped_request_enables_pool_gate_without_expanding_angles(self) -> None:
@@ -286,7 +287,7 @@ class JapaneseScopedVisionPoolQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.329", "3.329"],
+            ["3.330", "3.330"],
         )
         combined = (
             self.workflow
