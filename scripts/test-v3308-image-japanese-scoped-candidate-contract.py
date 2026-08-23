@@ -111,13 +111,12 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
         for marker in (
             "guard let mangaCandidate else",
             "guard let visionCandidate else",
-            "isMeaningfulJapaneseScopedBlockCandidate(visionCandidate)",
-            "isMeaningfulJapaneseScopedBlockCandidate(mangaCandidate)",
             "isUsableJapaneseScopedBlockCandidate(visionCandidate)",
             "isUsableJapaneseScopedBlockCandidate(mangaCandidate)",
             "? visionCandidate : mangaCandidate",
         ):
             self.assertIn(marker, selector)
+        self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", selector)
         for marker in (
             "japaneseLetterCountForRecovery(candidateText)",
             "japaneseLetterCountForRecovery(incumbentText)",
@@ -177,7 +176,7 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.325", "3.325"],
+            ["3.326", "3.326"],
         )
         for marker in (
             "scripts/test-v3308-image-japanese-scoped-candidate-contract.py",

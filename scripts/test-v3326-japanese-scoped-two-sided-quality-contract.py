@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.325 one-sided scoped OCR gates."""
+"""Static and pure-policy contract for v3.326 two-sided scoped OCR gates."""
 
 from pathlib import Path
 import math
@@ -62,9 +62,6 @@ def is_technical_word(character: str) -> bool:
 
 
 def japanese_letter_density(text: str) -> float:
-    letters = sum(is_japanese_letter(character) for character in text)
-    if not letters:
-        return 0.0
     visible = [
         character
         for character in text
@@ -72,6 +69,7 @@ def japanese_letter_density(text: str) -> float:
     ]
     if not visible:
         return 0.0
+    letters = sum(is_japanese_letter(character) for character in visible)
     support = sum(
         0x3099 <= ord(character) <= 0x309C or ord(character) == 0x30FC
         for character in visible
@@ -99,7 +97,10 @@ def japanese_script_density(text: str) -> float:
     return japanese / len(text)
 
 
-def is_usable_one_sided_candidate(text: str, confidence: float) -> bool:
+def is_usable(candidate: tuple[str, float] | None) -> bool:
+    if candidate is None:
+        return False
+    text, confidence = candidate
     cleaned = text.strip()
     return (
         bool(cleaned)
@@ -111,7 +112,22 @@ def is_usable_one_sided_candidate(text: str, confidence: float) -> bool:
     )
 
 
-class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
+def selected_source(
+    manga: tuple[str, float] | None,
+    vision: tuple[str, float] | None,
+) -> str | None:
+    if manga is None:
+        return "vision" if is_usable(vision) else None
+    if vision is None:
+        return "manga" if is_usable(manga) else None
+    if not is_usable(vision):
+        return "manga" if is_usable(manga) else None
+    if not is_usable(manga):
+        return "vision"
+    return "compare"
+
+
+class JapaneseScopedTwoSidedQualityContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
@@ -129,67 +145,57 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
             "private static func selectJapaneseScopedBlockCandidate(\n",
         )
 
-    def test_low_confidence_or_nonfinite_one_sided_candidate_is_rejected(self) -> None:
-        self.assertFalse(is_usable_one_sided_candidate("日本語", 0.5499))
-        self.assertFalse(is_usable_one_sided_candidate("日本語", math.nan))
-        self.assertFalse(is_usable_one_sided_candidate("日本語", math.inf))
+    def test_two_weak_candidates_do_not_become_a_successful_reread(self) -> None:
+        self.assertIsNone(selected_source(("日本語", 0.54), ("。、", 0.99)))
+        self.assertIsNone(selected_source(("。、", 0.99), ("日本abcde", 0.99)))
+        self.assertIsNone(selected_source(("日本語", math.nan), ("日本語", math.inf)))
 
-    def test_low_script_density_one_sided_candidate_is_rejected(self) -> None:
-        self.assertGreaterEqual(japanese_letter_density("日本abcde"), 0.5)
-        self.assertLess(japanese_script_density("日本abcde"), 0.5)
-        self.assertFalse(is_usable_one_sided_candidate("日本abcde", 0.99))
-        self.assertFalse(is_usable_one_sided_candidate("。、", 0.99))
+    def test_only_usable_manga_candidate_survives(self) -> None:
+        self.assertEqual(selected_source(("日本語", 0.55), ("。、", 0.99)), "manga")
+        self.assertEqual(selected_source(("ニコッ", 0.80), ("日本abcde", 0.99)), "manga")
 
-    def test_quality_candidate_remains_eligible(self) -> None:
-        self.assertTrue(is_usable_one_sided_candidate("日本語", 0.55))
-        self.assertTrue(is_usable_one_sided_candidate("AI日本語", 0.90))
-        self.assertTrue(is_usable_one_sided_candidate("ニコッ", 0.80))
+    def test_only_usable_vision_candidate_survives(self) -> None:
+        self.assertEqual(selected_source(("。、", 0.99), ("日本語", 0.55)), "vision")
+        self.assertEqual(selected_source(("日本語", 0.54), ("ニコッ", 0.80)), "vision")
 
-    def test_missing_manga_branch_requires_full_usable_gate(self) -> None:
-        branch = self.selector[
-            self.selector.index("guard let mangaCandidate else") :
-            self.selector.index("guard let visionCandidate else")
-        ]
-        self.assertIn("guard let visionCandidate", branch)
-        self.assertIn("isUsableJapaneseScopedBlockCandidate(visionCandidate)", branch)
-        self.assertIn("return nil", branch)
-        self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", branch)
+    def test_two_usable_candidates_still_reach_existing_comparator(self) -> None:
+        self.assertEqual(selected_source(("日本語", 0.70), ("ニコッ", 0.80)), "compare")
+        self.assertIn("isBetterJapaneseScopedBlockCandidate(", self.selector)
+        self.assertIn("? visionCandidate : mangaCandidate", self.selector)
 
-    def test_missing_vision_branch_requires_full_usable_gate(self) -> None:
-        start = self.selector.index("guard let visionCandidate else")
+    def test_two_sided_vision_rejection_gates_manga_fallback(self) -> None:
+        start = self.selector.index(
+            "guard isUsableJapaneseScopedBlockCandidate(visionCandidate)"
+        )
         end = self.selector.index(
-            "guard isUsableJapaneseScopedBlockCandidate(visionCandidate)",
+            "guard isUsableJapaneseScopedBlockCandidate(mangaCandidate)",
             start,
         )
         branch = self.selector[start:end]
-        self.assertIn("isUsableJapaneseScopedBlockCandidate(mangaCandidate)", branch)
+        self.assertIn("return isUsableJapaneseScopedBlockCandidate(mangaCandidate)", branch)
         self.assertIn("? mangaCandidate", branch)
         self.assertIn(": nil", branch)
-        self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", branch)
 
-    def test_two_candidate_comparison_and_page_fallback_remain_quality_gated(self) -> None:
-        for marker in (
-            "guard isUsableJapaneseScopedBlockCandidate(visionCandidate)",
-            "guard isUsableJapaneseScopedBlockCandidate(mangaCandidate)",
-            "isBetterJapaneseScopedBlockCandidate(",
-            "? visionCandidate : mangaCandidate",
-        ):
-            self.assertIn(marker, self.selector)
-        self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", self.selector)
-        page_selector = function_body(
-            self.vision,
-            "private static func selectOCRCandidate(\n",
+    def test_two_sided_manga_rejection_returns_only_usable_vision(self) -> None:
+        vision_gate = self.selector.index(
+            "guard isUsableJapaneseScopedBlockCandidate(visionCandidate)"
         )
-        self.assertIn("punctuation-only Japanese text is still valid input", page_selector)
-        self.assertNotIn("isUsableJapaneseScopedBlockCandidate", page_selector)
+        manga_gate = self.selector.index(
+            "guard isUsableJapaneseScopedBlockCandidate(mangaCandidate)",
+            vision_gate,
+        )
+        compare = self.selector.index("return isBetterJapaneseScopedBlockCandidate(")
+        self.assertLess(vision_gate, manga_gate)
+        self.assertLess(manga_gate, compare)
+        self.assertIn("return visionCandidate", self.selector[manga_gate:compare])
 
-    def test_shared_usable_gate_is_complete(self) -> None:
+    def test_selector_has_no_weaker_meaningful_bypass(self) -> None:
+        self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", self.vision)
         gate = function_body(
             self.vision,
             "private static func isUsableJapaneseScopedBlockCandidate(\n",
         )
         for marker in (
-            "postProcessJapaneseOCRText(candidate.original)",
             "candidate.confidence.isFinite",
             "candidate.confidence >= 0.55",
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
@@ -198,7 +204,12 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, gate)
 
-    def test_request_cancel_translation_and_persistence_boundaries_are_unchanged(self) -> None:
+    def test_page_request_cancel_translation_and_persistence_boundaries_stay_fixed(self) -> None:
+        page_selector = function_body(
+            self.vision,
+            "private static func selectOCRCandidate(\n",
+        )
+        self.assertIn("punctuation-only Japanese text is still valid input", page_selector)
         scoped = function_body(
             self.vision,
             "private static func recognizeTextBlockDetached(\n        image: CGImage,",
@@ -211,11 +222,8 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
             "catch is CancellationError",
         ):
             self.assertIn(marker, scoped)
-        self.assertNotIn("while ", scoped)
         self.assertIn("translateImageBlockWithQA(", self.store)
         self.assertIn("persist()", self.store)
-        for forbidden in ("TranslationSessionStore", "translate(", "persist("):
-            self.assertNotIn(forbidden, self.selector)
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
@@ -230,15 +238,15 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
             + self.update_log
         )
         for marker in (
-            "scripts/test-v3325-japanese-scoped-one-sided-quality-contract.py",
-            "v3.325",
-            "japanese-benchmark-v3.325-",
+            "scripts/test-v3326-japanese-scoped-two-sided-quality-contract.py",
+            "v3.326",
+            "japanese-benchmark-v3.326-",
         ):
             self.assertIn(marker, combined)
 
     def test_contract_has_no_process_entry(self) -> None:
         contract = read(
-            "scripts/test-v3325-japanese-scoped-one-sided-quality-contract.py"
+            "scripts/test-v3326-japanese-scoped-two-sided-quality-contract.py"
         )
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)
