@@ -1,9 +1,10 @@
-### v3.323 日语整块 Vision fallback 返回 meaningful-density 合同（进行中）
+### v3.323 日语整块 Vision fallback 返回 meaningful-density 合同（已完成）
 
 - line coverage 不完整后的 block primary/opposite crop observations 在提交、owner coverage proof 与 partial-line replacement 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再成为整块 fallback。
 - primary 过滤后为空仍触发现有 opposite orientation；opposite 过滤后为空则保留既有 partial lines。最多 16 个 block、8 次 block orientation fallback、line/pixel/tile 请求、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
 - 新合同：`scripts/test-v3323-japanese-block-fallback-density-contract.py`；工程版本为 `3.323`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
-- 本地新合同 `9/9`、322 个无进程合同、Python AST `369/369`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。云端 exact-SHA 工程验证待完成。
+- 本地新合同 `9/9`、322 个无进程合同、Python AST `369/369`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+- 实现 SHA `0e9248c9f4904a5e89345ac8404c86fc64356f8a` 的 PR [#387](https://github.com/bengzhu/project1_lgbt_naxida/pull/387) CI [32630765838](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32630765838) 成功；exact-SHA full [32630788496](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32630788496) 的 Japanese benchmark、静态检查、Speech、UI interaction、Home/Paste、云端 Xcode build、manifest、JUnit 与 full-validation receipt 全部通过，Koharu/GGUF 按非必需策略跳过。以 merge SHA `242bb32e7870f8c28298d16043223949b3b2837a` 合入 `smalldata_test` 后，push CI [32631313211](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32631313211) 的 v3.323 benchmark、静态检查与 receipt 成功，Xcode/UI/Speech 等按 merge scope 跳过。`main` 未修改。本轮只证明该局部自有 block fallback 返回门和工程回归通过，不声称通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量提升。
 
 ### v3.322 日语 Vision geometry recovery 返回 meaningful-density 合同（已完成）
 
