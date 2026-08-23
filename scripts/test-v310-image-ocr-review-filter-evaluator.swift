@@ -58,22 +58,22 @@ private func testReviewUnionAndStableOrder() {
     require(ImageOCRReviewFilter.all.blocks(from: blocks).map(\.token) == [1, 2, 3, 4, 5], "all must not filter")
 }
 
-private func testClampedThresholdAndConfidence() {
+private func testInvalidThresholdAndConfidence() {
     let horizontal = block(1, confidence: 0.99, direction: .horizontal)
     let overRange = block(2, confidence: 1.5, direction: .horizontal)
     let unknown = block(3, confidence: 1.0, direction: nil)
 
     require(
         !ImageOCRResultSummary.hasLowConfidence(horizontal, lowConfidenceThreshold: -1),
-        "negative threshold must clamp to zero"
+        "negative threshold must fail closed to zero"
     )
     require(
-        ImageOCRResultSummary.hasLowConfidence(horizontal, lowConfidenceThreshold: 2),
-        "threshold above one must clamp to one"
+        !ImageOCRResultSummary.hasLowConfidence(horizontal, lowConfidenceThreshold: 2),
+        "threshold above one must fail closed to zero"
     )
     require(
-        !ImageOCRResultSummary.hasLowConfidence(overRange, lowConfidenceThreshold: 2),
-        "confidence above one must clamp to one"
+        ImageOCRResultSummary.hasLowConfidence(overRange),
+        "confidence above one must fail closed to reviewable zero"
     )
     require(ImageOCRResultSummary.hasUnknownDirection(unknown), "nil direction must require review")
 }
@@ -82,7 +82,7 @@ private func testClampedThresholdAndConfidence() {
 private struct ImageOCRReviewFilterEvaluator {
     static func main() {
         testReviewUnionAndStableOrder()
-        testClampedThresholdAndConfidence()
+        testInvalidThresholdAndConfidence()
         print("v3.1 image OCR review filter evaluator passed")
     }
 }

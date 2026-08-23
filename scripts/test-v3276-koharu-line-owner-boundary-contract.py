@@ -177,7 +177,7 @@ class KoharuLineOwnerBoundaryContractTests(unittest.TestCase):
         self.assertIn(f"bash {runtime}", self.workflow)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
 
 

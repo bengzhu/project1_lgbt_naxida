@@ -74,8 +74,7 @@ class JapaneseMangaOCRBBoxPrimaryContractTests(unittest.TestCase):
             self.service,
         )
         for marker in [
-            "recognition.confidence.isFinite",
-            "recognition.confidence >= preferredCropConfidence",
+            "validConfidenceRank(recognition.confidence) >= preferredCropConfidence",
             "containsJapaneseLetter(recognition.text)",
             "japaneseScriptDensity(in: recognition.text)",
             ">= preferredJapaneseScriptDensity",
@@ -86,8 +85,8 @@ class JapaneseMangaOCRBBoxPrimaryContractTests(unittest.TestCase):
         for marker in [
             "recognitionQualityRank(boundingBox)",
             "recognitionQualityRank(lineQuadFallback)",
-            "finiteConfidence(boundingBox.confidence)",
-            "finiteConfidence(lineQuadFallback.confidence)",
+            "validConfidenceRank(boundingBox.confidence)",
+            "validConfidenceRank(lineQuadFallback.confidence)",
             "japaneseLetterCount(lineQuadFallback.text)",
             "japaneseLetterCount(boundingBox.text)",
         ]:

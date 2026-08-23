@@ -37,9 +37,10 @@ class ImageConfidenceSafetyContractTests(unittest.TestCase):
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
 
-    def test_product_summary_normalizes_non_finite_confidence(self) -> None:
+    def test_product_summary_normalizes_invalid_confidence(self) -> None:
         normalized = braced_body(self.summary, "static func normalizedConfidence")
         self.assertIn("rawConfidence.isFinite", normalized)
+        self.assertIn("(0...1).contains(rawConfidence)", normalized)
         self.assertIn("return 0", normalized)
         self.assertIn("Double(Self.normalizedConfidence($0.confidence))", self.summary)
         self.assertIn("let threshold = normalizedConfidence(lowConfidenceThreshold)", self.summary)

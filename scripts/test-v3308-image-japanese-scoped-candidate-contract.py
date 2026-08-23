@@ -93,7 +93,7 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
         for marker in (
             "postProcessJapaneseOCRText(sourceText)",
             "!text.isEmpty",
-            "confidence.isFinite",
+            "validOCRConfidence(confidence) != nil",
             "confidence >= 0.55",
             "japaneseScriptDensity(in: text) >= 0.5",
         ):
@@ -181,7 +181,7 @@ class ImageJapaneseScopedCandidateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
         for marker in (
             "scripts/test-v3308-image-japanese-scoped-candidate-contract.py",

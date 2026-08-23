@@ -190,7 +190,7 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
         )
         for marker in (
             "postProcessJapaneseOCRText(sourceText)",
-            "confidence.isFinite",
+            "validOCRConfidence(confidence) != nil",
             "confidence >= 0.55",
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
             "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5",
@@ -225,7 +225,7 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
         combined = (
             self.workflow

@@ -1,3 +1,9 @@
+### v3.332 OCR confidence 合法域合同（当前工作树）
+
+- Vision OCR 统一使用 `validOCRConfidence`：只有有限且位于闭区间 `[0,1]` 的值可以进入日语 top-5 `.14` window、observation comparator/score、orientation 判断、weak-block 排序以及 scoped/Manga/line/compact/dedupe 质量门；`-0.2`、`1.2` 与 NaN/±∞ 都 fail closed。
+- bundled Manga OCR bbox/quad preference 同步拒绝有限越界值；block 写回、layout 与 review summary 不再把 `>1` 夹成高可信 `1`，非法值统一成为零可信。合法 confidence 的相对排序、`.40/.48/.55` 阈值、12/8/4 orientation 与 4 weak-block 请求上限不变。
+- 新合同：`scripts/test-v3332-ocr-confidence-domain-contract.py`；工程版本为 `3.332`，Japanese benchmark route 已接入。新合同 `10/10`、331 个无进程合同（1,761 tests）、Python AST `378/378`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过，27 个实际导入 `subprocess` 的合同按约束跳过；exact-SHA full 待补。未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
+
 ### v3.331 日语 OCR confidence 全序合同（已完成）
 
 - 日语 Vision top-5 alternatives 在既有 `0.14` confidence window 前先排除 NaN/∞；有限标点-only 页面 fallback 与窗口内 letter-bearing preference 保留，非日语 top-1 不变。

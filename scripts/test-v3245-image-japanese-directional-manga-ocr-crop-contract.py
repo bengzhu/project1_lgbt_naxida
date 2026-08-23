@@ -120,9 +120,13 @@ class JapaneseDirectionalMangaOCRCropContractTests(unittest.TestCase):
             "try Task.checkCancellation()",
             "return []",
             "Self.cleanRecognizedBlockText(result.text)",
-            "result.confidence >= 0.55",
         ]:
             self.assertIn(marker, self.rerecognition if "result." in marker or "clean" in marker else self.service + self.vision)
+        self.assertIn(
+            "let confidence = Self.validOCRConfidence(result.confidence)",
+            self.rerecognition,
+        )
+        self.assertIn("confidence >= 0.55", self.rerecognition)
 
     def test_real_runtime_exercises_vertical_override_and_fixture_gate(self) -> None:
         for marker in [

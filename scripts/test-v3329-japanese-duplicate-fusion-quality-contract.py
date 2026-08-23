@@ -195,7 +195,7 @@ class JapaneseDuplicateFusionQualityContractTests(unittest.TestCase):
         for marker in (
             "isMeaningfulJapaneseRecoveryText(candidate.text)",
             "!isMeaningfulJapaneseRecoveryText(incumbent.text)",
-            "candidate.confidence.isFinite",
+            "validOCRConfidence(candidate.confidence) != nil",
             "candidate.confidence >= 0.40",
             "candidate.confidence >= incumbentConfidence - 0.14",
         ):
@@ -248,7 +248,7 @@ class JapaneseDuplicateFusionQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
         combined = self.workflow + self.flow + self.route + self.test_log + self.update_log
         for marker in (

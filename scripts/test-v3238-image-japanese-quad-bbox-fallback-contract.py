@@ -77,8 +77,7 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
         self.assertIn("private static let preferredCropConfidence: Float = 0.55", self.service)
         self.assertIn("private static let preferredJapaneseScriptDensity = 0.5", self.service)
         for marker in [
-            "recognition.confidence.isFinite",
-            "recognition.confidence >= preferredCropConfidence",
+            "validConfidenceRank(recognition.confidence) >= preferredCropConfidence",
             "containsJapaneseLetter(recognition.text)",
             "japaneseScriptDensity(in: recognition.text)",
             ">= preferredJapaneseScriptDensity",
@@ -108,12 +107,17 @@ class JapaneseQuadBBoxFallbackContractTests(unittest.TestCase):
             "case (false, true):",
             "recognitionQualityRank(boundingBox)",
             "recognitionQualityRank(lineQuadFallback)",
-            "finiteConfidence(boundingBox.confidence)",
-            "finiteConfidence(lineQuadFallback.confidence)",
+            "validConfidenceRank(boundingBox.confidence)",
+            "validConfidenceRank(lineQuadFallback.confidence)",
             "japaneseLetterCount(lineQuadFallback.text)",
         ]:
             self.assertIn(marker, self.preference)
-        self.assertIn("confidence.isFinite ? confidence : -.infinity", self.service)
+        for marker in (
+            "confidence.isFinite",
+            "(0...1).contains(confidence)",
+            "return -.infinity",
+        ):
+            self.assertIn(marker, self.service)
 
     def test_real_runtime_forces_blank_bbox_and_recovers_line_quad(self) -> None:
         for marker in [

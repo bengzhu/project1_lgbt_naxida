@@ -64,8 +64,8 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
         for marker in (
             ".filter { needsJapaneseWeakBlockRecovery($0.element) }",
             ".sorted { lhs, rhs in",
-            "let lhsConfidence = lhs.element.confidence.isFinite",
-            "let rhsConfidence = rhs.element.confidence.isFinite",
+            "let lhsConfidence = validOCRConfidence(lhs.element.confidence)",
+            "let rhsConfidence = validOCRConfidence(rhs.element.confidence)",
             "return lhsConfidence < rhsConfidence",
             "return lhs.offset < rhs.offset",
             ".prefix(Self.maximumJapaneseWeakBlockRecoveryRequests)",
@@ -95,7 +95,7 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             "private static func needsJapaneseWeakBlockRecovery(\n",
         )
         for marker in (
-            "!block.confidence.isFinite",
+            "validOCRConfidence(block.confidence) == nil",
             "block.confidence < 0.60",
             "japaneseScriptDensity(in: text) < 0.5",
             "japaneseLetterCountForRecovery(text)",
@@ -174,7 +174,7 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.331", "3.331"],
+            ["3.332", "3.332"],
         )
 
     def test_static_contract_has_no_process_entry(self) -> None:
