@@ -1,3 +1,10 @@
+### v3.322 日语 Vision geometry recovery 返回 meaningful-density 合同（进行中）
+
+- pixel-first 与 vertical-tile Vision crop observations 在提交到 `refined` 前统一经过真实日语字母、`japaneseLetterDensity >=0.5` 和既有 script-density 门；`。、`、`日。、` 不再进入 recovery dedupe/fusion/layout。
+- pixel-first primary 过滤后为空仍触发现有 opposite orientation；tile primary 继续按过滤结果决定 opposite，整块 fallback 不变。12 pixel candidates、4 pixel orientation、6 tile/18 window/4 tile orientation、crop/warp、owner/coverage、翻译 QA、取消和持久化不变。
+- 新合同：`scripts/test-v3322-japanese-vision-recovery-density-contract.py`；工程版本为 `3.322`，云端 Japanese benchmark route 已接入。Koharu/GGUF/授权语料/目标设备继续是可选研究/质量证据。
+- 本地新合同 `9/9`、321 个无进程合同、Python AST `368/368`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过；27 个编译/runtime 合同跳过，未运行本地 Xcode/Swift/Core ML/Rust/GGUF/App runtime。
+
 ### v3.321 日语 Manga line OCR 返回 meaningful-density 合同（已完成）
 
 - bundled Manga line OCR 的返回值在匹配 owner/line geometry 并 append `.verticalLine` 之前，统一要求真实日语字母、`japaneseLetterDensity >=0.5`、既有 `japaneseScriptDensity >=0.5` 与有限 confidence `>=0.55`；`。、`、`日。、` 不再成为成功 line observation。
