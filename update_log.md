@@ -1,3 +1,11 @@
+## v3.326：日语 scoped two-sided 候选完整质量闭包（2026-08-23，已实现并完成本地安全回归，待云端验证）
+
+v3.325 已收紧 one-sided 返回；静态审计继续发现 Manga 与 Vision 候选同时存在时仍先走 weaker meaningful gate，弱 Vision 可直接放行低质量 Manga，弱 Manga 也可直接放行低质量 Vision，两者都弱时仍可能把 Manga 当作成功 scoped reread。
+
+本轮移除 selector 的 meaningful-first bypass：Vision 不 usable 时只返回自身 usable 的 Manga，否则 nil；Vision usable 而 Manga 不 usable 时返回 Vision；两者 usable 时继续进入既有 measurable comparator。完整门仍要求非空、有限 confidence `>=.55`、真实日文字母、letter density `>=.5` 与 script density `>=.5`。普通 page punctuation fallback、既有 scoped Vision 方向、Manga 请求、crop/geometry、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3326-japanese-scoped-two-sided-quality-contract.py`，工程版本推进至 `3.326`，Japanese benchmark route 已接入；Koharu/GGUF、授权语料和目标设备继续是可选研究/质量证明。
+
+本地新合同 `10/10`、325 个无外部进程/编译入口合同（1,701 tests）全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；Python AST `372/372`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。未运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR、合并与合入后证据待候选提交后补齐。本轮只验证这一局部 scoped 双候选返回闭包，不外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.325：日语 scoped one-sided 候选完整质量门（2026-08-23，已完成）
 
 静态审计发现 `selectJapaneseScopedBlockCandidate` 在 Manga 或 Vision 候选任一缺失时只要求 meaningful 日文文本，没有执行既有的有限 confidence `>=.55` 与 `japaneseScriptDensity >=.5` 完整门；低置信、非有限或 `日本abcde` 这类低脚本密度候选仍可能替换已有 scoped block。

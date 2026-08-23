@@ -191,7 +191,7 @@ class JapaneseOCREngineCandidateContractTests(unittest.TestCase):
         self.assertIn("v3.284", self.route)
         self.assertIn("CER/exact/latency/memory/energy/license", self.route)
         self.assertIn("不默认启用", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.325", "3.325"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.326", "3.326"])
 
 
 if __name__ == "__main__":

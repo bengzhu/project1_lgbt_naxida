@@ -779,14 +779,10 @@ struct VisionOCRService: Sendable {
                 ? mangaCandidate
                 : nil
         }
-        guard isMeaningfulJapaneseScopedBlockCandidate(visionCandidate) else {
-            return mangaCandidate
-        }
-        guard isMeaningfulJapaneseScopedBlockCandidate(mangaCandidate) else {
-            return visionCandidate
-        }
         guard isUsableJapaneseScopedBlockCandidate(visionCandidate) else {
-            return mangaCandidate
+            return isUsableJapaneseScopedBlockCandidate(mangaCandidate)
+                ? mangaCandidate
+                : nil
         }
         guard isUsableJapaneseScopedBlockCandidate(mangaCandidate) else {
             return visionCandidate
@@ -795,19 +791,6 @@ struct VisionOCRService: Sendable {
             visionCandidate,
             than: mangaCandidate
         ) ? visionCandidate : mangaCandidate
-    }
-
-    /// Scoped rereads may replace an existing block only with actual Japanese
-    /// writing evidence. Punctuation-only output remains available to the
-    /// ordinary page candidate flow, but it must not become a successful
-    /// single-block reread when the other engine is empty or weak.
-    private static func isMeaningfulJapaneseScopedBlockCandidate(
-        _ candidate: ImageTranslationBlock
-    ) -> Bool {
-        let text = postProcessJapaneseOCRText(candidate.original)
-        return !text.isEmpty
-            && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
-            && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
     }
 
     private static func isUsableJapaneseScopedBlockCandidate(
