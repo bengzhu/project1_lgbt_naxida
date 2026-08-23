@@ -65,10 +65,10 @@ class ScopedJapaneseMeaningfulTextGateContractTests(unittest.TestCase):
             self.vision,
             "private static func selectJapaneseScopedBlockCandidate(\n",
         )
-        self.assertIn("isMeaningfulJapaneseScopedBlockCandidate(visionCandidate)", selector)
+        self.assertIn("isUsableJapaneseScopedBlockCandidate(visionCandidate)", selector)
         self.assertIn("return nil", selector)
         self.assertLess(
-            selector.index("isMeaningfulJapaneseScopedBlockCandidate(visionCandidate)"),
+            selector.index("isUsableJapaneseScopedBlockCandidate(visionCandidate)"),
             selector.index("return visionCandidate"),
         )
 
@@ -105,7 +105,7 @@ class ScopedJapaneseMeaningfulTextGateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.324", "3.324"],
+            ["3.325", "3.325"],
         )
         for marker in (
             "scripts/test-v3318-scoped-japanese-meaningful-text-gate-contract.py",

@@ -1,4 +1,5 @@
 # 项目流程图
+v3.325 日语单块 one-sided 返回门：`bounded Manga/Vision scoped reread -> sole candidate -> finite confidence + actual-letter + letter/script-density gate -> replace existing block OR preserve failure state`；双候选比较、整页标点 fallback、请求预算、取消、翻译和持久化边界不扩大。
 v3.324 日语 Vision line 返回门：`perspective/axis line crop -> meaningful Japanese observation filter -> line fusion/coverage OR bounded axis opposite/block fallback`；低密度标点噪声不提交，24 perspective/24 axis、12 orientation fallback、crop/warp、owner、layout/翻译、取消和持久化边界不扩大。
 v3.323 日语 block fallback 返回门：`incomplete line coverage -> bounded block crop -> meaningful Japanese observation filter -> owner coverage/partial-line replacement/fusion OR keep existing lines`；低密度标点噪声不提交，16 block、8 orientation fallback、crop/owner、layout/翻译、取消和持久化边界不扩大。
 v3.322 日语 Vision recovery 返回门：`pixel-first/tile crop -> meaningful Japanese observation filter -> geometry/fusion OR bounded opposite/block fallback`；低密度标点噪声不提交，请求、crop/owner、layout/翻译、取消和持久化边界不扩大。

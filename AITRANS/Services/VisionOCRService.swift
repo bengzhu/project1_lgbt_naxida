@@ -769,13 +769,13 @@ struct VisionOCRService: Sendable {
     ) -> ImageTranslationBlock? {
         guard let mangaCandidate else {
             guard let visionCandidate,
-                  isMeaningfulJapaneseScopedBlockCandidate(visionCandidate) else {
+                  isUsableJapaneseScopedBlockCandidate(visionCandidate) else {
                 return nil
             }
             return visionCandidate
         }
         guard let visionCandidate else {
-            return isMeaningfulJapaneseScopedBlockCandidate(mangaCandidate)
+            return isUsableJapaneseScopedBlockCandidate(mangaCandidate)
                 ? mangaCandidate
                 : nil
         }
