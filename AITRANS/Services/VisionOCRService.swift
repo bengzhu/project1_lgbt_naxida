@@ -455,7 +455,8 @@ struct VisionOCRService: Sendable {
                     rotationApplied: angle,
                     postProcessJapaneseText: japanese,
                     usesLanguageCorrection: !japanese,
-                    observationRole: .crop
+                    observationRole: .crop,
+                    requiresUsableJapaneseScopedText: japanese
                 ))
             } catch is CancellationError {
                 throw CancellationError()
@@ -471,7 +472,15 @@ struct VisionOCRService: Sendable {
         }
 
         try Task.checkCancellation()
-        guard let best = observations.max(by: {
+        let eligibleObservations = japanese
+            ? observations.filter {
+                Self.isUsableJapaneseScopedText(
+                    $0.text,
+                    confidence: $0.confidence
+                )
+            }
+            : observations
+        guard let best = eligibleObservations.max(by: {
             Self.isBetterObservation($0, $1, prefersJapanese: japanese)
         }),
         let text = Self.cleanRecognizedBlockText(best.text),
@@ -503,7 +512,8 @@ struct VisionOCRService: Sendable {
         rotationApplied: Int,
         postProcessJapaneseText: Bool = false,
         usesLanguageCorrection: Bool = true,
-        observationRole: VisionOCRObservationRole = .page
+        observationRole: VisionOCRObservationRole = .page,
+        requiresUsableJapaneseScopedText: Bool = false
     ) throws -> [VisionOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
@@ -531,10 +541,14 @@ struct VisionOCRService: Sendable {
         try handler.perform([request])
 
         return (request.results ?? []).compactMap { observation in
-            guard let candidate = Self.selectOCRCandidate(
-                from: observation.topCandidates(postProcessJapaneseText ? 5 : 1),
-                japanese: postProcessJapaneseText
-            ) else { return nil }
+            let candidates = observation.topCandidates(postProcessJapaneseText ? 5 : 1)
+            let candidate = requiresUsableJapaneseScopedText
+                ? Self.selectJapaneseScopedVisionCandidate(from: candidates)
+                : Self.selectOCRCandidate(
+                    from: candidates,
+                    japanese: postProcessJapaneseText
+                )
+            guard let candidate else { return nil }
             guard let rect = Self.normalizedRect(from: observation.boundingBox) else { return nil }
             let text = postProcessJapaneseText
                 ? Self.postProcessJapaneseOCRText(candidate.string)
@@ -796,10 +810,20 @@ struct VisionOCRService: Sendable {
     private static func isUsableJapaneseScopedBlockCandidate(
         _ candidate: ImageTranslationBlock
     ) -> Bool {
-        let text = postProcessJapaneseOCRText(candidate.original)
+        isUsableJapaneseScopedText(
+            candidate.original,
+            confidence: candidate.confidence
+        )
+    }
+
+    private static func isUsableJapaneseScopedText(
+        _ sourceText: String,
+        confidence: Float
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(sourceText)
         return !text.isEmpty
-            && candidate.confidence.isFinite
-            && candidate.confidence >= 0.55
+            && confidence.isFinite
+            && confidence >= 0.55
             && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
             && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
             && japaneseScriptDensity(in: text) >= 0.5
@@ -939,6 +963,22 @@ struct VisionOCRService: Sendable {
             .max { lhs, rhs in
                 japaneseCandidateScore(lhs) < japaneseCandidateScore(rhs)
             }
+    }
+
+    /// A scoped reread replaces an existing block, so punctuation-only,
+    /// low-confidence, non-finite, or low-density alternatives cannot mask a
+    /// usable nearby Vision candidate. Page OCR keeps its historical fallback
+    /// because punctuation-only Japanese is still valid page content.
+    private static func selectJapaneseScopedVisionCandidate(
+        from candidates: [VNRecognizedText]
+    ) -> VNRecognizedText? {
+        let usableCandidates = candidates.filter { candidate in
+            isUsableJapaneseScopedText(
+                candidate.string,
+                confidence: candidate.confidence
+            )
+        }
+        return selectOCRCandidate(from: usableCandidates, japanese: true)
     }
 
     private static func japaneseCandidateScore(_ candidate: VNRecognizedText) -> Double {

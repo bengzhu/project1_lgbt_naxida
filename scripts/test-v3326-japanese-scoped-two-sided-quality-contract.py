@@ -193,16 +193,21 @@ class JapaneseScopedTwoSidedQualityContractTests(unittest.TestCase):
         self.assertNotIn("isMeaningfulJapaneseScopedBlockCandidate", self.vision)
         gate = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isUsableJapaneseScopedText(\n",
         )
         for marker in (
-            "candidate.confidence.isFinite",
-            "candidate.confidence >= 0.55",
+            "confidence.isFinite",
+            "confidence >= 0.55",
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
             "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5",
             "japaneseScriptDensity(in: text) >= 0.5",
         ):
             self.assertIn(marker, gate)
+        block_gate = function_body(
+            self.vision,
+            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+        )
+        self.assertIn("isUsableJapaneseScopedText(", block_gate)
 
     def test_page_request_cancel_translation_and_persistence_boundaries_stay_fixed(self) -> None:
         page_selector = function_body(
@@ -228,7 +233,7 @@ class JapaneseScopedTwoSidedQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.326", "3.326"],
+            ["3.327", "3.327"],
         )
         combined = (
             self.workflow

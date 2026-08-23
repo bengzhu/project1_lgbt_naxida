@@ -79,11 +79,16 @@ class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
     def test_scoped_candidate_gate_cannot_promote_punctuation_only_text(self) -> None:
         body = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isUsableJapaneseScopedText(\n",
         )
         self.assertIn("JapaneseOCRTextNormalizer.containsJapaneseLetter(text)", body)
-        self.assertIn("candidate.confidence >= 0.55", body)
+        self.assertIn("confidence >= 0.55", body)
         self.assertIn("japaneseScriptDensity(in: text) >= 0.5", body)
+        block_gate = function_body(
+            self.vision,
+            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+        )
+        self.assertIn("isUsableJapaneseScopedText(", block_gate)
 
     def test_punctuation_observations_remain_available_as_fallback(self) -> None:
         selector = function_body(
@@ -108,7 +113,7 @@ class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.326", "3.326"],
+            ["3.327", "3.327"],
         )
         for marker in (
             "scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py",

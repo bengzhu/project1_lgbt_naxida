@@ -186,17 +186,22 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
     def test_shared_usable_gate_is_complete(self) -> None:
         gate = function_body(
             self.vision,
-            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+            "private static func isUsableJapaneseScopedText(\n",
         )
         for marker in (
-            "postProcessJapaneseOCRText(candidate.original)",
-            "candidate.confidence.isFinite",
-            "candidate.confidence >= 0.55",
+            "postProcessJapaneseOCRText(sourceText)",
+            "confidence.isFinite",
+            "confidence >= 0.55",
             "JapaneseOCRTextNormalizer.containsJapaneseLetter(text)",
             "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5",
             "japaneseScriptDensity(in: text) >= 0.5",
         ):
             self.assertIn(marker, gate)
+        block_gate = function_body(
+            self.vision,
+            "private static func isUsableJapaneseScopedBlockCandidate(\n",
+        )
+        self.assertIn("isUsableJapaneseScopedText(", block_gate)
 
     def test_request_cancel_translation_and_persistence_boundaries_are_unchanged(self) -> None:
         scoped = function_body(
@@ -220,7 +225,7 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.326", "3.326"],
+            ["3.327", "3.327"],
         )
         combined = (
             self.workflow

@@ -1,3 +1,11 @@
+## v3.327：日语 scoped Vision 候选池完整质量门（2026-08-23，已实现并完成本地安全回归，待云端验证）
+
+v3.325/v3.326 已闭合 scoped 最终 one-sided/two-sided 返回；静态审计继续发现 Vision 每个文字框的 top-5 alternatives 与跨方向/文字框 observation pool 都先选最佳，之后才执行完整 usable gate。高分标点、低置信、非有限或低 density 噪声可能先遮蔽合格日文，再被最终门拒绝，造成可恢复结果丢失。
+
+本轮让日语 scoped Vision 在两级候选池都先执行有限 confidence `>=.55`、真实日文字母、letter density `>=.5` 与 script density `>=.5` 完整门，再复用既有 candidate/observation comparator；最终 block gate 委托同一文本 helper。普通 page OCR 默认关闭 scoped gate 并保留标点-only fallback；既有 2/1/3 个方向请求、Manga 请求、crop/geometry、比较器、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3327-japanese-scoped-vision-pool-quality-contract.py`，工程版本推进至 `3.327`，Japanese benchmark route 已接入；Koharu/GGUF、授权语料和目标设备继续是可选研究/质量证明。
+
+本地新合同 `10/10`、326 个无外部进程/编译入口合同（1,711 tests）全部通过，27 个含编译/runtime 入口的历史合同按约束跳过；Python AST `373/373`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。未运行 Xcode/Swift/Core ML/Rust/GGUF/App runtime；云端 exact-SHA full、PR、合并及 receipt 证据待补齐。本轮只验证 scoped Vision 候选池召回边界，不外推为通用 OCR/CER、翻译盲评、真实 Koharu parity、真实 GGUF、授权语料、目标设备或 v3.289 holdout 质量证据。
+
 ## v3.326：日语 scoped two-sided 候选完整质量闭包（2026-08-23，已完成）
 
 v3.325 已收紧 one-sided 返回；静态审计继续发现 Manga 与 Vision 候选同时存在时仍先走 weaker meaningful gate，弱 Vision 可直接放行低质量 Manga，弱 Manga 也可直接放行低质量 Vision，两者都弱时仍可能把 Manga 当作成功 scoped reread。
