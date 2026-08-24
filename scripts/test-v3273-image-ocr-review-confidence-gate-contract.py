@@ -83,7 +83,7 @@ class ImageOCRReviewConfidenceGateContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.335", "3.335"],
+            ["3.336", "3.336"],
         )
 
 

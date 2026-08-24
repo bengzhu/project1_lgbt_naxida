@@ -1,3 +1,11 @@
+## v3.336：Japanese vertical block crop risk-first scheduling（2026-08-24，进行中）
+
+v3.335 已封闭 text-backed line candidate 的 confidence 合法域；继续审计普通图片 OCR 的竖排 block crop 阶段，发现已有 `.prefix(16)` 预算按 confidence 降序截取，长页中高置信 block 可能先占满名额，而低置信、低日文字信号、短文本或方向不稳的 block 得不到既有宽 block reread。
+
+本轮的可证伪假设是：**若仅把既有最多 16 个竖排 block crop 名额改为风险优先，并在同一风险组内按有限 confidence 弱者优先，则更需要宽 crop 的 block 能先进入不变预算；strong block、line-first、owner/geometry、最多 8 次 orientation fallback、OCR→翻译 QA、取消和持久化边界保持不变。**
+
+实现边界：`recognizeJapaneseVerticalCrops` 新增 `isJapaneseVerticalBlockAtRisk`，复用有限 confidence、日文字母/脚本密度、短文本与方向置信度信号；竖排 block queue 先风险后非风险，同类按有限 confidence 与方向置信度弱者优先，仍只取 `.prefix(16)`。不增加 OCR 请求、不改变 line/geometry/tile/pixel-first 先后、owner 分配、block fallback 的 exact-owner coverage proof、orientation 8 上限、翻译 QA、取消、generation、持久化或非日语路径。新增 `scripts/test-v3336-japanese-vertical-crop-risk-priority-contract.py`，工程版本推进至 `3.336`，Japanese benchmark route 接入。本轮只运行无进程入口的安全 Python 合同、AST/JSON/YAML/shell/plist 静态检查与 `git diff --check`；不运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究/质量证据。
+
 ## v3.335：Japanese line-candidate confidence fail-closed（2026-08-24，已完成）
 
 v3.334 已封闭 layout observation、block fallback 与 vertical synthesis 的非法 confidence 比较；继续审计普通 OCR 的 bounded Manga line request queue，发现 text-backed line candidates 只经过日语文字/density 门，却仍可能把 NaN/±∞ confidence 带入最多 8 次 line OCR 预算，并在弱候选优先排序中直接比较 raw `Float`。

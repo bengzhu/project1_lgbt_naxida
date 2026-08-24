@@ -1,3 +1,8 @@
+### v3.336 Japanese vertical block crop risk-priority contract（进行中）
+
+- `recognizeJapaneseVerticalCrops` 在既有最多 16 个竖排 block crop 名额内先按低置信、低日文字信号、短文本或方向不稳的风险门排序；同一风险组按有限 confidence 弱者优先。最多 16 个 block、8 个 orientation fallback、line-first、owner/geometry、翻译 QA、取消与持久化边界不变。
+- 新合同：`scripts/test-v3336-japanese-vertical-crop-risk-priority-contract.py`；工程版本推进至 `3.336`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续不作为本轮普通 OCR 修复门槛。
+
 ### v3.335 Japanese line-candidate confidence domain contract（已完成）
 
 - `japaneseMangaLineOCRCandidates` 的 text-backed vertical line pool 现在只接受有限闭区间 `[0,1]` confidence；非法/非有限值在占用最多 8 次 line OCR 预算前 fail closed。合法同长度候选继续按较弱 confidence 优先复读，geometry-only 仍保留最多 2 个名额，总预算、owner/geometry、取消、翻译 QA 与持久化边界不变。
