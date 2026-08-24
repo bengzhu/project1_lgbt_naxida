@@ -1,3 +1,8 @@
+### v3.335 Japanese line-candidate confidence domain contract（进行中）
+
+- `japaneseMangaLineOCRCandidates` 的 text-backed vertical line pool 现在只接受有限闭区间 `[0,1]` confidence；非法/非有限值在占用最多 8 次 line OCR 预算前 fail closed。合法同长度候选继续按较弱 confidence 优先复读，geometry-only 仍保留最多 2 个名额，总预算、owner/geometry、取消、翻译 QA 与持久化边界不变。
+- 新合同：`scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py`；工程版本推进至 `3.335`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续不作为本轮普通 OCR 修复门槛。
+
 ### v3.334 layout confidence 全序合同（已完成）
 
 - `ImageOCRLayoutEngine` 入口继续先把非法 layout confidence 归零；所有 observation fallback、block fallback、vertical synthesis tie-break 与 `StableKey` 现在统一使用有限闭区间 `[0,1]` ordering key，非法/非有限值映射为 `-.infinity`，不再直接参与原始 `Float` 比较或破坏 strict ordering。合法 confidence、几何/文字/阅读顺序、OCR 请求预算、owner/layout、翻译 QA、取消与持久化边界不变。

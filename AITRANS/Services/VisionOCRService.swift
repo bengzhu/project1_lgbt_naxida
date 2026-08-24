@@ -2774,6 +2774,7 @@ struct VisionOCRService: Sendable {
             let text = candidate.text.trimmingCharacters(in: .whitespacesAndNewlines)
             return isVerticalLineCandidate(region)
                 && !text.isEmpty
+                && validOCRConfidence(candidate.confidence) != nil
                 && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
                 && japaneseScriptDensity(in: text) >= 0.5
         }
@@ -2783,8 +2784,13 @@ struct VisionOCRService: Sendable {
             if lhsLength != rhsLength {
                 return lhsLength > rhsLength
             }
-            if lhs.confidence != rhs.confidence {
-                return lhs.confidence < rhs.confidence
+            let lhsConfidence = validOCRConfidence(lhs.confidence) ?? -.infinity
+            let rhsConfidence = validOCRConfidence(rhs.confidence) ?? -.infinity
+            if lhsConfidence != rhsConfidence {
+                // This is a bounded recovery queue: when line length is tied,
+                // reread the weakest finite candidate first. Invalid values
+                // are excluded above and remain fail-closed defensively here.
+                return lhsConfidence < rhsConfidence
             }
             return lhs.rect.y < rhs.rect.y
         }
