@@ -1,3 +1,8 @@
+## v3.334：layout confidence 全序与 fail-closed（2026-08-24，已完成）
+
+v3.333 已封闭 detector confidence 的 raw logit、sigmoid、merged TextRegion 和长页预算入口；继续审计普通 OCR layout 发现，几个 manga fallback 与 vertical synthesis tie-break 仍直接比较 `Float confidence`。v3.334 保留入口归一化，并新增有限闭区间 ordering key：合法 confidence 保持原值，非法/非有限值映射为 `-.infinity`；`ImageOCRLayoutEngine` 的 observation fallback、`StableKey`、block fallback 与 vertical block text synthesis 全部使用该 key，不再让非法值破坏 Swift strict ordering。几何、文字、owner、阅读顺序主规则、OCR 请求预算、翻译 QA、取消、generation、持久化和非图片路径不变。
+
+新增 `scripts/test-v3334-layout-confidence-total-order-contract.py`，工程版本推进至 `3.334`，Japanese benchmark route 接入。本地新合同 `9/9`、`333` 个确认无进程入口合同共 `1,779` 个测试全部通过，`27` 个实际含进程/编译/runtime 入口的历史合同按约束跳过；Python AST `380/380`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 全部通过。精确实现 SHA `0f15d1952e6868bbd835c48ab3f382f905739368` 的 exact-SHA full [32680065598](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32680065598) 成功，Japanese benchmark、云端 Xcode、UI/Speech/Home/Paste、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过；PR [#398](https://github.com/bengzhu/project1_lgbt_naxida/pull/398) checks [32680009529](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32680009529) 成功，以 merge SHA `02a1236eadda4b03b23fa2454c4688f572035d16` 合入 `smalldata_test`；合入后 push CI [32680866971](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32680866971) 成功并复用候选 full receipt。Koharu parity 按普通 OCR 独立策略跳过。本地未运行 Xcode/Swift/Core ML/Rust/Cargo/GGUF/App runtime；Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
 
 ## v3.333：detector confidence 预算合法域闭包（2026-08-24，已完成）
 
@@ -10514,8 +10519,3 @@ detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag
 当前 Vision、bundled Manga OCR 和共享混合脚本归一化把 `・` 与 ASCII 点号一起压缩；日语姓名、外来词和分隔词因此可能从 `ア・ニメ` 变成 `ア.ニメ`，损失原文标点语义。本轮的可证伪假设是：**若只把真正的 ASCII/全角句点与省略号纳入点号归一化，并让 U+30FB 中点原样保留，则日语 OCR 输入的姓名/外来词标点保真会提高，同时不改变候选选择、geometry/layout、请求预算或翻译边界。**
 
 实现边界：`JapaneseOCRTextNormalizer`、Vision Japanese fallback 和 bundled Manga OCR fallback 都停止把 U+30FB 计入 `dotCount`；ASCII `.`、全角 `．` 和 `…` 仍按既有规则处理。新增 `scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本推进至 `3.312`，CI Japanese benchmark contract route 已接入。Koharu/GPL、GGUF、授权语料和目标设备证据不参与本轮产品选择。
-## v3.334：layout confidence 全序与 fail-closed（进行中）
-
-v3.333 已封闭 detector confidence 的 raw logit、sigmoid、merged TextRegion 和长页预算入口；继续审计普通 OCR layout 发现，几个 manga fallback 与 vertical synthesis tie-break 仍直接比较 `Float confidence`。虽然生产入口此前已做归零归一化，但 synthesized/restored block 的防御路径若重新带入 NaN/∞，Swift comparator 可能出现两边都为 false 的非严格排序。v3.334 保留入口归一化，并新增有限闭区间 ordering key：合法 confidence 保持原值，非法/非有限值映射为 `-.infinity`，所有 layout tie-break 统一使用该 key。
-
-实现边界：`ImageOCRLayoutEngine` 的 observation fallback、`StableKey`、block fallback 与 vertical block text synthesis 不再直接比较 raw confidence；几何、文字、owner、阅读顺序主规则、OCR 请求预算、翻译 QA、取消、generation、持久化和非图片路径不变。新增 `scripts/test-v3334-layout-confidence-total-order-contract.py`，工程版本推进至 `3.334`，Japanese benchmark route 接入。本地仅运行无外部进程入口的安全 Python 合同、AST/JSON/YAML/shell/plist 静态检查与 `git diff --check`；不运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究/质量证据。
