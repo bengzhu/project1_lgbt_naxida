@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.334 layout confidence 全序边界：`raw layout confidence -> finite closed [0,1] normalization -> finite ordering key -> observation/block/vertical reading-order tie-break`；非法或非有限值不会进入 Swift `Float` 原始比较或破坏 strict ordering，合法 confidence 的几何、文字和阅读顺序保持不变；OCR 请求预算、owner/layout 主规则、翻译 QA、取消与持久化边界不变。
+当前 v3.333 detector confidence 预算边界：`raw RT-DETR logit -> finite check -> sigmoid -> [0,1] validator -> top-query -> merged TextRegion revalidation -> long-page request ranking`；非法值在占用 detector/Manga OCR 预算前 fail closed，合法 confidence、几何 tie-break、12/48 请求上限、primary precedence、翻译 QA、取消和持久化不变。
 当前 v3.317 日语 OCR 可靠文字证据边界：`Vision/Manga OCR -> shared Japanese letter signal (punctuation excluded) -> owner/line-coverage/scoped-candidate quality gates`；标点-only observation 仍可作为普通 fallback，但不能单独成为可靠 detector owner、complete line coverage 或 scoped block replacement 证据，不增加请求、预算、布局、翻译 QA、取消或持久化边界。
 当前 v3.318 日语 OCR scoped 复查边界：单块 Manga/Vision reread 也必须含至少一个实际日语书写字符才可替换现有 block；标点-only observation 仍保留在普通页面候选流，不改变请求预算、geometry/layout、翻译 QA、取消或持久化边界。
 当前 v3.319 日语→简体中文翻译 QA 边界：`sourceLeakage` 对纯汉字日语源允许共享 Han 译文，对含假名原文和其它语言对仍拒绝原文回显；标签、数字、术语、目标语言密度、长度、OCR、取消和持久化边界不变。

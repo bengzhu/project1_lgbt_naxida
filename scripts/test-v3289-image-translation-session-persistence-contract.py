@@ -194,7 +194,7 @@ class ImageTranslationSessionPersistenceContractTests(unittest.TestCase):
             self.assertIn(marker, self.workflow + self.route + self.store)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.333", "3.333"],
+            ["3.334", "3.334"],
         )
         contract = read("scripts/test-v3289-image-translation-session-persistence-contract.py")
         for source in (contract,):
