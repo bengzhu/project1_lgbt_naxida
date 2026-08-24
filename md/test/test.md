@@ -1,7 +1,7 @@
-### v3.336 Japanese vertical block crop risk-priority contract（进行中）
+### v3.336 Japanese vertical block crop risk-priority contract（已完成）
 
 - `recognizeJapaneseVerticalCrops` 在既有最多 16 个竖排 block crop 名额内先按低置信、低日文字信号、短文本或方向不稳的风险门排序；同一风险组按有限 confidence 弱者优先。最多 16 个 block、8 个 orientation fallback、line-first、owner/geometry、翻译 QA、取消与持久化边界不变。
-- 新合同：`scripts/test-v3336-japanese-vertical-crop-risk-priority-contract.py`；工程版本推进至 `3.336`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续不作为本轮普通 OCR 修复门槛。
+- 新合同：`scripts/test-v3336-japanese-vertical-crop-risk-priority-contract.py`；工程版本推进至 `3.336`，Japanese benchmark route 接入。本地 330 个安全合同通过，32 个进程/编译/runtime 入口合同按约束跳过；Python AST `362/362`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。实现 SHA `ec4f7105473fe6f6578bfcad2873609e49092f9d` 的 exact-SHA full [32684683786](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32684683786)、PR [#400](https://github.com/bengzhu/project1_lgbt_naxida/pull/400) checks [32685465879](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32685465879)、merge SHA `62d6e22f072ced5fed7355a3dc906bf8ed46c891` 与合入后 CI [32685524902](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32685524902) 均成功；Koharu parity 按普通 OCR 独立策略跳过。本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime；本轮不把固定样图外推为通用 OCR/CER、翻译盲评或 holdout 质量证据。
 
 ### v3.335 Japanese line-candidate confidence domain contract（已完成）
 
