@@ -1,3 +1,8 @@
+### v3.334 layout confidence 全序合同（进行中）
+
+- `ImageOCRLayoutEngine` 入口继续先把非法 layout confidence 归零；所有 observation fallback、block fallback、vertical synthesis tie-break 与 `StableKey` 现在统一使用有限闭区间 `[0,1]` ordering key，非法/非有限值映射为 `-.infinity`，不再直接参与原始 `Float` 比较或破坏 strict ordering。合法 confidence、几何/文字/阅读顺序、OCR 请求预算、owner/layout、翻译 QA、取消与持久化边界不变。
+- 新合同：`scripts/test-v3334-layout-confidence-total-order-contract.py`；工程版本推进至 `3.334`，Japanese benchmark route 接入。本地安全静态合同与云端 Xcode/runtime 证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
+
 ### v3.333 detector confidence 预算合法域合同（已完成）
 
 - 覆盖 RT-DETR 非有限 logit、sigmoid 后有限闭区间 `[0,1]`、top-query 前过滤、merge 后 TextRegion 再校验、Vision detector→Manga request 交接和 long-page overflow 合法值优先全序；非法 score 不得占用 detector query 或 Manga OCR 请求。

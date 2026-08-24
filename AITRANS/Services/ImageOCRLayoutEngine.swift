@@ -406,7 +406,9 @@ enum ImageOCRLayoutEngine {
             if lhs.rect.width != rhs.rect.width { return lhs.rect.width < rhs.rect.width }
             if lhs.rect.height != rhs.rect.height { return lhs.rect.height < rhs.rect.height }
             if lhs.text != rhs.text { return lhs.text < rhs.text }
-            return lhs.observation.confidence > rhs.observation.confidence
+            let lhsConfidence = confidenceOrderingKey(lhs.observation.confidence)
+            let rhsConfidence = confidenceOrderingKey(rhs.observation.confidence)
+            return lhsConfidence > rhsConfidence
         }
     }
 
@@ -473,7 +475,7 @@ enum ImageOCRLayoutEngine {
             width: value.rect.width,
             height: value.rect.height,
             text: value.text,
-            confidence: value.observation.confidence
+            confidence: confidenceOrderingKey(value.observation.confidence)
         )
     }
 
@@ -735,7 +737,9 @@ enum ImageOCRLayoutEngine {
             if lhs.rect.width != rhs.rect.width { return lhs.rect.width < rhs.rect.width }
             if lhs.rect.height != rhs.rect.height { return lhs.rect.height < rhs.rect.height }
             if lhs.text != rhs.text { return lhs.text < rhs.text }
-            return lhs.confidence > rhs.confidence
+            let lhsConfidence = confidenceOrderingKey(lhs.confidence)
+            let rhsConfidence = confidenceOrderingKey(rhs.confidence)
+            return lhsConfidence > rhsConfidence
         }
     }
 
@@ -797,6 +801,18 @@ enum ImageOCRLayoutEngine {
         guard rawConfidence.isFinite,
               (0...1).contains(rawConfidence) else {
             return 0
+        }
+        return rawConfidence
+    }
+
+    /// Supplies a finite total-order key for layout tie-breaks. Layout input is
+    /// normalized before resolution, but block fallback helpers remain defensive
+    /// when they receive a synthesized or restored block. Invalid confidence must
+    /// never make a Swift Float comparator non-strict or win a tie-break.
+    fileprivate static func confidenceOrderingKey(_ rawConfidence: Float) -> Float {
+        guard rawConfidence.isFinite,
+              (0...1).contains(rawConfidence) else {
+            return -.infinity
         }
         return rawConfidence
     }
@@ -906,7 +922,13 @@ private struct Cluster {
                 if $0.rect.width != $1.rect.width { return $0.rect.width < $1.rect.width }
                 if $0.rect.height != $1.rect.height { return $0.rect.height < $1.rect.height }
                 if $0.text != $1.text { return $0.text < $1.text }
-                return $0.observation.confidence > $1.observation.confidence
+                let lhsConfidence = ImageOCRLayoutEngine.confidenceOrderingKey(
+                    $0.observation.confidence
+                )
+                let rhsConfidence = ImageOCRLayoutEngine.confidenceOrderingKey(
+                    $1.observation.confidence
+                )
+                return lhsConfidence > rhsConfidence
             }
             text = orderedObservations.map { $0.text }.joined()
         } else {

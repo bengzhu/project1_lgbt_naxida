@@ -46,9 +46,13 @@ class JapaneseVerticalClusterReadingOrderContractTests(unittest.TestCase):
             "if $0.rect.width != $1.rect.width { return $0.rect.width < $1.rect.width }",
             "if $0.rect.height != $1.rect.height { return $0.rect.height < $1.rect.height }",
             "if $0.text != $1.text { return $0.text < $1.text }",
-            "return $0.observation.confidence > $1.observation.confidence",
         ]:
             self.assertIn(marker, self.cluster)
+        self.assertIn(
+            "ImageOCRLayoutEngine.confidenceOrderingKey(\n                    $0.observation.confidence",
+            self.cluster,
+        )
+        self.assertIn("return lhsConfidence > rhsConfidence", self.cluster)
 
     def test_horizontal_text_keeps_existing_line_break_logic(self) -> None:
         vertical_end = self.cluster.index("} else {")

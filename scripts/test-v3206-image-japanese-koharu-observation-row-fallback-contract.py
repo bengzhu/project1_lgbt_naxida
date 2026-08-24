@@ -57,7 +57,9 @@ class JapaneseObservationRowFallbackContractTests(unittest.TestCase):
             "lhs.rect.width < rhs.rect.width",
             "lhs.rect.height < rhs.rect.height",
             "lhs.text < rhs.text",
-            "lhs.observation.confidence > rhs.observation.confidence",
+            "let lhsConfidence = confidenceOrderingKey(lhs.observation.confidence)",
+            "let rhsConfidence = confidenceOrderingKey(rhs.observation.confidence)",
+            "return lhsConfidence > rhsConfidence",
         ]:
             self.assertIn(marker, self.fallback)
 
