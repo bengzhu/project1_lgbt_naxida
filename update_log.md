@@ -1,3 +1,11 @@
+## v3.335：Japanese line-candidate confidence fail-closed（2026-08-24，进行中）
+
+v3.334 已封闭 layout observation、block fallback 与 vertical synthesis 的非法 confidence 比较；继续审计普通 OCR 的 bounded Manga line request queue，发现 text-backed line candidates 只经过日语文字/density 门，却仍可能把 NaN/±∞ confidence 带入最多 8 次 line OCR 预算，并在弱候选优先排序中直接比较 raw `Float`。
+
+本轮的可证伪假设是：**若 text-backed vertical line candidates 在进入预算前只接受有限闭区间 `[0,1]` confidence，排序器使用同一有限 key 并保留“同长度时弱候选优先复读”的既有策略，则非法值不能占用 line OCR 名额；合法候选的 line recall、最多 8 次请求、最多 2 个 geometry-only 保留位和下游 OCR→翻译边界保持不变。**
+
+实现边界：`japaneseMangaLineOCRCandidates` 新增 finite `[0,1]` confidence gate，line queue 的 confidence tie-break 改用 `validOCRConfidence`，无效值 fail closed；detector owner、meaningful Japanese density、Manga line decoder、12/8/4 orientation、crop/warp、layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py`，工程版本推进至 `3.335`，Japanese benchmark route 接入。本地只运行无进程入口的安全 Python 合同、AST/JSON/YAML/shell/plist 静态检查与 `git diff --check`；不运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究/质量证据。
+
 ## v3.334：layout confidence 全序与 fail-closed（2026-08-24，已完成）
 
 v3.333 已封闭 detector confidence 的 raw logit、sigmoid、merged TextRegion 和长页预算入口；继续审计普通 OCR layout 发现，几个 manga fallback 与 vertical synthesis tie-break 仍直接比较 `Float confidence`。v3.334 保留入口归一化，并新增有限闭区间 ordering key：合法 confidence 保持原值，非法/非有限值映射为 `-.infinity`；`ImageOCRLayoutEngine` 的 observation fallback、`StableKey`、block fallback 与 vertical block text synthesis 全部使用该 key，不再让非法值破坏 Swift strict ordering。几何、文字、owner、阅读顺序主规则、OCR 请求预算、翻译 QA、取消、generation、持久化和非图片路径不变。
