@@ -1,10 +1,10 @@
-## v3.335：Japanese line-candidate confidence fail-closed（2026-08-24，进行中）
+## v3.335：Japanese line-candidate confidence fail-closed（2026-08-24，已完成）
 
 v3.334 已封闭 layout observation、block fallback 与 vertical synthesis 的非法 confidence 比较；继续审计普通 OCR 的 bounded Manga line request queue，发现 text-backed line candidates 只经过日语文字/density 门，却仍可能把 NaN/±∞ confidence 带入最多 8 次 line OCR 预算，并在弱候选优先排序中直接比较 raw `Float`。
 
 本轮的可证伪假设是：**若 text-backed vertical line candidates 在进入预算前只接受有限闭区间 `[0,1]` confidence，排序器使用同一有限 key 并保留“同长度时弱候选优先复读”的既有策略，则非法值不能占用 line OCR 名额；合法候选的 line recall、最多 8 次请求、最多 2 个 geometry-only 保留位和下游 OCR→翻译边界保持不变。**
 
-实现边界：`japaneseMangaLineOCRCandidates` 新增 finite `[0,1]` confidence gate，line queue 的 confidence tie-break 改用 `validOCRConfidence`，无效值 fail closed；detector owner、meaningful Japanese density、Manga line decoder、12/8/4 orientation、crop/warp、layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py`，工程版本推进至 `3.335`，Japanese benchmark route 接入。本地只运行无进程入口的安全 Python 合同、AST/JSON/YAML/shell/plist 静态检查与 `git diff --check`；不运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究/质量证据。
+实现边界：`japaneseMangaLineOCRCandidates` 新增 finite `[0,1]` confidence gate，line queue 的 confidence tie-break 改用 `validOCRConfidence`，无效值 fail closed；detector owner、meaningful Japanese density、Manga line decoder、12/8/4 orientation、crop/warp、layout、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py`，工程版本推进至 `3.335`，Japanese benchmark route 接入。本地 334 个无进程入口合同通过，27 个实际进程/编译/runtime 入口合同按约束跳过；Python AST `380/380`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。候选 SHA `bea806d3519a87a6ce2e95357c9b1a86c4d5e628` 的 exact-SHA full [32682434197](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32682434197) 成功，benchmark、静态、Speech、UI/Home/Paste、云端 Xcode、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过；PR [#399](https://github.com/bengzhu/project1_lgbt_naxida/pull/399) checks [32683298468](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32683298468) 成功，以 merge SHA `a5abc0f53f8c1afcfa9b252a68dc39b58fe64a2a` 合入 `smalldata_test`；合入后 push CI [32683364869](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32683364869) 成功并复用候选 full receipt。Koharu parity 按普通 OCR 独立策略跳过。本地未运行 Xcode/Swift/Core ML/Rust/Cargo/GGUF/App runtime；Koharu/GGUF/授权语料/目标设备继续只作可选研究/质量证据。
 
 ## v3.334：layout confidence 全序与 fail-closed（2026-08-24，已完成）
 

@@ -1,7 +1,7 @@
-### v3.335 Japanese line-candidate confidence domain contract（进行中）
+### v3.335 Japanese line-candidate confidence domain contract（已完成）
 
 - `japaneseMangaLineOCRCandidates` 的 text-backed vertical line pool 现在只接受有限闭区间 `[0,1]` confidence；非法/非有限值在占用最多 8 次 line OCR 预算前 fail closed。合法同长度候选继续按较弱 confidence 优先复读，geometry-only 仍保留最多 2 个名额，总预算、owner/geometry、取消、翻译 QA 与持久化边界不变。
-- 新合同：`scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py`；工程版本推进至 `3.335`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续不作为本轮普通 OCR 修复门槛。
+- 新合同：`scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py`；工程版本推进至 `3.335`，Japanese benchmark route 接入。本地 334 个无进程入口合同通过，27 个实际进程/编译/runtime 入口合同按约束跳过；Python AST `380/380`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。候选 SHA `bea806d3519a87a6ce2e95357c9b1a86c4d5e628` 的 exact-SHA full [32682434197](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32682434197) 成功，benchmark、静态、Speech、UI/Home/Paste、云端 Xcode、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 全部通过；PR [#399](https://github.com/bengzhu/project1_lgbt_naxida/pull/399) checks [32683298468](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32683298468) 成功，以 merge SHA `a5abc0f53f8c1afcfa9b252a68dc39b58fe64a2a` 合入 `smalldata_test`；合入后 push CI [32683364869](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/32683364869) 成功并复用候选 full receipt。Koharu parity 按普通 OCR 独立策略跳过。本地未运行 Xcode/Swift/Core ML/Rust/Cargo/GGUF/App runtime；Koharu/GGUF/授权语料/目标设备继续只作可选研究或质量证据。
 
 ### v3.334 layout confidence 全序合同（已完成）
 
