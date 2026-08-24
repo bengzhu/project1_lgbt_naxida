@@ -752,6 +752,23 @@ struct VisionOCRService: Sendable {
             || (direction == .vertical && letters <= 2)
     }
 
+    private static func isJapaneseVerticalBlockAtRisk(
+        _ block: ImageOCRLayoutBlock
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(block.text)
+        let directionIsWeak = block.direction != .vertical
+            || !block.directionConfidence.isFinite
+            || block.directionConfidence < 0.45
+        let letters = japaneseLetterCountForRecovery(text)
+        return validOCRConfidence(block.confidence) == nil
+            || block.confidence < 0.60
+            || text.isEmpty
+            || JapaneseOCRTextNormalizer.japaneseLetterDensity(text) < 0.5
+            || japaneseScriptDensity(in: text) < 0.5
+            || directionIsWeak
+            || letters <= 2
+    }
+
     private static func isBetterJapaneseWeakBlockRecovery(
         _ candidate: ImageTranslationBlock,
         than original: ImageTranslationBlock
@@ -1175,8 +1192,31 @@ struct VisionOCRService: Sendable {
                     || isCompactVerticalCandidate)
         }
         .sorted { lhs, rhs in
-            if lhs.confidence != rhs.confidence {
-                return lhs.confidence > rhs.confidence
+            let lhsAtRisk = isJapaneseVerticalBlockAtRisk(lhs)
+            let rhsAtRisk = isJapaneseVerticalBlockAtRisk(rhs)
+            if lhsAtRisk != rhsAtRisk {
+                // The following prefix is the bounded block-crop budget. Give
+                // blocks whose first read is weak or directionally uncertain a
+                // chance to use that budget before spending it on strong
+                // blocks that are less likely to need a wider reread.
+                return lhsAtRisk && !rhsAtRisk
+            }
+            let lhsConfidence = validOCRConfidence(lhs.confidence) ?? -.infinity
+            let rhsConfidence = validOCRConfidence(rhs.confidence) ?? -.infinity
+            if lhsConfidence != rhsConfidence {
+                // Within the same risk class, recover the weakest finite read
+                // first. This keeps the selection deterministic and makes the
+                // bounded crop queue agree with weak-block recovery priority.
+                return lhsConfidence < rhsConfidence
+            }
+            let lhsDirectionConfidence = lhs.directionConfidence.isFinite
+                ? lhs.directionConfidence
+                : -.infinity
+            let rhsDirectionConfidence = rhs.directionConfidence.isFinite
+                ? rhs.directionConfidence
+                : -.infinity
+            if lhsDirectionConfidence != rhsDirectionConfidence {
+                return lhsDirectionConfidence < rhsDirectionConfidence
             }
             if lhs.rect.height != rhs.rect.height {
                 return lhs.rect.height > rhs.rect.height
