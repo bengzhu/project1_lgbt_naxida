@@ -1,3 +1,8 @@
+### v3.340 Japanese line coverage source boundary contract（进行中）
+
+- `japaneseLineCoverageSourceCandidates` 现在排除 `observationRole == .detectorTextRegion` 的块级 bbox；它不是逐 line 的源证据，不能让单条成功 line 伪造多行 block 的 complete coverage。`page`、`crop` 与 `verticalLine` 仍按既有 owner、geometry、可靠日语质量与一对一结果 proof 参与。
+- 新合同：`scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py`；工程版本推进至 `3.340`，Japanese benchmark route 接入。本地保持最多 16 个 block、8 个 line OCR、8 个 orientation fallback 与 4 个 weak-block recovery 名额；不改变 detector threshold、crop/warp、owner/layout、翻译 QA、取消、持久化或非日语路径。Koharu/GGUF、授权语料和目标设备证据不作为本轮阻塞。
+
 ### v3.339 detector same-label slice merge closure contract（已完成）
 
 - `mergeSliceRegions` 保留现有 containment/IoU/相邻片段几何门控与 confidence max；每次同标签合并后重启完整候选扫描，使扩大后的 slice envelope 能重新检查先前跳过的片段，避免跨切片重复 detector region 继续占用 OCR/布局候选。请求预算、crop/warp、owner/layout、翻译 QA、取消和持久化边界不变。

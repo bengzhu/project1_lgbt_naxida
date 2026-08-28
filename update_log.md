@@ -1,3 +1,9 @@
+## v3.340：Japanese line coverage source boundary（2026-08-28，进行中）
+
+v3.339 之后继续审计普通图片 OCR 的 line-first/block-fallback 边界，发现 `hasCompleteJapaneseLineCoverage` 的源候选集合仍会把 bundled Manga OCR 的块级 `detectorTextRegion` bbox 当作一条 source line。当多行 block 只有一条真实 line reread 时，宽 detector bbox 可能通过既有一对一 geometry/owner/quality proof，提前跳过整块 crop，漏掉剩余 line。
+
+本轮只在 `japaneseLineCoverageSourceCandidates` 排除 `observationRole == .detectorTextRegion`；`page`、`crop`、`verticalLine` 的既有候选、owner proof、可靠日语质量、geometry match 和一对一结果消费保持不变。若没有真实 line-like source candidate，既有 `guard !sourceLineCandidates.isEmpty` 让 block crop 正常继续；请求预算、阈值、crop/warp、layout、翻译 QA、取消、持久化和非日语路径不变。新增 `scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py`，工程版本推进至 `3.340`，Japanese benchmark route 接入。本地只运行安全静态合同，不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime；本轮不依赖 Koharu/GGUF、授权语料或目标设备证据，也不外推为通用 OCR/CER 或翻译质量提升。
+
 ## v3.339：detector same-label slice merge closure（2026-08-28，已完成）
 
 v3.338 已封闭普通 detector TextRegion 的重叠合并，但跨长图切片的同标签 `mergeSliceRegions` 仍在一次合并后从原 `compare` 位置继续；当后续片段扩大包络时，先前跳过的相邻片段可能留作重复 detector region，继续占用 OCR/布局候选。本轮保留 containment `>= 0.85`、IoU `>= 0.50`、相邻片段几何门控与 confidence max，只在成功合并后重启完整 slice 扫描，令同标签切片关系闭包且不依赖 detector 输出顺序。

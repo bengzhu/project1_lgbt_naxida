@@ -3149,8 +3149,9 @@ struct VisionOCRService: Sendable {
     ///
     /// A single successful line can sit inside a multi-line Vision block.  The
     /// old any-overlap check therefore dropped the remaining text before the
-    /// block crop had a chance to recover it.  Reconstruct the source line set
-    /// from the page observations, require a valid source candidate, and match
+    /// block crop had a chance to recover it. Reconstruct the source line set
+    /// from page/line observations, excluding block-level detector TextRegions,
+    /// require a valid source candidate, and match
     /// each candidate to a distinct, tight `.verticalLine` result.  The
     /// one-to-one rule also prevents a synthesized column envelope from being
     /// treated as proof that several independent source lines were read.
@@ -3212,6 +3213,13 @@ struct VisionOCRService: Sendable {
         sourceObservations: [VisionOCRObservation]
     ) -> [VisionOCRObservation] {
         let candidates = sourceObservations.filter { observation in
+            // A bundled detector observation is a block-level TextRegion bbox,
+            // not evidence that each source line inside that bbox was read.
+            // Keeping it out of the source set prevents one narrow line result
+            // from falsely suppressing the wider block-crop recovery.
+            guard observation.observationRole != .detectorTextRegion else {
+                return false
+            }
             let lineRegion = observation.lineRegionRect ?? observation.rect
             return japaneseObservation(observation, belongsTo: block)
                 && overlapRatio(observation.rect, block.rect) >= 0.25
