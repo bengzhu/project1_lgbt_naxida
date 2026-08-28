@@ -1,6 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.340 Japanese line coverage source boundary：`page/line observations -> exclude block-level detector TextRegion from source-line set -> existing owner/quality/geometry one-to-one proof -> bounded block crop fallback`；块级 detector bbox 不再伪造多行完整覆盖，既有 line/block OCR 预算、阈值、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
 当前 v3.339 detector 同标签跨切片合并边界：`slice detector predictions -> existing same-label containment/IoU/adjacent geometry gates -> merge/replacement -> restart complete slice scan -> v3.338 TextRegion closure -> confidence sort/Manga OCR`；只封闭跨切片候选的遍历顺序缺口，检测阈值、confidence 合法域、12/48 请求预算、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
 当前 v3.338 detector TextRegion 合并边界：`detector predictions -> existing IoU/containment relation -> union envelope -> restart scan -> deterministic merged TextRegion -> existing confidence sort/Manga OCR`；合并后重新检查此前跳过的候选，重叠链不再因 `popLast` 顺序留下重复区域；检测阈值、confidence 合法域、12/48 请求上限、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
 当前 v3.337 Japanese line candidate 调度边界：`text-backed vertical line candidates -> weak/text/density risk gate -> risk-first bounded line queue -> non-risk length order -> reserved geometry-only slots -> Manga/Vision fusion`；短、低置信、低日文字信号或低脚本密度 line 先进入既有 text-backed 名额，同风险组按有限 confidence、日文字母数和脚本文字密度弱者优先，非风险组保留长文本优先，最多 8 个 line OCR 请求、2 个 geometry-only 保留位、detector-owned 排除、line-first、owner/coverage、翻译 QA、取消与持久化边界不变。
