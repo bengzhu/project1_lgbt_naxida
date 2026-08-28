@@ -1,4 +1,5 @@
 # 项目流程图
+v3.341 Japanese vertical tile round-robin：`uncovered vertical reconnaissance -> over-budget strip×window schedule uses height-band round-robin, otherwise legacy column-first -> existing coverage/crop/meaningful-text gate -> bounded Vision OCR fusion`；只有固定 18 窗口预算可能截断列覆盖时才每列先获得同一高度窗口的复读机会，普通页保留既有方向补读、列内上到下和去重边界。
 v3.340 Japanese line coverage source boundary：`page/line observations -> exclude detector TextRegion bbox -> existing owner/quality/geometry one-to-one proof -> block crop fallback`；块级 detector 区域不能单独证明多行已完整识别，既有 OCR 预算、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
 v3.339 detector 同标签跨切片合并闭包：`slice predictions -> same-label existing geometry gates -> merge/replacement -> restart complete slice scan -> TextRegion merge closure -> Manga OCR`；跨切片相邻重复区域不再依赖 detector 输出顺序，阈值、confidence 域、12/48 预算、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
 v3.338 detector TextRegion 合并闭包：`detector predictions -> existing IoU/containment -> union envelope -> restart prior-candidate scan -> merged TextRegion -> confidence sort/Manga OCR`；保持现有阈值、confidence 域、detector primary、12/48 预算、crop/warp、owner/layout、翻译 QA、取消和持久化边界，重叠链不再依赖遍历顺序。

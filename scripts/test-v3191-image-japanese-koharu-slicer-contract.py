@@ -73,7 +73,7 @@ class JapaneseKoharuSlicerContractTests(unittest.TestCase):
             "imageHeight: imageHeight",
             "stripWidth: tileWidth",
             "for window in verticalWindows",
-            "guard processedWindowCount < maximumWindows else { break }",
+            "guard processedWindowCount < maximumWindows else { return }",
             "let pixelHeight = window.height",
             "y: Double(window.start) / Double(imageHeight)",
         ]:

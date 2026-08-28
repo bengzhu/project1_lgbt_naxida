@@ -2427,10 +2427,18 @@ struct VisionOCRService: Sendable {
             stripWidth: tileWidth
         )
         // Manga reading order is right-to-left across columns, then
-        // top-to-bottom inside each column. Spend a finite reconnaissance
-        // budget on the rightmost columns first so a very tall page does not
-        // truncate the Japanese reading frontier on the left.
+        // top-to-bottom inside each column. For a very tall page, a strict
+        // column-first loop can spend the whole finite budget in the first
+        // rightmost strip and leave every other column unseen. Only when the
+        // complete strip/window schedule exceeds the existing budget do we
+        // round-robin same-height windows from right to left before descending
+        // to the next height band. Keeping the legacy order when the schedule
+        // fits preserves the existing orientation-fallback assignment for
+        // ordinary pages; layout still restores final reading order after
+        // recognition.
         let mangaOrderedStarts = starts.sorted { $0 > $1 }
+        let shouldUseBandRoundRobin =
+            verticalWindows.count * mangaOrderedStarts.count > maximumWindows
         let reliableLineRegions = lineObservations.compactMap { observation in
             japaneseLinePathRegion(observation)
         }
@@ -2440,61 +2448,75 @@ struct VisionOCRService: Sendable {
         var orientationFallbacksRemaining = 4
         var processedWindowCount = 0
 
-        for start in mangaOrderedStarts {
+        func processJapaneseVerticalTile(
+            start: Int,
+            window: (start: Int, height: Int)
+        ) {
+            guard processedWindowCount < maximumWindows else { return }
             let pixelWidth = min(tileWidth, imageWidth - start)
-            guard pixelWidth >= 2 else { continue }
-            for window in verticalWindows {
-                guard processedWindowCount < maximumWindows else { break }
-                let pixelHeight = window.height
-                guard pixelHeight >= 2 else { continue }
-                let tileRect = ImageOCRLayoutRect(
-                    x: Double(start) / Double(imageWidth),
-                    y: Double(window.start) / Double(imageHeight),
-                    width: Double(pixelWidth) / Double(imageWidth),
-                    height: Double(pixelHeight) / Double(imageHeight)
-                )
-                guard !verticalBlocks.contains(where: {
-                    verticalTileIsCovered($0.rect, by: tileRect)
-                }),
-                      !reliableLineRegions.contains(where: {
-                          overlapRatio($0, tileRect) >= 0.60
-                      }),
-                      let crop = cropImage(image, normalizedRect: tileRect),
-                      crop.image.width >= 2,
-                      crop.image.height >= 2 else {
-                    continue
-                }
+            guard pixelWidth >= 2 else { return }
+            let pixelHeight = window.height
+            guard pixelHeight >= 2 else { return }
+            let tileRect = ImageOCRLayoutRect(
+                x: Double(start) / Double(imageWidth),
+                y: Double(window.start) / Double(imageHeight),
+                width: Double(pixelWidth) / Double(imageWidth),
+                height: Double(pixelHeight) / Double(imageHeight)
+            )
+            guard !verticalBlocks.contains(where: {
+                verticalTileIsCovered($0.rect, by: tileRect)
+            }),
+                  !reliableLineRegions.contains(where: {
+                      overlapRatio($0, tileRect) >= 0.60
+                  }),
+                  let crop = cropImage(image, normalizedRect: tileRect),
+                  crop.image.width >= 2,
+                  crop.image.height >= 2 else {
+                return
+            }
 
-                processedWindowCount += 1
-                let preparedCrop = prepareJapaneseCropForVision(crop.image)
-                let primary = recognizeJapaneseCropPass(
+            processedWindowCount += 1
+            let preparedCrop = prepareJapaneseCropForVision(crop.image)
+            let primary = recognizeJapaneseCropPass(
+                crop: preparedCrop.image,
+                cropRect: crop.rect,
+                originalImage: image,
+                angle: 90,
+                recognitionLanguages: recognitionLanguages,
+                minimumTextHeight: 0.003,
+                cropScale: preparedCrop.scale
+            )
+            let verticalPrimary = filterJapaneseVerticalTileObservations(primary)
+            refined.append(contentsOf: verticalPrimary)
+
+            if orientationFallbacksRemaining > 0,
+               needsJapaneseOrientationFallback(verticalPrimary) {
+                orientationFallbacksRemaining -= 1
+                let opposite = recognizeJapaneseCropPass(
                     crop: preparedCrop.image,
                     cropRect: crop.rect,
                     originalImage: image,
-                    angle: 90,
+                    angle: 270,
                     recognitionLanguages: recognitionLanguages,
                     minimumTextHeight: 0.003,
                     cropScale: preparedCrop.scale
                 )
-                let verticalPrimary = filterJapaneseVerticalTileObservations(primary)
-                refined.append(contentsOf: verticalPrimary)
+                refined.append(contentsOf: filterJapaneseVerticalTileObservations(opposite))
+            }
+        }
 
-                if orientationFallbacksRemaining > 0,
-                   needsJapaneseOrientationFallback(verticalPrimary) {
-                    orientationFallbacksRemaining -= 1
-                    let opposite = recognizeJapaneseCropPass(
-                        crop: preparedCrop.image,
-                        cropRect: crop.rect,
-                        originalImage: image,
-                        angle: 270,
-                        recognitionLanguages: recognitionLanguages,
-                        minimumTextHeight: 0.003,
-                        cropScale: preparedCrop.scale
-                    )
-                    refined.append(contentsOf: filterJapaneseVerticalTileObservations(opposite))
+        if shouldUseBandRoundRobin {
+            for window in verticalWindows {
+                for start in mangaOrderedStarts {
+                    processJapaneseVerticalTile(start: start, window: window)
                 }
             }
-            guard processedWindowCount < maximumWindows else { break }
+        } else {
+            for start in mangaOrderedStarts {
+                for window in verticalWindows {
+                    processJapaneseVerticalTile(start: start, window: window)
+                }
+            }
         }
         return deduplicateJapaneseObservations(refined)
     }

@@ -179,7 +179,7 @@ class JapaneseTranslationModelComparisonContractTests(unittest.TestCase):
         self.assertNotIn("xcodebuild", self.wrapper)
         self.assertNotIn("swiftc", self.wrapper)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.340", "3.340"])
+        self.assertEqual(versions, ["3.341", "3.341"])
         self.assertIn("v3.287", self.route)
         self.assertIn("v3.287", self.update_log)
         self.assertNotIn("qwen-1.5b-candidate", self.service)
