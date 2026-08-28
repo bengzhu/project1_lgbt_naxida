@@ -1,8 +1,8 @@
-## v3.338：detector TextRegion merge closure（2026-08-28，进行中）
+## v3.338：detector TextRegion merge closure（2026-08-28，已完成）
 
 v3.337 已把普通图片日语 line reread 的既有预算改为风险优先；本轮修复 detector `mergeTextRegions` 的遍历顺序缺口。现有 IoU `>= 0.50`、containment `>= 0.30` 和 confidence max 规则不变；每次 union 扩大 candidate envelope 后从头复查 remaining，使既有重叠/包含关系形成闭包，避免同一重叠链因 `popLast`／`swapRemove` 顺序留下重复 TextRegion，进而重复占用 OCR/布局候选。
 
-新增 `scripts/test-v3338-image-japanese-detector-merge-closure-contract.py`，工程版本推进至 `3.338`，Japanese benchmark route 接入。当前已完成实现与纯静态/纯几何合同，exact-SHA full、PR checks、合入后 CI 与最终 receipt 待执行；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。检测阈值、confidence 合法域、12/48 预算、crop/warp、owner/layout、翻译 QA、取消、持久化和非日语路径不变；本轮不声称通用 OCR/CER、翻译盲评、真实 Koharu/GGUF parity、授权语料、目标设备或 holdout 质量证据。
+新增 `scripts/test-v3338-image-japanese-detector-merge-closure-contract.py`，工程版本推进至 `3.338`，Japanese benchmark route 接入。本地 337 个安全合同通过，27 个含实际进程/编译/runtime 入口合同按约束跳过；Python AST `384/384`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过，本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `b90af7537cbce169d456a0bf080aa44cc3c423f1` 的 exact-SHA full [33150611214](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33150611214) 的 benchmark、静态、Speech、UI/Home/Paste、云端 Xcode、manifest 与 receipt 全部成功；PR [#402](https://github.com/bengzhu/project1_lgbt_naxida/pull/402) checks [33151332549](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33151332549) 成功，以 merge SHA `c1e159389bc4c2ff0bf39a6632506c0f5d887b34` 合入 `smalldata_test`；合入后 push CI [33151406646](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33151406646) 成功并复用候选 full receipt。检测阈值、confidence 合法域、12/48 预算、crop/warp、owner/layout、翻译 QA、取消、持久化和非日语路径不变；本轮只证明 detector 重叠链闭包与重复 TextRegion 防护，不外推为通用 OCR/CER、翻译盲评、真实 Koharu/GGUF parity、授权语料、目标设备或 holdout 质量证据。
 
 ## v3.337：Japanese line candidate risk-first scheduling（2026-08-28，已完成）
 

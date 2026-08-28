@@ -1,7 +1,7 @@
-### v3.338 detector TextRegion merge-closure contract（进行中）
+### v3.338 detector TextRegion merge-closure contract（已完成）
 
 - `ComicTextBubbleDetectorService.mergeTextRegions` 在既有 IoU `>= 0.50`／containment `>= 0.30` 关系上，合并并扩大 candidate envelope 后从头复查此前跳过的候选，使重叠链形成确定性闭包，不再因 `popLast`／`swapRemove` 顺序留下重复 TextRegion。detector threshold、confidence domain、primary precedence、12/48 请求预算、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
-- 新合同：`scripts/test-v3338-image-japanese-detector-merge-closure-contract.py`；工程版本推进至 `3.338`，Japanese benchmark route 已接入。当前已完成代码与纯静态/纯几何合同，云端 exact-SHA full、PR checks 与合入后 CI 待执行；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+- 新合同：`scripts/test-v3338-image-japanese-detector-merge-closure-contract.py`；工程版本推进至 `3.338`，Japanese benchmark route 已接入。本地 337 个安全合同通过，27 个含实际进程/编译/runtime 入口合同按约束跳过；Python AST `384/384`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过，本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `b90af7537cbce169d456a0bf080aa44cc3c423f1` 的 exact-SHA full [33150611214](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33150611214) 的 benchmark、静态、Speech、UI/Home/Paste、云端 Xcode、manifest 与 receipt 全部成功；PR [#402](https://github.com/bengzhu/project1_lgbt_naxida/pull/402) checks [33151332549](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33151332549) 成功，以 merge SHA `c1e159389bc4c2ff0bf39a6632506c0f5d887b34` 合入 `smalldata_test`；合入后 push CI [33151406646](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33151406646) 成功并复用候选 full receipt。Koharu parity 按普通 OCR 独立策略跳过；本轮只证明 detector 重叠链闭包与重复 TextRegion 防护，不外推为通用 OCR/CER、翻译盲评或 holdout 质量证据。
 
 ### v3.337 Japanese line candidate risk-priority contract（已完成）
 
