@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.340 Japanese line coverage."""
+"""Static and pure-policy contract for v3.341 Japanese line coverage."""
 
 from pathlib import Path
 import re
@@ -210,13 +210,13 @@ class JapaneseLineCoverageSourceBoundaryContractTests(unittest.TestCase):
             self.assertNotIn(marker, contract)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.340", "3.340"],
+            ["3.341", "3.341"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py",
-            "v3.340",
-            "japanese-benchmark-v3.340-",
+            "v3.341",
+            "japanese-benchmark-v3.341-",
         ):
             self.assertIn(marker, combined)
 

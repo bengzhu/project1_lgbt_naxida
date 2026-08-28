@@ -2427,9 +2427,12 @@ struct VisionOCRService: Sendable {
             stripWidth: tileWidth
         )
         // Manga reading order is right-to-left across columns, then
-        // top-to-bottom inside each column. Spend a finite reconnaissance
-        // budget on the rightmost columns first so a very tall page does not
-        // truncate the Japanese reading frontier on the left.
+        // top-to-bottom inside each column. For a very tall page, a strict
+        // column-first loop can spend the whole finite budget in the first
+        // rightmost strip and leave every other column unseen. Round-robin the
+        // same-height windows from right to left before descending to the next
+        // height band; layout still restores the final reading order after
+        // recognition, while the bounded tile budget gets spatial coverage.
         let mangaOrderedStarts = starts.sorted { $0 > $1 }
         let reliableLineRegions = lineObservations.compactMap { observation in
             japaneseLinePathRegion(observation)
@@ -2440,11 +2443,11 @@ struct VisionOCRService: Sendable {
         var orientationFallbacksRemaining = 4
         var processedWindowCount = 0
 
-        for start in mangaOrderedStarts {
-            let pixelWidth = min(tileWidth, imageWidth - start)
-            guard pixelWidth >= 2 else { continue }
-            for window in verticalWindows {
+        for window in verticalWindows {
+            for start in mangaOrderedStarts {
                 guard processedWindowCount < maximumWindows else { break }
+                let pixelWidth = min(tileWidth, imageWidth - start)
+                guard pixelWidth >= 2 else { continue }
                 let pixelHeight = window.height
                 guard pixelHeight >= 2 else { continue }
                 let tileRect = ImageOCRLayoutRect(

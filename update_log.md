@@ -1,3 +1,11 @@
+## v3.341：Japanese vertical tile round-robin（2026-08-28，当前研发）
+
+v3.340 修复了块级 detector bbox 伪造 complete line coverage 的边界；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recognizeJapaneseVerticalTileFallback` 的嵌套循环先遍历最右 strip 的全部高度窗口，长图在既有 18 个未覆盖 tile 名额内可能只复读最右列，左侧或其它列完全没有局部 Vision OCR 机会。
+
+可证伪假设：**若保持既有 tile 宽度、Koharu slicer 高度/overlap、covered-window 过滤、最多 18 个窗口、90/270 方向与最多 4 次 opposite fallback，只把调度改为每个高度 band 先按右到左轮询所有 strip，再进入下一 band，则同一预算下长图能覆盖更多列；列内窗口序仍按上到下，最终布局、去重、翻译 QA、取消、持久化和非日语路径不变。**
+
+实现边界：`for window in verticalWindows` 外层、`for start in mangaOrderedStarts` 内层；当某个窗口被现有 `verticalBlocks` 或可靠 line region 覆盖时仍不占用 `processedWindowCount`。新增 `scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`，工程版本推进至 `3.341`，Japanese benchmark route 已接入；本地与云端验收待本轮继续完成。Koharu/GGUF、授权语料和目标设备证据不参与本轮产品路径选择。
+
 ## v3.340：Japanese line coverage source boundary（2026-08-28，已完成）
 
 v3.339 之后继续审计普通图片 OCR 的 line-first/block-fallback 边界，发现 `hasCompleteJapaneseLineCoverage` 的源候选集合仍会把 bundled Manga OCR 的块级 `detectorTextRegion` bbox 当作一条 source line。当多行 block 只有一条真实 line reread 时，宽 detector bbox 可能通过既有一对一 geometry/owner/quality proof，提前跳过整块 crop，漏掉剩余 line。

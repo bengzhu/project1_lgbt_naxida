@@ -128,13 +128,13 @@ class JapaneseLineCandidateConfidenceDomainContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.340", "3.340"],
+            ["3.341", "3.341"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py",
-            "v3.340",
-            "japanese-benchmark-v3.340-",
+            "v3.341",
+            "japanese-benchmark-v3.341-",
         ):
             self.assertIn(marker, combined)
         contract = read("scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py")

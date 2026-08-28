@@ -37,24 +37,26 @@ class JapaneseMangaWindowOrderContractTests(unittest.TestCase):
         self.project = read("AITRANS.xcodeproj/project.pbxproj")
         self.workflow = read(".github/workflows/ci-results.yml")
 
-    def test_budget_is_scheduled_right_to_left_before_ocr(self) -> None:
+    def test_budget_is_scheduled_by_height_band_right_to_left_before_ocr(self) -> None:
         for marker in [
-            "let mangaOrderedStarts = starts.sorted { $0 > $1 }",
-            "for start in mangaOrderedStarts",
             "let verticalWindows = japaneseVerticalSliceWindows(",
+            "let mangaOrderedStarts = starts.sorted { $0 > $1 }",
+            "for window in verticalWindows",
+            "for start in mangaOrderedStarts",
             "guard processedWindowCount < maximumWindows else { break }",
         ]:
             self.assertIn(marker, self.tiles)
         self.assertLess(
-            self.tiles.index("let mangaOrderedStarts = starts.sorted { $0 > $1 }"),
+            self.tiles.index("for window in verticalWindows"),
             self.tiles.index("for start in mangaOrderedStarts"),
         )
 
     def test_each_column_keeps_top_to_bottom_slice_order(self) -> None:
         self.assertIn("for window in verticalWindows", self.tiles)
+        self.assertIn("for start in mangaOrderedStarts", self.tiles)
         self.assertLess(
-            self.tiles.index("for start in mangaOrderedStarts"),
             self.tiles.index("for window in verticalWindows"),
+            self.tiles.index("for start in mangaOrderedStarts"),
         )
         self.assertIn("y: Double(window.start) / Double(imageHeight)", self.tiles)
 
