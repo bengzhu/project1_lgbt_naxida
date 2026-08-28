@@ -1,3 +1,8 @@
+### v3.338 detector TextRegion merge-closure contract（进行中）
+
+- `ComicTextBubbleDetectorService.mergeTextRegions` 在既有 IoU `>= 0.50`／containment `>= 0.30` 关系上，合并并扩大 candidate envelope 后从头复查此前跳过的候选，使重叠链形成确定性闭包，不再因 `popLast`／`swapRemove` 顺序留下重复 TextRegion。detector threshold、confidence domain、primary precedence、12/48 请求预算、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
+- 新合同：`scripts/test-v3338-image-japanese-detector-merge-closure-contract.py`；工程版本推进至 `3.338`，Japanese benchmark route 已接入。当前已完成代码与纯静态/纯几何合同，云端 exact-SHA full、PR checks 与合入后 CI 待执行；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.337 Japanese line candidate risk-priority contract（已完成）
 
 - `japaneseMangaLineOCRCandidates` 在既有 text-backed line 预算内先按低置信、短文本、低日文 letter density 或低 script density 的风险候选排序；同风险组按有限 confidence、日文字母数和脚本文字密度弱者优先，非风险组保留文本长度优先。最多 8 个 line OCR 请求、最多 2 个 uncovered geometry 保留位、detector-owned 排除、line-first、owner/coverage、翻译 QA、取消与持久化边界不变。

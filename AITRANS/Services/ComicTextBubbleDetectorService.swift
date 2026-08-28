@@ -588,6 +588,10 @@ private struct ComicTextBubbleDetectorRuntime {
                 candidate.rect = candidate.rect.union(other.rect)
                 candidate.confidence = max(candidate.confidence, other.confidence)
                 swapRemove(at: index, from: &remaining)
+                // Revisit candidates that were compared before the union grew.
+                // This makes the existing overlap/containment relation transitive
+                // instead of making the final TextRegion depend on pop order.
+                index = 0
             }
             merged.append(candidate)
         }
