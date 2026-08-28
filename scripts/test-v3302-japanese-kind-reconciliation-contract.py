@@ -123,7 +123,7 @@ class JapaneseKindReconciliationContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.336", "3.336"],
+            ["3.337", "3.337"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:

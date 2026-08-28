@@ -2795,6 +2795,22 @@ struct VisionOCRService: Sendable {
         }
     }
 
+    /// Mark a text-backed line as a bounded recovery risk before the Manga OCR
+    /// line budget is allocated. Long, already-strong lines are useful context
+    /// but are less likely to benefit from a second read than a short or
+    /// mixed-script line whose first read may have lost Japanese glyphs.
+    private static func isJapaneseMangaLineCandidateAtRisk(
+        _ candidate: VisionOCRObservation
+    ) -> Bool {
+        let text = postProcessJapaneseOCRText(candidate.text)
+        let letters = japaneseLetterCountForRecovery(text)
+        return validOCRConfidence(candidate.confidence) == nil
+            || candidate.confidence < 0.60
+            || letters <= 2
+            || JapaneseOCRTextNormalizer.japaneseLetterDensity(text) < 0.65
+            || japaneseScriptDensity(in: text) < 0.65
+    }
+
     /// Select tight Vision line geometry as a bounded equivalent of Koharu's
     /// `TextRegion.line_polygons`. Detector-owned Manga OCR results are excluded
     /// so the same TextRegion is never submitted twice; synthesized columns are
@@ -2819,20 +2835,52 @@ struct VisionOCRService: Sendable {
                 && japaneseScriptDensity(in: text) >= 0.5
         }
         let textBacked = textBackedCandidates.sorted { lhs, rhs in
+            let lhsAtRisk = isJapaneseMangaLineCandidateAtRisk(lhs)
+            let rhsAtRisk = isJapaneseMangaLineCandidateAtRisk(rhs)
+            if lhsAtRisk != rhsAtRisk {
+                // The text-backed share of the bounded line budget should
+                // reach weak/short/mixed-script lines before strong long lines
+                // that are less likely to need a second recognition pass.
+                return lhsAtRisk && !rhsAtRisk
+            }
+            let lhsConfidence = validOCRConfidence(lhs.confidence) ?? -.infinity
+            let rhsConfidence = validOCRConfidence(rhs.confidence) ?? -.infinity
+            if lhsAtRisk {
+                if lhsConfidence != rhsConfidence {
+                    // Within the risk class, preserve the existing weak-first
+                    // recovery policy using the finite confidence key.
+                    return lhsConfidence < rhsConfidence
+                }
+                let lhsText = postProcessJapaneseOCRText(lhs.text)
+                let rhsText = postProcessJapaneseOCRText(rhs.text)
+                let lhsLetters = japaneseLetterCountForRecovery(lhsText)
+                let rhsLetters = japaneseLetterCountForRecovery(rhsText)
+                if lhsLetters != rhsLetters {
+                    return lhsLetters < rhsLetters
+                }
+                let lhsDensity = japaneseScriptDensity(in: lhsText)
+                let rhsDensity = japaneseScriptDensity(in: rhsText)
+                if lhsDensity != rhsDensity {
+                    return lhsDensity < rhsDensity
+                }
+            }
             let lhsLength = lhs.text.unicodeScalars.count
             let rhsLength = rhs.text.unicodeScalars.count
             if lhsLength != rhsLength {
                 return lhsLength > rhsLength
             }
-            let lhsConfidence = validOCRConfidence(lhs.confidence) ?? -.infinity
-            let rhsConfidence = validOCRConfidence(rhs.confidence) ?? -.infinity
             if lhsConfidence != rhsConfidence {
-                // This is a bounded recovery queue: when line length is tied,
-                // reread the weakest finite candidate first. Invalid values
-                // are excluded above and remain fail-closed defensively here.
+                // Non-risk candidates keep the historical longest-line-first
+                // order; confidence remains the tie-break for equal lengths.
                 return lhsConfidence < rhsConfidence
             }
-            return lhs.rect.y < rhs.rect.y
+            if lhs.rect.y != rhs.rect.y {
+                return lhs.rect.y < rhs.rect.y
+            }
+            if lhs.rect.x != rhs.rect.x {
+                return lhs.rect.x < rhs.rect.x
+            }
+            return lhs.text < rhs.text
         }
 
         // Geometry-only candidates are the closest local equivalent to

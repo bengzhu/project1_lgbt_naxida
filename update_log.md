@@ -1,3 +1,11 @@
+## v3.337：Japanese line candidate risk-first scheduling（2026-08-28，进行中）
+
+v3.336 已把竖排 block crop 的既有 16 个名额改为风险优先；继续审计普通图片 OCR 的 line-level bounded queue，发现 text-backed line candidate 仍按文本长度最长优先，只有同长度才按弱 confidence。长页超过 8 个候选时，强而完整的长行可能先占满 text-backed 名额，短行、低日文字信号或低置信行反而得不到既有 Manga line reread。
+
+本轮的可证伪假设是：**若只把 text-backed line 的既有预算改为风险优先，同一风险组内按有限 confidence、日文字母数和脚本文字密度弱者优先，风险 line 能先进入不变的 line OCR 名额；非风险候选保留原有长文本优先，geometry-only 保留位、总请求上限和下游融合保持不变。**
+
+实现边界：`japaneseMangaLineOCRCandidates` 新增 `isJapaneseMangaLineCandidateAtRisk`，复用有限 confidence、短文本、日文 letter density 与 script density 信号；text-backed queue 先风险后非风险，同组先弱 confidence，再按日文字母数/脚本密度稳定排序，非风险组继续按文本长度优先。最多 8 次 Manga line OCR、最多 2 个 uncovered geometry 保留位、detector-owned 排除、line-first、crop/warp、owner/coverage、翻译 QA、取消、generation、持久化和非日语路径不变。新增 `scripts/test-v3337-japanese-line-candidate-risk-priority-contract.py`，工程版本推进至 `3.337`，Japanese benchmark route 接入。本轮只运行无进程入口的安全 Python 合同、AST/JSON/YAML/shell/plist 静态检查与 `git diff --check`；不运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续只作可选研究/质量证据。
+
 ## v3.336：Japanese vertical block crop risk-first scheduling（2026-08-24，已完成）
 
 v3.335 已封闭 text-backed line candidate 的 confidence 合法域；继续审计普通图片 OCR 的竖排 block crop 阶段，发现已有 `.prefix(16)` 预算按 confidence 降序截取，长页中高置信 block 可能先占满名额，而低置信、低日文字信号、短文本或方向不稳的 block 得不到既有宽 block reread。
