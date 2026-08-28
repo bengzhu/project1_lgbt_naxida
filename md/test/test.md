@@ -1,7 +1,7 @@
-### v3.337 Japanese line candidate risk-priority contract（进行中）
+### v3.337 Japanese line candidate risk-priority contract（已完成）
 
 - `japaneseMangaLineOCRCandidates` 在既有 text-backed line 预算内先按低置信、短文本、低日文 letter density 或低 script density 的风险候选排序；同风险组按有限 confidence、日文字母数和脚本文字密度弱者优先，非风险组保留文本长度优先。最多 8 个 line OCR 请求、最多 2 个 uncovered geometry 保留位、detector-owned 排除、line-first、owner/coverage、翻译 QA、取消与持久化边界不变。
-- 新合同：`scripts/test-v3337-japanese-line-candidate-risk-priority-contract.py`；工程版本推进至 `3.337`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续不作为本轮普通 OCR 修复门槛。
+- 新合同：`scripts/test-v3337-japanese-line-candidate-risk-priority-contract.py`；工程版本推进至 `3.337`，Japanese benchmark route 接入。本地 336 个安全合同通过，27 个含进程/编译/runtime 入口合同按约束跳过；Python AST `383/383`、JSON `144/144`、workflow YAML `3/3`、shell `20/20`、plist `4/4` 与 `git diff --check` 全部通过。候选 SHA `146ce1e683b08ef28313e6e10136a510a02a65bf` 的 exact-SHA full [33148380045](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33148380045)、PR [#401](https://github.com/bengzhu/project1_lgbt_naxida/pull/401) checks [33149022870](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33149022870)、merge SHA `9fc94350f2d53640bdc6a3a988f04e94078906c8` 与合入后 CI [33149082342](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33149082342) 均成功；Koharu parity 按普通 OCR 独立策略跳过。本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime；本轮只证明既有预算内的风险 line 优先调度，不外推为通用 OCR/CER、翻译盲评或 holdout 质量证据。
 
 ### v3.336 Japanese vertical block crop risk-priority contract（已完成）
 
