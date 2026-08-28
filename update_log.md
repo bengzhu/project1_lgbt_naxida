@@ -2,9 +2,9 @@
 
 v3.340 修复了块级 detector bbox 伪造 complete line coverage 的边界；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recognizeJapaneseVerticalTileFallback` 的嵌套循环先遍历最右 strip 的全部高度窗口，长图在既有 18 个未覆盖 tile 名额内可能只复读最右列，左侧或其它列完全没有局部 Vision OCR 机会。
 
-可证伪假设：**若保持既有 tile 宽度、Koharu slicer 高度/overlap、covered-window 过滤、最多 18 个窗口、90/270 方向与最多 4 次 opposite fallback，只把调度改为每个高度 band 先按右到左轮询所有 strip，再进入下一 band，则同一预算下长图能覆盖更多列；列内窗口序仍按上到下，最终布局、去重、翻译 QA、取消、持久化和非日语路径不变。**
+可证伪假设：**若保持既有 tile 宽度、Koharu slicer 高度/overlap、covered-window 过滤、最多 18 个窗口、90/270 方向与最多 4 次 opposite fallback，只在完整 strip×window 组合超过 18 个名额时把调度改为每个高度 band 先按右到左轮询所有 strip，再进入下一 band，则同一预算下长图能覆盖更多列；窗口总数未超预算的普通页保留既有列优先顺序，列内窗口序仍按上到下，最终布局、去重、翻译 QA、取消、持久化和非日语路径不变。**
 
-实现边界：`for window in verticalWindows` 外层、`for start in mangaOrderedStarts` 内层；当某个窗口被现有 `verticalBlocks` 或可靠 line region 覆盖时仍不占用 `processedWindowCount`。新增 `scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`，工程版本推进至 `3.341`，Japanese benchmark route 已接入；本地与云端验收待本轮继续完成。Koharu/GGUF、授权语料和目标设备证据不参与本轮产品路径选择。
+实现边界：以 `verticalWindows.count * mangaOrderedStarts.count > maximumWindows` 作为是否均衡的唯一条件；条件成立时 `for window in verticalWindows` 外层、`for start in mangaOrderedStarts` 内层，条件不成立时保留旧的列优先嵌套顺序。当某个窗口被现有 `verticalBlocks` 或可靠 line region 覆盖时仍不占用 `processedWindowCount`。新增 `scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`，工程版本推进至 `3.341`，Japanese benchmark route 已接入；本轮先修复云端发现的紧凑块方向 fallback 分配回归，再继续 exact-SHA 验收。Koharu/GGUF、授权语料和目标设备证据不参与本轮产品路径选择。
 
 ## v3.340：Japanese line coverage source boundary（2026-08-28，已完成）
 

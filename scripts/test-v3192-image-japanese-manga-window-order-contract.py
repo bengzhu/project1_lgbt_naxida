@@ -43,7 +43,7 @@ class JapaneseMangaWindowOrderContractTests(unittest.TestCase):
             "let mangaOrderedStarts = starts.sorted { $0 > $1 }",
             "for window in verticalWindows",
             "for start in mangaOrderedStarts",
-            "guard processedWindowCount < maximumWindows else { break }",
+            "guard processedWindowCount < maximumWindows else { return }",
         ]:
             self.assertIn(marker, self.tiles)
         self.assertLess(

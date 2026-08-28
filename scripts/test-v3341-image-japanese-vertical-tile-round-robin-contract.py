@@ -117,14 +117,36 @@ class JapaneseVerticalTileRoundRobinContractTests(unittest.TestCase):
             "let maximumWindows = 18",
             "let verticalWindows = japaneseVerticalSliceWindows(",
             "let mangaOrderedStarts = starts.sorted { $0 > $1 }",
+            "let shouldUseBandRoundRobin =",
+            "verticalWindows.count * mangaOrderedStarts.count > maximumWindows",
+            "if shouldUseBandRoundRobin",
             "for window in verticalWindows",
             "for start in mangaOrderedStarts",
-            "guard processedWindowCount < maximumWindows else { break }",
+            "processJapaneseVerticalTile(start: start, window: window)",
+            "for start in mangaOrderedStarts",
+            "for window in verticalWindows",
         ):
             self.assertIn(marker, self.tiles)
         self.assertLess(
             self.tiles.index("for window in verticalWindows"),
             self.tiles.index("for start in mangaOrderedStarts"),
+        )
+
+    def test_balancing_only_activates_when_the_existing_budget_can_starve_columns(
+        self,
+    ) -> None:
+        self.assertIn(
+            "verticalWindows.count * mangaOrderedStarts.count > maximumWindows",
+            self.tiles,
+        )
+        self.assertFalse(2 * 4 > 18)
+        self.assertEqual(
+            len(legacy_column_first([0, 100, 200, 300], list(range(2)), 18)),
+            8,
+        )
+        self.assertEqual(
+            legacy_column_first([0, 100, 200, 300], list(range(2)), 18),
+            [(300, 0), (300, 1), (200, 0), (200, 1), (100, 0), (100, 1), (0, 0), (0, 1)],
         )
 
     def test_existing_coverage_crop_and_orientation_boundaries_remain(self) -> None:

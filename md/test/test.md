@@ -1,7 +1,7 @@
 ### v3.341 Japanese vertical tile round-robin contract（当前研发）
 
-- `VisionOCRService.recognizeJapaneseVerticalTileFallback` 将既有最多 18 个未覆盖 tile 窗口改为按高度 band 轮询右到左各 strip，再进入下一高度 band；用于避免长图中最右 strip 独占全部 bounded reread 名额。窗口尺寸、0.20 overlap、覆盖过滤、Vision crop/preprocess、90/270 方向与最多 4 次 opposite fallback 不变。
-- 新合同：`scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`；等待本轮安全静态回归与 exact-SHA cloud validation 后收口 receipt。Koharu/GGUF、授权语料、目标设备和质量 holdout 继续独立于普通 OCR 主路径。
+- `VisionOCRService.recognizeJapaneseVerticalTileFallback` 仅在完整 strip×window 组合超过既有 18 个名额时按高度 band 轮询右到左各 strip，再进入下一高度 band；普通页保留既有列优先顺序，避免改变共享方向 fallback 分配。窗口尺寸、0.20 overlap、覆盖过滤、Vision crop/preprocess、90/270 方向与最多 4 次 opposite fallback 不变。
+- 新合同：`scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`；云端首次 full 暴露固定 `ニコッ` runtime 回归，已收紧为预算超限时才均衡，等待修订后的安全静态回归与 exact-SHA cloud validation。Koharu/GGUF、授权语料、目标设备和质量 holdout 继续独立于普通 OCR 主路径。
 
 ### v3.340 Japanese line coverage source boundary contract（已完成）
 

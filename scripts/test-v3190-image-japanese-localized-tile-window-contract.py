@@ -50,7 +50,7 @@ class JapaneseLocalizedTileWindowContractTests(unittest.TestCase):
 
     def test_every_crop_uses_local_y_geometry_and_a_hard_total_budget(self) -> None:
         for marker in [
-            "guard processedWindowCount < maximumWindows else { break }",
+            "guard processedWindowCount < maximumWindows else { return }",
             "height: Double(pixelHeight) / Double(imageHeight)",
             "processedWindowCount += 1",
         ]:
