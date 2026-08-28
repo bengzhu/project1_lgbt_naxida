@@ -1,7 +1,7 @@
-### v3.341 Japanese vertical tile round-robin contract（当前研发）
+### v3.341 Japanese vertical tile round-robin contract（已完成）
 
 - `VisionOCRService.recognizeJapaneseVerticalTileFallback` 仅在完整 strip×window 组合超过既有 18 个名额时按高度 band 轮询右到左各 strip，再进入下一高度 band；普通页保留既有列优先顺序，避免改变共享方向 fallback 分配。窗口尺寸、0.20 overlap、覆盖过滤、Vision crop/preprocess、90/270 方向与最多 4 次 opposite fallback 不变。
-- 新合同：`scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`；云端首次 full 暴露固定 `ニコッ` runtime 回归，已收紧为预算超限时才均衡，等待修订后的安全静态回归与 exact-SHA cloud validation。Koharu/GGUF、授权语料、目标设备和质量 holdout 继续独立于普通 OCR 主路径。
+- 新合同：`scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py`；本地 340 个安全 Python 合同通过，27 个含真实进程／编译／runtime 入口的历史合同按约束跳过；Python AST `367/367`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、JSON `237/237`（排除 2 个已知 JSONC）与 `git diff --check` 全部通过，本地未运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `e597670a15b99df5232ae07c535c1ff012131001` 的 exact-SHA full [33158937826](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33158937826)、PR [#405](https://github.com/bengzhu/project1_lgbt_naxida/pull/405) checks [33159845028](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33159845028)、merge SHA `fbfbaf5697c617cdf6bdc3420431b6697253c4a8` 与合入后 push CI [33159935197](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33159935197) 均成功（receipt 状态 API 瞬态 502 后仅重试 receipt 阶段）。Koharu/GGUF、授权语料、目标设备和质量 holdout 继续独立于普通 OCR 主路径，本轮不外推为通用 OCR/CER 或翻译质量提升。
 
 ### v3.340 Japanese line coverage source boundary contract（已完成）
 
