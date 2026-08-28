@@ -609,6 +609,7 @@ private struct ComicTextBubbleDetectorRuntime {
         var index = 0
         while index < regions.count {
             var compare = index + 1
+            var didMerge = false
             while compare < regions.count {
                 guard regions[index].labelID == regions[compare].labelID else {
                     compare += 1
@@ -631,7 +632,8 @@ private struct ComicTextBubbleDetectorRuntime {
                         regions[compare].confidence
                     )
                     swapRemove(at: compare, from: &regions)
-                    continue
+                    didMerge = true
+                    break
                 }
 
                 if regionIoU >= 0.50 {
@@ -643,7 +645,8 @@ private struct ComicTextBubbleDetectorRuntime {
                         regions[compare].confidence
                     )
                     swapRemove(at: compare, from: &regions)
-                    continue
+                    didMerge = true
+                    break
                 }
 
                 let firstWidth = max(first.width, 0.000_001)
@@ -681,10 +684,18 @@ private struct ComicTextBubbleDetectorRuntime {
                             regions[compare].confidence
                         )
                         swapRemove(at: compare, from: &regions)
-                        continue
+                        didMerge = true
+                        break
                     }
                 }
                 compare += 1
+            }
+            if didMerge {
+                // The union/replacement can make a previously skipped slice
+                // region eligible. Revisit the complete remaining set so
+                // same-label slice closure does not depend on detector order.
+                index = 0
+                continue
             }
             index += 1
         }
