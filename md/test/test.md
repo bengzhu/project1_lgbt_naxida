@@ -1,7 +1,7 @@
-### v3.340 Japanese line coverage source boundary contract（进行中）
+### v3.340 Japanese line coverage source boundary contract（已完成）
 
 - `japaneseLineCoverageSourceCandidates` 现在排除 `observationRole == .detectorTextRegion` 的块级 bbox；它不是逐 line 的源证据，不能让单条成功 line 伪造多行 block 的 complete coverage。`page`、`crop` 与 `verticalLine` 仍按既有 owner、geometry、可靠日语质量与一对一结果 proof 参与。
-- 新合同：`scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py`；工程版本推进至 `3.340`，Japanese benchmark route 接入。本地保持最多 16 个 block、8 个 line OCR、8 个 orientation fallback 与 4 个 weak-block recovery 名额；不改变 detector threshold、crop/warp、owner/layout、翻译 QA、取消、持久化或非日语路径。Koharu/GGUF、授权语料和目标设备证据不作为本轮阻塞。
+- 新合同：`scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py`；工程版本推进至 `3.340`，Japanese benchmark route 接入。本地 339 个安全 Python 合同通过，27 个含真实进程入口的历史合同按约束跳过；Python AST `366/366`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、JSON `237/237`（排除 2 个已知 JSONC）与 `git diff --check` 全部通过。本地未运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `01847911b0075202de075a35c2887ca571ffcf87` 的 exact-SHA full [33155422636](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33155422636)、PR [#404](https://github.com/bengzhu/project1_lgbt_naxida/pull/404) checks [33156370408](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33156370408)、merge SHA `10793fbabc5e7abd045993453d198a43f589cd57` 与合入后 push CI [33156437909](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33156437909) 均成功。Koharu/GGUF、授权语料和目标设备证据独立跳过，不作为本轮阻塞。
 
 ### v3.339 detector same-label slice merge closure contract（已完成）
 
