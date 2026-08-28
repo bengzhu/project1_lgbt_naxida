@@ -1,3 +1,8 @@
+### v3.337 Japanese line candidate risk-priority contract（进行中）
+
+- `japaneseMangaLineOCRCandidates` 在既有 text-backed line 预算内先按低置信、短文本、低日文 letter density 或低 script density 的风险候选排序；同风险组按有限 confidence、日文字母数和脚本文字密度弱者优先，非风险组保留文本长度优先。最多 8 个 line OCR 请求、最多 2 个 uncovered geometry 保留位、detector-owned 排除、line-first、owner/coverage、翻译 QA、取消与持久化边界不变。
+- 新合同：`scripts/test-v3337-japanese-line-candidate-risk-priority-contract.py`；工程版本推进至 `3.337`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF/授权语料/目标设备继续不作为本轮普通 OCR 修复门槛。
+
 ### v3.336 Japanese vertical block crop risk-priority contract（已完成）
 
 - `recognizeJapaneseVerticalCrops` 在既有最多 16 个竖排 block crop 名额内先按低置信、低日文字信号、短文本或方向不稳的风险门排序；同一风险组按有限 confidence 弱者优先。最多 16 个 block、8 个 orientation fallback、line-first、owner/geometry、翻译 QA、取消与持久化边界不变。
