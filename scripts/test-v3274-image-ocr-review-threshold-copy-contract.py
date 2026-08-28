@@ -52,7 +52,7 @@ class ImageOCRReviewThresholdCopyContractTests(unittest.TestCase):
         self.assertIn(f"python3 -B {current}", self.workflow)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.337", "3.337"],
+            ["3.338", "3.338"],
         )
 
 

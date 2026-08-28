@@ -1,3 +1,9 @@
+## v3.338：detector TextRegion merge closure（2026-08-28，进行中）
+
+v3.337 已把普通图片日语 line reread 的既有预算改为风险优先；本轮修复 detector `mergeTextRegions` 的遍历顺序缺口。现有 IoU `>= 0.50`、containment `>= 0.30` 和 confidence max 规则不变；每次 union 扩大 candidate envelope 后从头复查 remaining，使既有重叠/包含关系形成闭包，避免同一重叠链因 `popLast`／`swapRemove` 顺序留下重复 TextRegion，进而重复占用 OCR/布局候选。
+
+新增 `scripts/test-v3338-image-japanese-detector-merge-closure-contract.py`，工程版本推进至 `3.338`，Japanese benchmark route 接入。当前已完成实现与纯静态/纯几何合同，exact-SHA full、PR checks、合入后 CI 与最终 receipt 待执行；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。检测阈值、confidence 合法域、12/48 预算、crop/warp、owner/layout、翻译 QA、取消、持久化和非日语路径不变；本轮不声称通用 OCR/CER、翻译盲评、真实 Koharu/GGUF parity、授权语料、目标设备或 holdout 质量证据。
+
 ## v3.337：Japanese line candidate risk-first scheduling（2026-08-28，已完成）
 
 v3.336 已把竖排 block crop 的既有 16 个名额改为风险优先；继续审计普通图片 OCR 的 line-level bounded queue，发现 text-backed line candidate 仍按文本长度最长优先，只有同长度才按弱 confidence。长页超过 8 个候选时，强而完整的长行可能先占满 text-backed 名额，短行、低日文字信号或低置信行反而得不到既有 Manga line reread。
