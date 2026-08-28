@@ -1,3 +1,8 @@
+### v3.339 detector same-label slice merge closure contract（进行中）
+
+- `mergeSliceRegions` 保留现有 containment/IoU/相邻片段几何门控与 confidence max；每次同标签合并后重启完整候选扫描，使扩大后的 slice envelope 能重新检查先前跳过的片段，避免跨切片重复 detector region 继续占用 OCR/布局候选。请求预算、crop/warp、owner/layout、翻译 QA、取消和持久化边界不变。
+- 新合同：`scripts/test-v3339-image-japanese-detector-slice-merge-closure-contract.py`；工程版本推进至 `3.339`，Japanese benchmark route 接入。本地安全合同与云端验证待本轮完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.338 detector TextRegion merge-closure contract（已完成）
 
 - `ComicTextBubbleDetectorService.mergeTextRegions` 在既有 IoU `>= 0.50`／containment `>= 0.30` 关系上，合并并扩大 candidate envelope 后从头复查此前跳过的候选，使重叠链形成确定性闭包，不再因 `popLast`／`swapRemove` 顺序留下重复 TextRegion。detector threshold、confidence domain、primary precedence、12/48 请求预算、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。

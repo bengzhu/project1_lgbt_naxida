@@ -1,3 +1,9 @@
+## v3.339：detector same-label slice merge closure（2026-08-28，进行中）
+
+v3.338 已封闭普通 detector TextRegion 的重叠合并，但跨长图切片的同标签 `mergeSliceRegions` 仍在一次合并后从原 `compare` 位置继续；当后续片段扩大包络时，先前跳过的相邻片段可能留作重复 detector region，继续占用 OCR/布局候选。本轮保留 containment `>= 0.85`、IoU `>= 0.50`、相邻片段几何门控与 confidence max，只在成功合并后重启完整 slice 扫描，令同标签切片关系闭包且不依赖 detector 输出顺序。
+
+新增 `scripts/test-v3339-image-japanese-detector-slice-merge-closure-contract.py`，工程版本推进至 `3.339`，Japanese benchmark route 接入。本地安全合同与云端证据待本轮验证；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。detector 阈值、confidence 合法域、12/48 Manga OCR 预算、crop/warp、owner/layout、翻译 QA、取消、持久化和非日语路径不变；本轮只证明跨切片重复 region 的闭包防护，不外推为通用 OCR/CER、翻译盲评、真实 Koharu/GGUF parity、授权语料、目标设备或 holdout 质量证据。
+
 ## v3.338：detector TextRegion merge closure（2026-08-28，已完成）
 
 v3.337 已把普通图片日语 line reread 的既有预算改为风险优先；本轮修复 detector `mergeTextRegions` 的遍历顺序缺口。现有 IoU `>= 0.50`、containment `>= 0.30` 和 confidence max 规则不变；每次 union 扩大 candidate envelope 后从头复查 remaining，使既有重叠/包含关系形成闭包，避免同一重叠链因 `popLast`／`swapRemove` 顺序留下重复 TextRegion，进而重复占用 OCR/布局候选。
