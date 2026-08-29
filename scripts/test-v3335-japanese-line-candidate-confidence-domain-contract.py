@@ -102,11 +102,14 @@ class JapaneseLineCandidateConfidenceDomainContractTests(unittest.TestCase):
             "maximumJapaneseMangaLineOCRRequests = 8",
             "min(2, maximumJapaneseMangaLineOCRRequests)",
             "maximumJapaneseMangaLineOCRRequests - geometryReserve",
-            "textBacked.prefix(textLimit)",
             "uncoveredGeometry.prefix(geometryReserve)",
             ".prefix(maximumJapaneseMangaLineOCRRequests)",
         ):
             self.assertIn(marker, self.candidates + self.vision)
+        self.assertTrue(
+            "textBacked.prefix(textLimit)" in self.candidates
+            or "boundedJapaneseMangaLineTextCandidates(" in self.candidates
+        )
 
     def test_line_recognition_keeps_existing_cancel_and_result_gates(self) -> None:
         for marker in (
@@ -128,13 +131,13 @@ class JapaneseLineCandidateConfidenceDomainContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.341", "3.341"],
+            ["3.342", "3.342"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py",
-            "v3.341",
-            "japanese-benchmark-v3.341-",
+            "v3.342",
+            "japanese-benchmark-v3.342-",
         ):
             self.assertIn(marker, combined)
         contract = read("scripts/test-v3335-japanese-line-candidate-confidence-domain-contract.py")
