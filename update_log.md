@@ -1,3 +1,11 @@
+## v3.350：Japanese tile direction eligibility（2026-08-30，已完成）
+
+v3.349 后继续审计普通图片 OCR→翻译主路径发现，方向判定仅为弱/不确定的 vertical block 仍可能声明 tile coverage；这与既有 `isJapaneseVerticalBlockAtRisk` 的方向风险边界不一致。
+
+可证伪假设：**若保留既有 `verticalTileIsCovered` 几何关系与 v3.349 的 OCR/日语质量门，仅让 `directionConfidence` 有限、位于 `[0,1]` 且 `>=.45` 的 vertical block 抑制宽 tile，则方向不确定的 block 会重新保留既有 tile 机会，可靠方向 block 与可靠 line frontier 仍抑制重复窗口；最多 6 个 tile、18 个窗口、4 次 opposite orientation、pixel-first/line/block recovery、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
+
+实现已合入 `smalldata_test`：新增 `scripts/test-v3350-japanese-tile-direction-eligibility-contract.py`，工程版本推进至 `3.350`。实现 SHA `46c105605c215ccef61e4bd013b71d7e1c8e1799` 的 exact-SHA full [33291869290](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33291869290)、PR [#414](https://github.com/bengzhu/project1_lgbt_naxida/pull/414) checks [33292290297](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292290297)、merge SHA `0d53fa31e12e3dcd653aa25a9c230c44ce8c1c46` 与合入后 push CI [33292322548](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292322548) 均成功。新合同 `13/13`；本地 `349` 个安全合同通过，`27` 个进程／编译／runtime 合同跳过，`376` 个合同总计无失败；Python AST `376/376`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+
 ## v3.349：Japanese tile coverage eligibility（2026-08-30，已完成）
 
 文档收口 push CI [33291243730](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33291243730) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
