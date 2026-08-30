@@ -2,7 +2,7 @@
 
 - v3.345 的多 band 轮询在风险等级混合时可能让单个 dense band 的弱 block 被其它 band 的强 block 挤出 16 个 crop 名额；v3.353 先在风险 block 类内做同 band round-robin，再用剩余名额对非风险 block 做相同空间均衡，未超预算、单 band、无风险队列保持历史选择。最多 16 个 vertical block crop、8 次方向 fallback，line/pixel/tile/frontier、owner、OCR/layout、翻译 QA、取消、持久化与可选 Koharu/GGUF 研究边界不变。新增 `scripts/test-v3353-japanese-vertical-crop-risk-balance-contract.py`，工程版本 `3.353`；实现 SHA `9e60fcbca3ca4c36a7ad67ed99ae45d42ce81ed2` 的 exact-SHA full [33295448242](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33295448242)、PR [#417](https://github.com/bengzhu/project1_lgbt_naxida/pull/417) checks [33295982257](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33295982257)、merge SHA `16db200bfc881702363eca2f67dd7bd513d72ae9` 与合入后 push CI [33296036459](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33296036459) 均成功；新合同 `11/11`，本地 `352` 个安全合同通过，`27` 个进程／编译／runtime 合同跳过，`379` 个合同总计无失败；Python AST `379/379`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
 
-v3.353 文档收口 push CI 待执行；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+v3.353 文档收口 push CI [33296186523](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33296186523) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 ### v3.352 Japanese direction-confidence risk-domain contract（已完成）
 
