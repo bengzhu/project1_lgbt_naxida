@@ -226,14 +226,14 @@ class JapaneseGeometryOwnerBalanceContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.355", "3.355"],
+            ["3.356", "3.356"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3354-japanese-direction-owner-domain-contract.py",
             "scripts/test-v3355-japanese-geometry-owner-balance-contract.py",
             "v3.355",
-            "japanese-benchmark-v3.355-",
+            "japanese-benchmark-v3.356-",
         ):
             self.assertIn(marker, combined)
         contract = Path(__file__).read_text(encoding="utf-8")

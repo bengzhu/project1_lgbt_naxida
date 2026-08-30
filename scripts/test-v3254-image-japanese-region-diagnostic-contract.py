@@ -52,7 +52,7 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
             "rect.width <= 0.08",
             "rect.height <= 0.08",
             "if unique.count == 128",
-            "let reservedCompact = Array(compactCandidates.prefix(4))",
+            "let reservedCompact = Self.boundedJapanesePixelFirstCompactCandidates(",
             "let remaining = max(0, 12 - reservedCompact.count)",
             "isWeakCompactJapaneseOwner",
             "observation.confidence < 0.80",
@@ -109,7 +109,7 @@ class JapaneseRegionDiagnosticContractTests(unittest.TestCase):
             self.workflow,
         )
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.355", "3.355"])
+        self.assertEqual(versions, ["3.356", "3.356"])
         self.assertNotIn("MARKETING_VERSION = 3.255;", self.project)
 
 

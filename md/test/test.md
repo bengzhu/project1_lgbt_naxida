@@ -1,3 +1,7 @@
+### v3.356 Japanese compact spatial-balance contract（当前研发分支）
+
+- pixel-first 路径为 compact 日语候选预留最多 4 个名额，但旧逻辑按 `y/x` 前缀选择，多个页面 band 的短 SFX/短列可能集中在同一 band。v3.356 仅在 compact pool 超过 4 且存在多个 band 时采用稳定 band round-robin，保留 compact 优先级、under-budget/single-band、12/4 pixel/方向上限及 OCR/layout、翻译 QA、取消、持久化边界不变。新增 `scripts/test-v3356-japanese-compact-spatial-balance-contract.py`，工程版本 `3.356`；实现与 cloud full 待执行，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.355 Japanese geometry-owner balance contract（已完成）
 
 - v3.354 已封闭 vertical direction confidence 的有限域，但 `japaneseMangaLineOCRCandidates` 的 2 个 geometry-only 保留名额仍按几何高度前缀选择；同一 known owner 的多个候选可能占满名额，其他 TextRegion 的 line geometry 被跳过。v3.355 在既有 text-backed coverage filter、严格单 owner geometry gate 与稳定排序后复用 owner-only selector，仅在 geometry pool 超预算且存在多个 known owner 时平衡候选；under-budget、single-owner、ownerless 兼容、8/2 line/geometry 上限及 OCR/layout、翻译 QA、取消、持久化边界不变。新增 `scripts/test-v3355-japanese-geometry-owner-balance-contract.py`，工程版本 `3.355`；实现 SHA `0568d4d10b2132ce55b2a64b2ce3317606291f3f` 的 exact-SHA full [33298161646](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298161646)、PR [#419](https://github.com/bengzhu/project1_lgbt_naxida/pull/419) checks [33298597548](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298597548)、merge SHA `be23a758952d7b8713267acb8d0667ab85ffefc5` 与合入后 push CI [33298644345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298644345) 均成功；未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。

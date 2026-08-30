@@ -149,7 +149,9 @@ class JapanesePixelFirstSpatialBalanceContractTests(unittest.TestCase):
     def test_compact_reservation_and_regular_budget_partition_stay_in_place(self) -> None:
         for marker in (
             "let compactCandidates = unique",
-            "let reservedCompact = Array(compactCandidates.prefix(4))",
+            "let reservedCompact = Self.boundedJapanesePixelFirstCompactCandidates(",
+            "compactCandidates",
+            "limit: 4",
             "let regularCandidates = unique.filter",
             "let remaining = max(0, 12 - reservedCompact.count)",
             "let selectedRegular = Self.boundedJapanesePixelFirstRegularCandidates(",
@@ -217,7 +219,7 @@ class JapanesePixelFirstSpatialBalanceContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.355", "3.355"],
+            ["3.356", "3.356"],
         )
         combined = self.workflow + self.docs
         for marker in (
