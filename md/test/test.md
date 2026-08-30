@@ -1,7 +1,7 @@
-### v3.363 Japanese standard translation prompt contract（候选）
+### v3.363 Japanese standard translation prompt contract（已完成）
 
 - 日语图片翻译的 plain-text standard 请求补充明确的日语源语言、目标语言、忠实/简洁风格、称谓/专名/拟声词保留和只输出译文约束；该提示同时覆盖批量失败块 QA 回退与 OCR 重新识别后的单块复译。
-- 新增 `scripts/test-v3363-japanese-standard-translation-prompt-contract.py`，工程版本 `3.363`，workflow 已接入；待安全静态回归和云端 full validation。`mangaBlocks` 的 `[N]` 标签、OCR/layout、请求预算、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，不合成输入或质量证据。
+- 新增 `scripts/test-v3363-japanese-standard-translation-prompt-contract.py`，工程版本 `3.363`，workflow 已接入；新合同 `6/6`，本地安全回归 `362` 个通过、`27` 个进程/编译/runtime 入口按约束跳过（`389` 总计），Python AST `409/409`、tracked JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project 与 `git diff --check` 通过。实现 SHA `ae20f960f18ca95b94d78f3ddfb9734c00087904` 的 exact-SHA full [33310548726](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33310548726)、PR [#427](https://github.com/bengzhu/project1_lgbt_naxida/pull/427) checks [33311049315](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33311049315)、merge SHA `e437c67c9ef820e633dd36c6aecd1347d2f2bbe6` 与合入后 push CI [33311104151](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33311104151) 均成功；Xcode/JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。`mangaBlocks` 的 `[N]` 标签、OCR/layout、请求预算、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，不合成输入或质量证据。
 
 ### v3.362 Japanese translation context-echo contract（已完成）
 

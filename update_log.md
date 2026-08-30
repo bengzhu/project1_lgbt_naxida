@@ -1,10 +1,10 @@
-## v3.363：Japanese standard translation prompt（候选）
+## v3.363：Japanese standard translation prompt（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现，日语图片批量翻译的 tagged `mangaBlocks` 请求已有明确语言对和漫画约束，但失败块逐块 QA 回退、以及 OCR 重新识别后的单块复译，走的是 plain-text `standard` 请求；通用提示模板对日语没有显式源语言/目标语言声明，弱本地模型可能因此回显、漏译或误解拟声词。
 
 本轮可证伪假设：**若仅对 plain-text standard 的日语→简体中文/英语请求补充显式语言对、忠实/简洁翻译、称谓/专名/语气/拟声词保留和只输出译文约束，则单块回退/复译更可能稳定进入既有 QA；`mangaBlocks` 标签协议、OCR/layout、请求预算、取消、持久化和非日语路径保持不变。**
 
-实现待通过本地安全静态合同与云端 full validation 后收口；新增 `scripts/test-v3363-japanese-standard-translation-prompt-contract.py`，工程版本推进至 `3.363`，workflow 已接入。当前不运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 尚未提供，不合成样图，也不把静态合同结果外推为通用 OCR/CER/翻译质量证据。
+实现已由 `ae20f960f18ca95b94d78f3ddfb9734c00087904` 合入 `smalldata_test`，merge SHA 为 `e437c67c9ef820e633dd36c6aecd1347d2f2bbe6`；新增 `scripts/test-v3363-japanese-standard-translation-prompt-contract.py`，工程版本推进至 `3.363`，workflow 已接入。新合同 `6/6`，本地安全回归 `362` 个通过、`27` 个进程/编译/runtime 入口按约束跳过（`389` 总计），Python AST `409/409`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project 与 `git diff --check` 通过。exact-SHA full [33310548726](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33310548726)、PR [#427](https://github.com/bengzhu/project1_lgbt_naxida/pull/427) checks [33311049315](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33311049315)、合入后 push CI [33311104151](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33311104151) 均成功，Xcode/JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 尚未提供，不合成样图，也不把静态合同结果外推为通用 OCR/CER/翻译质量证据。
 
 ## v3.361：Japanese pixel compact dedupe（已完成）
 
