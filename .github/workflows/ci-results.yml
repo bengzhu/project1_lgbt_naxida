@@ -3523,7 +3523,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311/v3.312/v3.313/v3.314/v3.315/v3.316/v3.317/v3.318/v3.319/v3.320/v3.321/v3.322/v3.323/v3.324/v3.325/v3.326/v3.327/v3.328/v3.329/v3.330/v3.331/v3.332/v3.333/v3.334/v3.335/v3.336/v3.337/v3.338/v3.339/v3.340/v3.341/v3.342/v3.343/v3.344/v3.345/v3.346/v3.347/v3.348/v3.349 benchmark schemas and fixtures
+      - name: Validate v3.280/v3.282/v3.283/v3.284/v3.285/v3.286/v3.287/v3.288/v3.289/v3.290/v3.291/v3.292/v3.293/v3.294/v3.295/v3.296/v3.297/v3.298/v3.299/v3.300/v3.301/v3.302/v3.303/v3.304/v3.305/v3.306/v3.307/v3.308/v3.309/v3.310/v3.311/v3.312/v3.313/v3.314/v3.315/v3.316/v3.317/v3.318/v3.319/v3.320/v3.321/v3.322/v3.323/v3.324/v3.325/v3.326/v3.327/v3.328/v3.329/v3.330/v3.331/v3.332/v3.333/v3.334/v3.335/v3.336/v3.337/v3.338/v3.339/v3.340/v3.341/v3.342/v3.343/v3.344/v3.345/v3.346/v3.347/v3.348/v3.349/v3.350 benchmark schemas and fixtures
         shell: bash
         run: |
           set -euo pipefail
@@ -3600,6 +3600,7 @@ jobs:
           python3 -B scripts/test-v3347-japanese-recovery-frontier-contract.py
           python3 -B scripts/test-v3348-japanese-pixel-recovery-eligibility-contract.py
           python3 -B scripts/test-v3349-japanese-tile-coverage-eligibility-contract.py
+          python3 -B scripts/test-v3350-japanese-tile-direction-eligibility-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3819,7 +3820,8 @@ jobs:
           # japanese-benchmark-v3.347-
           # japanese-benchmark-v3.348-
           # japanese-benchmark-v3.349-
-          name: japanese-benchmark-v3.349-${{ github.run_id }}
+          # japanese-benchmark-v3.350-
+          name: japanese-benchmark-v3.350-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json

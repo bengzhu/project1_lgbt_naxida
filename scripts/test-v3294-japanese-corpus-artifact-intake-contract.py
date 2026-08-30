@@ -348,7 +348,7 @@ class JapaneseCorpusArtifactIntakeContractTests(unittest.TestCase):
         self.assertNotIn("MangaOverlayProbeService", self.source)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.349", "3.349"],
+            ["3.350", "3.350"],
         )
 
 

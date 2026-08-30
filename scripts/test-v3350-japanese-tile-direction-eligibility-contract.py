@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.349 tile coverage eligibility."""
+"""Static and pure-policy contract for v3.350 tile direction eligibility."""
 
 from dataclasses import dataclass
 import math
@@ -34,6 +34,7 @@ def function_body(source: str, signature: str) -> str:
 @dataclass(frozen=True)
 class TileBlock:
     direction: str
+    direction_confidence: float
     text: str
     confidence: float
     japanese_letter: bool
@@ -82,12 +83,15 @@ def vertical_tile_is_covered(
 
 
 def eligible_tile_blocks(blocks: list[TileBlock]) -> list[TileBlock]:
-    """Model v3.349's fail-closed block coverage gate."""
+    """Model v3.350's fail-closed direction and OCR coverage gate."""
     return [
         block
         for block in blocks
         if (
             block.direction == "vertical"
+            and math.isfinite(block.direction_confidence)
+            and 0.0 <= block.direction_confidence <= 1.0
+            and block.direction_confidence >= 0.45
             and bool(block.text.strip())
             and math.isfinite(block.confidence)
             and 0.0 <= block.confidence <= 1.0
@@ -137,7 +141,7 @@ def uncovered_tiles(
     ]
 
 
-class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
+class JapaneseTileDirectionEligibilityContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
@@ -156,6 +160,10 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
             cls.vision,
             "private static func recognizeJapaneseVerticalTileFallback(",
         )
+        cls.risk = function_body(
+            cls.vision,
+            "private static func isJapaneseVerticalBlockAtRisk(",
+        )
         cls.detector = function_body(
             cls.vision,
             "private static func detectJapanesePixelFirstVerticalRegions(",
@@ -169,7 +177,7 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
             "private static func japaneseLinePathRegion(",
         )
 
-    def test_quality_gate_precedes_tile_block_coverage(self) -> None:
+    def test_direction_quality_gate_precedes_tile_coverage(self) -> None:
         quality = self.tile.index(
             "let reliableVerticalBlocks = verticalBlocks.filter"
         )
@@ -179,6 +187,9 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         self.assertLess(quality, coverage)
         for marker in (
             "block.direction == .vertical",
+            "block.directionConfidence.isFinite",
+            "(0...1).contains(block.directionConfidence)",
+            "block.directionConfidence >= 0.45",
             "let text = postProcessJapaneseOCRText(block.text)",
             "!text.isEmpty",
             "validOCRConfidence(block.confidence) != nil",
@@ -190,9 +201,10 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.tile)
 
-    def test_reliable_vertical_block_suppresses_duplicate_tile(self) -> None:
+    def test_confident_vertical_block_suppresses_duplicate_tile(self) -> None:
         block = TileBlock(
             "vertical",
+            0.84,
             "今度こそ",
             0.82,
             True,
@@ -203,11 +215,12 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         tile = (0.70, 0.10, 0.22, 0.62)
         self.assertEqual(uncovered_tiles([tile], [block], []), [])
 
-    def test_weak_vertical_block_leaves_tile_eligible(self) -> None:
+    def test_directionally_weak_vertical_block_leaves_tile_eligible(self) -> None:
         weak = TileBlock(
             "vertical",
-            "今度こそ",
             0.31,
+            "今度こそ",
+            0.82,
             True,
             0.90,
             0.90,
@@ -216,28 +229,68 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         tile = (0.70, 0.10, 0.22, 0.62)
         self.assertEqual(uncovered_tiles([tile], [weak], []), [tile])
 
-    def test_empty_non_japanese_density_and_direction_fail_closed(self) -> None:
+    def test_direction_confidence_domain_and_threshold_are_exact(self) -> None:
         rect = (0.74, 0.20, 0.08, 0.42)
-        blocks = [
-            TileBlock("vertical", "", 0.90, True, 0.90, 0.90, rect),
-            TileBlock("vertical", "noise", 0.90, False, 0.90, 0.90, rect),
-            TileBlock("vertical", "かな", 0.90, True, 0.49, 0.90, rect),
-            TileBlock("vertical", "かな", 0.90, True, 0.90, 0.49, rect),
-            TileBlock("horizontal", "かな", 0.90, True, 0.90, 0.90, rect),
-        ]
-        self.assertEqual(eligible_tile_blocks(blocks), [])
 
-    def test_confidence_domain_and_threshold_are_exact(self) -> None:
+        def block(direction_confidence: float) -> TileBlock:
+            return TileBlock(
+                "vertical",
+                direction_confidence,
+                "今度こそ",
+                0.82,
+                True,
+                0.90,
+                0.90,
+                rect,
+            )
+
+        for confidence in (
+            math.nan,
+            math.inf,
+            -math.inf,
+            -0.01,
+            0.449,
+            1.01,
+        ):
+            self.assertEqual(eligible_tile_blocks([block(confidence)]), [])
+        self.assertEqual(len(eligible_tile_blocks([block(0.45)])), 1)
+
+    def test_existing_ocr_quality_gate_remains_required(self) -> None:
         rect = (0.74, 0.20, 0.08, 0.42)
 
         def block(confidence: float) -> TileBlock:
             return TileBlock(
-                "vertical", "今度こそ", confidence, True, 0.90, 0.90, rect
+                "vertical",
+                0.84,
+                "今度こそ",
+                confidence,
+                True,
+                0.90,
+                0.90,
+                rect,
             )
 
         for confidence in (math.nan, math.inf, -math.inf, -0.01, 1.01, 0.479):
             self.assertEqual(eligible_tile_blocks([block(confidence)]), [])
         self.assertEqual(len(eligible_tile_blocks([block(0.48)])), 1)
+
+    def test_empty_non_japanese_density_and_direction_fail_closed(self) -> None:
+        rect = (0.74, 0.20, 0.08, 0.42)
+        blocks = [
+            TileBlock("vertical", 0.84, "", 0.90, True, 0.90, 0.90, rect),
+            TileBlock("vertical", 0.84, "noise", 0.90, False, 0.90, 0.90, rect),
+            TileBlock("vertical", 0.84, "かな", 0.90, True, 0.49, 0.90, rect),
+            TileBlock("vertical", 0.84, "かな", 0.90, True, 0.90, 0.49, rect),
+            TileBlock("horizontal", 0.84, "かな", 0.90, True, 0.90, 0.90, rect),
+        ]
+        self.assertEqual(eligible_tile_blocks(blocks), [])
+
+    def test_risk_classifier_uses_the_same_direction_boundary(self) -> None:
+        for marker in (
+            "!block.directionConfidence.isFinite",
+            "block.directionConfidence < 0.45",
+        ):
+            self.assertIn(marker, self.risk)
 
     def test_line_frontier_remains_a_separate_coverage_gate(self) -> None:
         line = LineObservation(
@@ -265,7 +318,7 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.frontier)
 
-    def test_tile_budget_and_ordering_remain_bounded(self) -> None:
+    def test_tile_budget_and_crop_order_remain_bounded(self) -> None:
         for marker in (
             "let maximumTiles = 6",
             "let maximumWindows = 18",
@@ -278,14 +331,17 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
             self.assertIn(marker, self.tile)
         self.assertEqual(self.tile.count("processedWindowCount += 1"), 1)
 
-    def test_pixel_first_and_block_paths_keep_distinct_geometry_boundaries(self) -> None:
+    def test_pixel_first_and_block_paths_keep_distinct_boundaries(self) -> None:
         self.assertIn("!overlapsLayoutBlock", self.detector)
         self.assertIn("!existingVerticalRegions.contains(where:", self.detector)
-        self.assertIn("let recoveryFrontierObservations = lineRefined + pixelFirstRefined", self.crops)
+        self.assertIn(
+            "let recoveryFrontierObservations = lineRefined + pixelFirstRefined",
+            self.crops,
+        )
         self.assertIn("lineObservations: recoveryFrontierObservations", self.crops)
         self.assertIn("!reliableVerticalBlocks.contains(where:", self.tile)
 
-    def test_quality_gate_does_not_change_tile_crop_or_orientation_paths(self) -> None:
+    def test_direction_gate_does_not_change_tile_crop_or_orientation_paths(self) -> None:
         for marker in (
             "japaneseVerticalSliceWindows(",
             "prepareJapaneseCropForVision(crop.image)",
@@ -299,7 +355,7 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.tile)
 
-    def test_translation_persistence_and_optional_research_stay_outside_tile_gate(self) -> None:
+    def test_translation_persistence_and_optional_research_stay_outside_gate(self) -> None:
         self.assertIn("translateImageBlockWithQA(", self.store)
         self.assertIn("persist()", self.store)
         for source in (self.tile, self.detector, self.crops):
@@ -319,13 +375,13 @@ class JapaneseTileCoverageEligibilityContractTests(unittest.TestCase):
         )
         combined = self.workflow + self.docs
         for marker in (
-            "scripts/test-v3349-japanese-tile-coverage-eligibility-contract.py",
-            "v3.349",
-            "japanese-benchmark-v3.349-",
+            "scripts/test-v3350-japanese-tile-direction-eligibility-contract.py",
+            "v3.350",
+            "japanese-benchmark-v3.350-",
         ):
             self.assertIn(marker, combined)
         contract = read(
-            "scripts/test-v3349-japanese-tile-coverage-eligibility-contract.py"
+            "scripts/test-v3350-japanese-tile-direction-eligibility-contract.py"
         )
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)
