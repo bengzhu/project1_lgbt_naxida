@@ -1,8 +1,8 @@
-### v3.357 Japanese kana SFX translation-recall contract（当前研发分支）
+### v3.357 Japanese kana SFX translation-recall contract（已完成）
 
 - 普通图片日语 OCR 的既有 `.sfx` 推断此前偏向片假名；v3.357 增加高信号的完整假名重复（`ふらふら`）、词尾促音（`ぐっ`）与极短长音/省略号（`ふー`）形状，并保留对话引号拒绝、边界框/长度/日语比例门。较长平假名长音对白不会仅因一个标记升级。
 - 翻译上下文和漫画 batch prompt 只追加拟声词/状态字的简短中文拟声或动作表达提示，不补写主语、解释动作或扩写成完整句子；文字类型仍是 prompt metadata，不改变 OCR、候选/geometry/layout、请求预算、标签/QA、取消、持久化或非日语路径。
-- 新增 `scripts/test-v3357-japanese-sfx-translation-recall-contract.py`，工程版本 `3.357`，CI 接入后待云端 full/PR/merge receipt 验证。本地只做无进程静态合同和语法检查，未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。`test/3.png` 尚未提供，收到真实文件后再纳入同一回归；不以 synthetic fixture 或本合同结果宣称通用 OCR/CER 或翻译质量提升。
+- 新增 `scripts/test-v3357-japanese-sfx-translation-recall-contract.py`，工程版本 `3.357`；新合同 `7/7`，本地安全回归 `356` 个通过、`27` 个进程/编译入口合同按约束跳过（`383` 总计），Python AST `402/402`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。exact-SHA full [33300948175](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33300948175)、PR [#421](https://github.com/bengzhu/project1_lgbt_naxida/pull/421) checks [33301514792](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33301514792)、merge SHA `84b9a681fa95b9978db465888013784d8a005454` 与合入后 push CI [33301557301](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33301557301) 均成功。本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。`test/3.png` 尚未提供，收到真实文件后再纳入同一回归；不以 synthetic fixture 或本合同结果宣称通用 OCR/CER 或翻译质量提升。
 
 ### v3.356 Japanese compact spatial-balance contract（已完成）
 

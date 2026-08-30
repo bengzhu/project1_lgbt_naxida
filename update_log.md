@@ -1,10 +1,10 @@
-## v3.357：Japanese kana SFX translation recall（2026-08-30，研发中）
+## v3.357：Japanese kana SFX translation recall（2026-08-30，已完成）
 
 继续只优化 AITRANS 普通图片 OCR→日语翻译主路径。审计 `test/2.png` 这类漫画页的声效形状发现，旧 `TranslationTextKindClassifier` 主要依赖重复片假名；`ふらふら`、`ぐっ`、`ふー` 等常见平假名/混合假名声效可能被当作对白，进入不合适的长句翻译提示。
 
 本轮实现的可证伪边界是：在既有边界框、长度、日语比例和对话引号拒绝门之外，只接受完整假名重复模式、词尾促音、极短长音/省略号，或保留片假名标记形状的 `.sfx` metadata；较长平假名长音对白不因单个标记自动升级。翻译上下文和漫画 batch prompt 只对标记为拟声词/状态字的块追加简短中文拟声或动作表达提示，要求保留节奏且不补写主语、解释动作或扩写成完整句子。
 
-OCR、candidate/geometry/layout、请求预算、tag/QA、取消、持久化、默认模型、UI/renderer 和非日语路径不变；不读取 ground truth，不接入 Koharu/GGUF/授权语料/目标设备证据，不把 metadata 或 prompt contract 结果外推为通用 OCR/CER 或翻译质量提升。新增 `scripts/test-v3357-japanese-sfx-translation-recall-contract.py`，工程版本推进至 `3.357`，CI 已接入；本地只做安全静态合同与语法检查，云端 full/PR/merge receipt 待验证。`test/3.png` 当前仍未在工作树、分支或 `origin` 历史中出现，收到真实文件后再纳入普通 OCR/翻译回归。
+OCR、candidate/geometry/layout、请求预算、tag/QA、取消、持久化、默认模型、UI/renderer 和非日语路径不变；不读取 ground truth，不接入 Koharu/GGUF/授权语料/目标设备证据，不把 metadata 或 prompt contract 结果外推为通用 OCR/CER 或翻译质量提升。新增 `scripts/test-v3357-japanese-sfx-translation-recall-contract.py`，工程版本推进至 `3.357`，CI 已接入。本地安全回归为 356 个安全合同通过、27 个进程/编译入口合同按约束跳过（383 总计），Python AST `402/402`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过；exact-SHA full [33300948175](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33300948175)、PR [#421](https://github.com/bengzhu/project1_lgbt_naxida/pull/421) checks [33301514792](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33301514792)、merge SHA `84b9a681fa95b9978db465888013784d8a005454` 与合入后 push CI [33301557301](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33301557301) 均成功；本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。`test/3.png` 当前仍未在工作树、分支或 `origin` 历史中出现，收到真实文件后再纳入普通 OCR/翻译回归。
 
 ## v3.356：Japanese compact spatial balance（2026-08-30，已完成）
 
