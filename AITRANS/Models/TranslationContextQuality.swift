@@ -461,6 +461,39 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         return normalizedContext
     }
 
+    /// Returns the style metadata aligned with one item of a tagged batch.
+    /// A missing entry deliberately falls back to dialogue so a legacy block
+    /// cannot inherit the first block's type merely because the batch contains
+    /// mixed text kinds.
+    func batchTextKind(
+        at offset: Int,
+        fallback: TranslationTextKind = .dialogue
+    ) -> TranslationTextKind {
+        guard batchTextKinds.indices.contains(offset) else { return fallback }
+        return batchTextKinds[offset]
+    }
+
+    /// Narrows a mixed-batch context before it is consumed by a plain-text
+    /// single-block request. Confirmed terms and an eligible previous-batch
+    /// summary remain read-only context, while per-item batch style metadata
+    /// and the batch ordinal are removed. The existing kind-specific output
+    /// limit is surfaced to the model and remains the same QA limit.
+    func scopedToSingleBlock(
+        textKind: TranslationTextKind,
+        sourceCharacterCount: Int
+    ) -> TranslationPromptContext {
+        var copy = TranslationPromptContext(
+            confirmedTerms: confirmedTerms,
+            previousBatchSummary: previousBatchSummary,
+            textKind: textKind,
+            maxOutputCharacters: maxOutputCharacters
+                ?? textKind.defaultMaximumOutputCharacters(for: sourceCharacterCount)
+        )
+        copy.requestSourceLanguage = requestSourceLanguage
+        copy.requestTargetLanguage = requestTargetLanguage
+        return copy
+    }
+
     func promptSection() -> String {
         let context = normalized()
         guard !context.isEmpty else { return "" }

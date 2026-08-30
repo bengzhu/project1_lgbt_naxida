@@ -5116,7 +5116,10 @@ final class TranslationSessionStore: ObservableObject {
                     TranslationBatchQAInputItem(
                         id: expectedIDs[offset],
                         sourceText: block.original,
-                        kind: block.textKind ?? translationContext.textKind
+                        kind: translationContext.batchTextKind(
+                            at: offset,
+                            fallback: block.textKind ?? .dialogue
+                        )
                     )
                 },
                 configuration: japaneseTranslationQAConfiguration(
@@ -5296,11 +5299,23 @@ final class TranslationSessionStore: ObservableObject {
         targetLanguage: SupportedLanguage,
         translationContext: TranslationPromptContext
     ) async throws -> String {
+        let batchOffset = translationContext.batchStartIndex.map { startIndex in
+            expectedID - startIndex - 1
+        }
+        let effectiveTextKind = block.textKind
+            ?? batchOffset.map {
+                translationContext.batchTextKind(at: $0)
+            }
+            ?? .dialogue
+        let singleBlockContext = translationContext.scopedToSingleBlock(
+            textKind: effectiveTextKind,
+            sourceCharacterCount: block.original.count
+        )
         let candidate = try await translate(
             block.original,
             sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage,
-            translationContext: translationContext
+            translationContext: singleBlockContext
         )
         try Task.checkCancellation()
 
@@ -5308,11 +5323,11 @@ final class TranslationSessionStore: ObservableObject {
         let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
             output: cleanCandidate,
             sourceText: block.original,
-            kind: block.textKind ?? translationContext.textKind,
+            kind: effectiveTextKind,
             configuration: japaneseTranslationQAConfiguration(
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
-                translationContext: translationContext
+                translationContext: singleBlockContext
             )
         )
         guard failures.isEmpty else {
