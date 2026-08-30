@@ -1,6 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.347 Japanese recovery frontier：`lineRefined + reliable pixel-first recovery -> shared tile coverage frontier -> bounded 18-window tile fallback`；只有通过既有 verticalLine、有限 confidence、日语质量和竖排 geometry gate 的 pixel-first 结果才抑制重复 tile，弱/空结果、预算、方向、翻译 QA、取消和持久化边界不变。
 当前 v3.346 Japanese pixel-first regular crop spatial balance：`pixel-first geometry -> compact reserve(<=4) -> regular multi-band over-budget round-robin -> bounded 12-crop recovery -> existing orientation/fusion`；只在 regular 候选超出剩余名额且多 band 时均衡未覆盖区域，compact 预留、总 12/方向 4 上限、quality/geometry、翻译 QA、取消和持久化边界不变。
 当前 v3.345 Japanese vertical crop spatial balance：`risk-first vertical layout blocks -> multi-band over-budget round-robin -> bounded 16-block crop queue -> existing owner/line/fallback fusion`；仅在候选超过 16 且存在多个非空纵向 band 时均衡既有 block crop 名额，最终恢复原风险顺序，16/8 请求上限、质量门、owner/layout、翻译 QA、取消和持久化边界不变。
 当前 v3.344 Japanese weak-block recovery spatial balance：`weak layout blocks -> existing finite-confidence priority -> multi-band over-budget round-robin -> bounded four-block scoped reread -> measurable replacement`；只在候选超过 4 且存在多个纵向 band 时均衡既有 recovery 名额，最终恢复原 weak-first 顺序，`.55`/日文质量/改善门、失败取消、OCR/layout、翻译 QA 和持久化边界不变。
