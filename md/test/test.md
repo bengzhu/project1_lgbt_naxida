@@ -1,7 +1,7 @@
-### v3.368 Translation metadata prefix contract（验证中）
+### v3.368 Translation metadata prefix contract（已完成）
 
 - `GemmaLocalService.cleanTranslationOutput` 的 prompt marker 过滤改为行首边界：自然译文句中出现 `translation engine`、`输出风格` 等内容时整行保留；行首（允许边缘标点）的明确 metadata、metadata bullet、表格和翻译标签继续移除，之后仍进入既有 validation/QA。
-- 新增 `scripts/test-v3368-translation-metadata-prefix-contract.py`，工程版本 `3.368`，workflow 已接入；本地安全回归和云端 exact-SHA full 正在进行。OCR/layout、预算、标签、逐块 QA、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，不合成输入或质量证据。
+- 新增 `scripts/test-v3368-translation-metadata-prefix-contract.py`，工程版本 `3.368`，workflow 已接入；本地安全回归 `367` 个无进程入口合同通过、`27` 个进程/编译/runtime 合同按约束跳过（`394` 总计），Python AST `414/414`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、project versions `3.368/3.368` 与 `git diff --check` 通过。实现 SHA `9f8c52877e93e3d97f9dc450d006f51ed9dfd951` 的 exact-SHA full [33318086676](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33318086676)、PR [#432](https://github.com/bengzhu/project1_lgbt_naxida/pull/432) checks [33318078495](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33318078495)、merge SHA `9d3a3d604a4500191073e558f69fd3bd0f161bc6` 与合入后 push CI [33318776814](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33318776814) 均成功；云端 Japanese benchmark、静态/UI/Home/Paste/Speech 合同、Xcode build、JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。OCR/layout、预算、标签、逐块 QA、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，不合成输入或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
 
 ### v3.367 Translation numeric token Unicode QA contract（已完成）
 
