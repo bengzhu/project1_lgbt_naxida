@@ -76,7 +76,7 @@ class JapaneseKoharuPixelDetectorContractTests(unittest.TestCase):
     def test_detector_candidates_are_vertical_uncovered_and_bounded(self) -> None:
         detector_scope = self.detector + self.vision
         for marker in [
-            "!verticalBlocks.contains(where:",
+            "!reliableVerticalBlocks.contains(where:",
             "rect.width <= 0.30",
             "rect.height >= 0.025",
             "aspectRatio >= 1.15",

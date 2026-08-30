@@ -2621,6 +2621,20 @@ struct VisionOCRService: Sendable {
             imageHeight: imageHeight,
             stripWidth: tileWidth
         )
+        // A layout block is geometry context, not recognition coverage by
+        // itself. Keep weak, empty, non-Japanese, and low-density vertical
+        // blocks eligible for the existing tile fallback; only a usable
+        // Japanese block may suppress a broad reconnaissance window.
+        let reliableVerticalBlocks = verticalBlocks.filter { block in
+            let text = postProcessJapaneseOCRText(block.text)
+            return block.direction == .vertical
+                && !text.isEmpty
+                && validOCRConfidence(block.confidence) != nil
+                && block.confidence >= 0.48
+                && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
+                && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
+                && japaneseScriptDensity(in: text) >= 0.5
+        }
         // Manga reading order is right-to-left across columns, then
         // top-to-bottom inside each column. For a very tall page, a strict
         // column-first loop can spend the whole finite budget in the first
@@ -2658,7 +2672,7 @@ struct VisionOCRService: Sendable {
                 width: Double(pixelWidth) / Double(imageWidth),
                 height: Double(pixelHeight) / Double(imageHeight)
             )
-            guard !verticalBlocks.contains(where: {
+            guard !reliableVerticalBlocks.contains(where: {
                 verticalTileIsCovered($0.rect, by: tileRect)
             }),
                   !reliableLineRegions.contains(where: {

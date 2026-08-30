@@ -167,7 +167,7 @@ class JapaneseTranslationFallbackQAContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.348", "3.348"],
+            ["3.349", "3.349"],
         )
 
     def test_contract_has_no_process_entry(self) -> None:
