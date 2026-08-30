@@ -556,6 +556,21 @@ struct GemmaLocalService: LocalLanguageModeling {
             "翻译是：",
             "这是翻译"
         ]
+
+        // A prompt marker embedded in translated prose is content; only a
+        // marker at the line start is unambiguous metadata.
+        func isPromptMarkerAtLineStart(_ line: String, marker: String) -> Bool {
+            guard let range = line.range(
+                of: marker,
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+            ) else {
+                return false
+            }
+            let before = String(line[..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+            return before.isEmpty
+        }
+
         lines.removeAll { line in
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             let bulletBody = trimmed.hasPrefix("- ")
@@ -563,8 +578,8 @@ struct GemmaLocalService: LocalLanguageModeling {
                 : trimmed
             let isMetadataBullet = trimmed.hasPrefix("- ")
                 && (bulletBody.isEmpty
-                    || lineLeakMarkers.contains {
-                        bulletBody.localizedCaseInsensitiveContains($0)
+                    || lineLeakMarkers.contains { marker in
+                        isPromptMarkerAtLineStart(bulletBody, marker: marker)
                     })
             let isTranslationLabelOnly = translationLabelMarkers.contains { marker in
                 guard let range = trimmed.range(
@@ -581,8 +596,8 @@ struct GemmaLocalService: LocalLanguageModeling {
             }
             return isMetadataBullet
                 || (trimmed.hasPrefix("|") && trimmed.hasSuffix("|"))
-                || lineLeakMarkers.contains {
-                    trimmed.localizedCaseInsensitiveContains($0)
+                || lineLeakMarkers.contains { marker in
+                    isPromptMarkerAtLineStart(trimmed, marker: marker)
                 }
                 || isTranslationLabelOnly
         }
