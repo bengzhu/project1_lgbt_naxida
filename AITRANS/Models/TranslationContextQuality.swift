@@ -49,6 +49,15 @@ enum TranslationTextKindClassifier {
         guard (2...12).contains(compact.count) else { return nil }
 
         let scalars = Array(compact.unicodeScalars)
+        let hasSoundEffectMarker = scalars.contains { scalar in
+            switch scalar.value {
+            case 0x2025, 0x2026, 0x30FC, 0x301C,
+                 0xFF5E, 0x2605, 0x2606, 0x266A:
+                true
+            default:
+                false
+            }
+        }
         let japaneseLetters = scalars.filter { scalar in
             switch scalar.value {
             case 0x3040...0x30FA, 0x3400...0x4DBF,
@@ -59,7 +68,20 @@ enum TranslationTextKindClassifier {
                 false
             }
         }
-        guard japaneseLetters.count >= 2 else { return nil }
+        let hasSmallTsuEnding = japaneseLetters.last.map { scalar in
+            switch scalar.value {
+            case 0x3063, 0x30C3, 0xFF6F:
+                true
+            default:
+                false
+            }
+        } ?? false
+        guard japaneseLetters.count >= 2
+            || (japaneseLetters.count >= 1
+                && japaneseLetters.count <= 4
+                && (hasSoundEffectMarker || hasSmallTsuEnding)) else {
+            return nil
+        }
 
         let katakanaLetters = japaneseLetters.filter { scalar in
             switch scalar.value {
@@ -69,9 +91,19 @@ enum TranslationTextKindClassifier {
                 false
             }
         }
+        let kanaLetters = japaneseLetters.filter { scalar in
+            switch scalar.value {
+            case 0x3041...0x309F, 0x30A1...0x30FA, 0xFF66...0xFF9D:
+                true
+            default:
+                false
+            }
+        }
         let katakanaRatio = Double(katakanaLetters.count)
             / Double(japaneseLetters.count)
-        guard katakanaRatio >= 0.65 else { return nil }
+        let kanaRatio = Double(kanaLetters.count)
+            / Double(japaneseLetters.count)
+        guard katakanaRatio >= 0.65 || kanaRatio >= 0.65 else { return nil }
 
         let hasDialogueQuote = scalars.contains { scalar in
             switch scalar.value {
@@ -83,23 +115,49 @@ enum TranslationTextKindClassifier {
         }
         guard !hasDialogueQuote else { return nil }
 
-        let hasSoundEffectMarker = scalars.contains { scalar in
-            switch scalar.value {
-            case 0x30FC, 0x301C, 0xFF5E, 0x2605,
-                 0x2606, 0x266A:
-                true
-            default:
-                false
-            }
-        }
-
-        var letterCounts: [UInt32: Int] = [:]
+        var katakanaCounts: [UInt32: Int] = [:]
         for scalar in katakanaLetters {
-            letterCounts[scalar.value, default: 0] += 1
+            katakanaCounts[scalar.value, default: 0] += 1
         }
         let hasRepeatedKatakana = katakanaLetters.count >= 3
-            && letterCounts.values.contains { $0 >= 2 }
-        guard hasSoundEffectMarker || hasRepeatedKatakana else { return nil }
+            && katakanaCounts.values.contains { $0 >= 2 }
+        let kanaValues = kanaLetters.map(\.value)
+        let hasRepeatedKanaUnit: Bool
+        if kanaValues.count >= 4, kanaValues.count.isMultiple(of: 2) {
+            let half = kanaValues.count / 2
+            hasRepeatedKanaUnit = Array(kanaValues.prefix(half))
+                == Array(kanaValues.suffix(half))
+        } else {
+            hasRepeatedKanaUnit = false
+        }
+        var longestRepeatedKanaRun = kanaValues.isEmpty ? 0 : 1
+        var currentRepeatedKanaRun = longestRepeatedKanaRun
+        if kanaValues.count > 1 {
+            for index in 1..<kanaValues.count {
+                if kanaValues[index] == kanaValues[index - 1] {
+                    currentRepeatedKanaRun += 1
+                    longestRepeatedKanaRun = max(
+                        longestRepeatedKanaRun,
+                        currentRepeatedKanaRun
+                    )
+                } else {
+                    currentRepeatedKanaRun = 1
+                }
+            }
+        }
+        let hasRepeatedKana = hasRepeatedKanaUnit
+            || longestRepeatedKanaRun >= 3
+        let hasKatakanaMarkerShape = hasSoundEffectMarker
+            && katakanaRatio >= 0.65
+        let hasShortMarkerShape = hasSoundEffectMarker
+            && japaneseLetters.count <= 2
+        guard hasKatakanaMarkerShape
+            || hasShortMarkerShape
+            || hasRepeatedKatakana
+            || hasRepeatedKana
+            || hasSmallTsuEnding else {
+            return nil
+        }
         return .sfx
     }
 }
@@ -404,6 +462,9 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             }
         } else {
             lines.append("本次文字类型：\(context.textKind.promptLabel)")
+        }
+        if context.textKind == .sfx || context.batchTextKinds.contains(.sfx) {
+            lines.append("标记为拟声词/状态字的文字块：仅使用简短的中文拟声或动作表达，保留节奏；不要补写主语、解释动作；不要扩写成完整句子。")
         }
         if !context.confirmedTerms.isEmpty {
             lines.append("已确认术语/人名/称呼（只采用 confirmed 项；旧项撤销后不得继续采用）：")
