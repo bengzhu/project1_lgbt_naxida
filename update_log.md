@@ -1,10 +1,12 @@
-## v3.352：Japanese direction-confidence risk domain（2026-08-30，当前研发分支）
+## v3.352：Japanese direction-confidence risk domain（2026-08-30，已完成）
 
 v3.351 已完成 pixel-first coverage 的 block eligibility 收紧；继续审计普通图片 OCR→翻译主路径发现，覆盖门与风险排序的方向置信度合法域仍不一致：前者拒绝有限越界值，后者只拒绝非有限或低于 `.45` 的值，越界高值可能被当作可靠方向并占用有限复读机会。
 
 可证伪假设：**若由共享 `validJapaneseDirectionConfidence` 同时约束 weak-block recovery、vertical crop 风险排序与 direction tie-break，则 `NaN/±∞` 和有限越界值会按弱候选 fail closed，合法 `[0,1]` 与 `.45` 语义保持；最多 16 个 vertical block crop、8 次方向 fallback、4 个 weak-block scoped reread、pixel/line/tile/frontier、owner、OCR/layout、翻译 QA、取消、持久化、Koharu/GGUF 研究边界和非日语路径不变。**
 
-当前实现位于独立分支 `codex/v3.352-japanese-direction-confidence-risk-domain`：新增 `scripts/test-v3352-japanese-direction-confidence-risk-domain-contract.py`，工程版本推进至 `3.352`，workflow 已接入；本地安全静态回归与 exact-SHA cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+实现已合入 `smalldata_test`：新增 `scripts/test-v3352-japanese-direction-confidence-risk-domain-contract.py`，工程版本推进至 `3.352`，workflow 已接入。实现 SHA `321e52831b4ca9d202ae897276316c980f541fe7` 的 exact-SHA full [33294222837](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294222837)、PR [#416](https://github.com/bengzhu/project1_lgbt_naxida/pull/416) checks [33294632461](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294632461)、merge SHA `180f47f50cfa483a5796801d6247ccebef4ff493` 与合入后 push CI [33294679936](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294679936) 均成功。新合同 `10/10`；本地 `351` 个安全合同通过，`27` 个进程／编译／runtime 合同跳过，`378` 个合同总计无失败；Python AST `378/378`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+
+v3.352 文档收口 push CI 待执行；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 ## v3.351：Japanese pixel recovery block eligibility（2026-08-30，已完成）
 

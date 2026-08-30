@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-当前 v3.352 Japanese direction-confidence risk domain（研发中）：`vertical recovery -> finite closed [0,1] direction confidence -> weak-block/crop risk ordering -> bounded reread`；`NaN/±∞` 与有限越界值 fail closed，合法 `[0,1]` 与 `.45` 语义、16/8/4 请求上限、pixel/line/tile/frontier、owner、OCR/layout、翻译 QA、取消和持久化边界不变。
+当前 v3.352 Japanese direction-confidence risk domain（已完成）：`vertical recovery -> finite closed [0,1] direction confidence -> weak-block/crop risk ordering -> bounded reread`；`NaN/±∞` 与有限越界值 fail closed，合法 `[0,1]` 与 `.45` 语义、16/8/4 请求上限、pixel/line/tile/frontier、owner、OCR/layout、翻译 QA、取消和持久化边界不变。
 当前 v3.351 Japanese pixel recovery block eligibility（已完成）：`layout blocks -> finite normalized direction/OCR/Japanese quality gate -> pixel-first geometry coverage -> bounded 12-crop recovery`；弱/空/非日语/低密度/方向不确定 block 不抑制 pixel-first，可靠 block 与既有 observation/line frontier 仍抑制重复 geometry，最多 12 个 crop、方向 4、tile/block recovery、OCR/layout、翻译 QA、取消和持久化边界不变。v3.350 Japanese tile direction eligibility 已完成。
 当前 v3.349 Japanese tile coverage eligibility（已完成）：`vertical blocks -> usable Japanese text + finite confidence/density gate -> existing vertical tile coverage -> bounded 18-window tile fallback`；弱/空/非日语 block 不再抑制 tile，可靠 block 与 line frontier 仍抑制重复窗口，最多 6 个 tile、方向 4、pixel-first/line/block recovery、OCR/layout、翻译 QA、取消和持久化边界不变。
 当前 v3.348 Japanese pixel recovery eligibility（已完成）：`vertical provenance/role -> usable Japanese text + finite confidence/density gate -> existing vertical geometry coverage -> bounded 12-crop pixel-first recovery`；弱/空/非日语页面读数不再抑制 pixel-first，可靠读数仍抑制重复 crop，compact owner 例外、方向 4、line/tile frontier、OCR/layout、翻译 QA、取消和持久化边界不变。
