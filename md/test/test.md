@@ -2,6 +2,8 @@
 
 - `detectJapanesePixelFirstVerticalRegions` 不再让全部 `verticalBlocks` 仅凭几何阻止 pixel-first candidate；只有 vertical、`directionConfidence` 有限且位于 `[0,1]`、`>=.45`，并通过既有非空、OCR confidence `>=.48`、真实日语文字、日语文字密度与脚本文本密度 `>=.5` 的 block 才声明 geometry 已覆盖。弱/空/非日语/低密度/方向不确定 block 继续保留既有 pixel-first 机会；可靠 block 仍按既有 `japanesePixelDetectorRegionIsCovered` 抑制重复 geometry。最多 12 个 pixel-first crop、4 次方向 fallback、line frontier、tile/block recovery、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新增 `scripts/test-v3351-japanese-pixel-recovery-block-eligibility-contract.py`，工程版本 `3.351`；实现 SHA `09cd27d2931ed5aa5f79a0325beac06d9e106975` 的 exact-SHA full [33293068254](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33293068254)、PR [#415](https://github.com/bengzhu/project1_lgbt_naxida/pull/415) checks [33293551364](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33293551364)、merge SHA `db302ec1bf281533d01e31e3bc1b919cc95b6a57` 与合入后 push CI [33293585668](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33293585668) 均成功；新合同 `10/10`，本地 `350` 个安全合同通过，`27` 个进程／编译／runtime 合同跳过，`377` 个合同总计无失败；Python AST `377/377`、JSON `237/237`（排除 2 个已知 JSONC）、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
 
+v3.351 文档收口 push CI [33293685336](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33293685336) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+
 ### v3.350 Japanese tile direction eligibility contract（已完成）
 
 文档收口 push CI [33292525345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292525345) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
