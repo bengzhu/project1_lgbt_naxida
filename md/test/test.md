@@ -1,5 +1,7 @@
 ### v3.347 Japanese recovery frontier contract（已完成）
 
+文档收口 push CI [33288959454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288959454) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+
 - `recognizeJapaneseVerticalCrops` 先完成既有 line-first 与 pixel-first recovery，再把 `lineRefined + pixelFirstRefined` 传给 tile fallback 的只读 coverage frontier；tile 仍只用 `japaneseLinePathRegion` 接受 `.verticalLine`、有限 `[0,1]` confidence、真实日语文字/脚本密度和竖排 geometry 合格结果，弱/空 pixel-first 输出不抑制宽 tile。最多 18 个 tile window、4 次 opposite orientation、既有 crop/geometry、布局、翻译 QA、取消和持久化边界不变。
 - 新合同：`scripts/test-v3347-japanese-recovery-frontier-contract.py`；工程版本推进至 `3.347`，Japanese benchmark route 已接入。实现 SHA `a3fd100d908da4ade62ad8b4311afad95cb7a690` 的 exact-SHA full [33288126373](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288126373)、PR [#411](https://github.com/bengzhu/project1_lgbt_naxida/pull/411) checks [33288763518](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288763518)、merge SHA `112c5dfcf4e4c3eb1ce51d8501911eb9112982bf` 与合入后 push CI [33288808855](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288808855) 均成功；新合同 `9/9`。本地 `346` 个安全合同通过，`27` 个进程／编译／runtime 合同按约束跳过，`373` 个合同总计无失败；Python AST `373/373`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
 

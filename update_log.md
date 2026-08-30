@@ -1,5 +1,7 @@
 ## v3.347：Japanese recovery frontier（2026-08-30，已完成）
 
+文档收口 push CI [33288959454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288959454) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+
 v3.346 已让 pixel-first regular crop 在多纵向 band 间共享既有 12 个名额；继续审计普通图片 OCR→翻译主路径发现，pixel-first 复读在既有质量门后已经产出可靠 `.verticalLine` observation，但同一轮后续 tile fallback 仍只接收 `lineRefined`，不会把可靠 pixel-first 结果纳入覆盖前沿。这样已被窄 crop 读出的区域仍可能触发宽 tile，消耗既有 18 个 tile 窗口并挤出之后的未覆盖区域。
 
 可证伪假设：**若把 `lineRefined + pixelFirstRefined` 作为 tile 的只读 coverage frontier，并继续由 `japaneseLinePathRegion` 统一执行 `.verticalLine`、有限 `[0,1]` confidence、实际日语文字/脚本密度与竖排 geometry gate，则可靠 pixel-first 区域不会重复进入 tile，弱/空/非竖排结果仍保留既有 fallback；tile 仍最多 18 个窗口、最多 4 次反向方向复读，OCR/layout、翻译 QA、取消、持久化与非日语路径不变。**
