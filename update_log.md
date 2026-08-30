@@ -1,3 +1,11 @@
+## v3.366：Japanese fallback context scope（当前研发分支，待云端验证）
+
+继续提升普通图片日语 OCR→翻译主路径。审计发现，混合 `[N]` batch 的批量输出缺失或逐块质量失败后，plain-text 回退仍把整批 `batchTextKinds` 带入当前单块请求；旧块没有 `textKind` 时，QA 还可能继承批次第一块的类型。相邻块的拟声词、标题或旁白风格因此可能污染当前对白回退。
+
+本轮可证伪假设：**若逐块回退按 `expectedID - batchStartIndex - 1` 取得当前块的准确类型，缺失类型安全回落到 dialogue，并在 plain-text 请求前移除混合 batch metadata，同时保留 confirmed 术语和已完成上一批只读摘要；再把既有 `TranslationTextKind.defaultMaximumOutputCharacters` 的同一上限同时告知模型和 block QA，则混合 batch 的回退译文不会继承其它块的类型约束，且短块/标题/SFX 不会被无界长输出拖过 QA。**
+
+实现改动：`TranslationPromptContext` 新增 batch offset 类型读取与 `scopedToSingleBlock`；`translateJapaneseImageBatch` 的 QA item 使用与 `[N]` 对齐的类型；`translateJapaneseImageBlockWithQA` 在模型请求和 QA 前收窄 context、恢复当前块类型，并携带类型化输出长度上限。新增 `scripts/test-v3366-japanese-fallback-context-scope-contract.py`，工程版本 `3.366`，workflow 已接入；当前待安全静态回归与 exact-SHA full。OCR、detector、crop/warp、geometry/layout、8 blocks/1,800 chars、标签、取消、持久化、UI/renderer、非日语路径与 Koharu/GGUF/授权语料/目标设备证据边界不变。`test/3.png` 仍未提供，不合成输入或把合同结果外推为通用 OCR/CER/翻译质量证据。
+
 ## v3.365：Japanese per-kind style prompt scope（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计 `test/2.png` 这类混合漫画 batch 后发现，`TranslationPromptContext` 已能携带全局 `[N]` 对应的文字类型，但非 SFX 类型在混合批次中仍只有类型标签，弱本地模型可能把对白、旁白、标题或其它块的表达风格互相串用。
