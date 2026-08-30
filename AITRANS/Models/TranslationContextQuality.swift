@@ -869,6 +869,7 @@ enum TranslationBatchQualityEvaluator {
         }
         if isSourceLeakage(
             source: sourceText,
+            output: translatedText,
             normalizedSource: normalizedSource,
             normalizedOutput: normalizedOutput,
             sourceLanguage: configuration.sourceLanguage,
@@ -969,12 +970,13 @@ enum TranslationBatchQualityEvaluator {
     /// output.
     private static func isSourceLeakage(
         source: String,
+        output: String,
         normalizedSource: String,
         normalizedOutput: String,
         sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage
     ) -> Bool {
-        guard normalizedSource.count > 1,
+        guard !normalizedSource.isEmpty,
               !isOnlyDigits(normalizedSource),
               normalizedOutput.contains(normalizedSource) else {
             return false
@@ -983,6 +985,17 @@ enum TranslationBatchQualityEvaluator {
         if sourceLanguage == .japanese,
            targetLanguage == .simplifiedChinese,
            isSharedHanOnlyJapaneseSource(source) {
+            // The shared-Han exception is exact-only. A tagged block such as
+            // `日本人` must not pass merely because it contains the source
+            // `日本`; the model cleaner and QA must make the same decision.
+            return !TranslationOutputPolicy.allowsUnchangedJapaneseHanTranslation(
+                source: source,
+                output: output,
+                sourceLanguage: sourceLanguage,
+                targetLanguage: targetLanguage
+            )
+        }
+        guard normalizedSource.count > 1 else {
             return false
         }
         return true

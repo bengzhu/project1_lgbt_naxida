@@ -1,3 +1,8 @@
+### v3.359 Japanese shared-Han QA exactness contract（候选验证中）
+
+- v3.358 的模型清洗器已经只对规范化后完全相同的纯汉字共享词放行，但产品 QA 的 `isSourceLeakage` 仍把 `日本→日本人` 等原文子串当作例外。v3.359 让 QA 直接复用同一 exact shared-Han policy；仅日语→简体中文、至少两个字符、纯汉字且规范化后完全相同的输出免于泄漏失败，单字、假名/拉丁/数字、额外原文和其它语言对仍进入拒绝/补译边界。
+- 新增 `scripts/test-v3359-japanese-shared-han-qa-exactness-contract.py`，工程版本 `3.359`，CI 已接入；云端 full、PR checks、合入后 CI 与 receipt 待候选 SHA 验证后补录。本地仍只允许运行安全 Python 合同、AST/YAML/shell/plist 静态检查和 `git diff --check`，不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF。OCR、geometry/layout、请求预算、tag、取消、持久化、UI/renderer 和非日语路径不因该 QA 收紧而改变；`test/3.png` 尚未提供，不合成样图代替证据。
+
 ### v3.358 Japanese shared-Han model-cleanup contract（已完成）
 
 - 产品 QA 已允许日语→简体中文的纯汉字共享词保持同形，但本地模型清洗层此前在标准输出与带 `[N]` 漫画 batch 中仍将其判为原文重复。v3.358 通过 `TranslationOutputPolicy` 统一窄条件：源/输出规范化后相同、源文本至少两个字符且纯汉字，并且语言对严格为日语→简体中文时才放行；假名、拉丁字母、数字、额外原文和其它语言对仍走原有拒绝门。

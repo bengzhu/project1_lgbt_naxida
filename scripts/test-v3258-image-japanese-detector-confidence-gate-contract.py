@@ -123,7 +123,7 @@ class ImageJapaneseDetectorConfidenceGateContractTests(unittest.TestCase):
 
     def test_project_version_is_v3258(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.358", "3.358"])
+        self.assertEqual(versions, ["3.359", "3.359"])
 
 
 if __name__ == "__main__":

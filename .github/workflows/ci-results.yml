@@ -3609,6 +3609,7 @@ jobs:
           python3 -B scripts/test-v3356-japanese-compact-spatial-balance-contract.py
           python3 -B scripts/test-v3357-japanese-sfx-translation-recall-contract.py
           python3 -B scripts/test-v3358-japanese-shared-han-model-cleanup-contract.py
+          python3 -B scripts/test-v3359-japanese-shared-han-qa-exactness-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3835,7 +3836,8 @@ jobs:
           # japanese-benchmark-v3.356-
           # japanese-benchmark-v3.357-
           # japanese-benchmark-v3.358-
-          name: japanese-benchmark-v3.358-${{ github.run_id }}
+          # japanese-benchmark-v3.359-
+          name: japanese-benchmark-v3.359-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json
