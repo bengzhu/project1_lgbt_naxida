@@ -1,10 +1,10 @@
-## v3.349：Japanese tile coverage eligibility（开发中）
+## v3.349：Japanese tile coverage eligibility（2026-08-30，已完成）
 
 v3.348 后继续审计普通图片 OCR→翻译主路径发现，`recognizeJapaneseVerticalTileFallback` 仍以全部 `verticalBlocks` 的几何直接跳过宽 tile；低置信、空/非日语或低密度的竖排 block 也可能因此提前声明覆盖，让既有 tile recovery 无法补读。
 
 可证伪假设：**若保留现有 `verticalTileIsCovered` 几何关系，仅让方向为 vertical 且通过非空、有限 `[0,1]` confidence `>=.48`、真实日语文字、日语文字密度与脚本文字密度 `>=.5` 的 block 抑制宽 tile，则弱 block 会重新保留既有 tile 机会，可靠 block 与可靠 line frontier 仍抑制重复窗口；最多 6 个 tile、18 个窗口、4 次 opposite orientation、pixel-first、block/line fallback、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
 
-当前在独立分支 `codex/v3.349-japanese-tile-coverage-eligibility` 实现；新增 `scripts/test-v3349-japanese-tile-coverage-eligibility-contract.py`，工程版本推进至 `3.349`，Japanese benchmark route 已接入。当前先执行安全静态合同与云端 full validation；Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把固定样图外推为通用 OCR/CER 或翻译质量提升。
+实现已合入 `smalldata_test`：新增 `scripts/test-v3349-japanese-tile-coverage-eligibility-contract.py`，工程版本推进至 `3.349`，Japanese benchmark route 已接入。实现 SHA `f70cdf40a5474b82d410c9c9371d4be17ebe6a87` 的 exact-SHA full [33290699231](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290699231)、PR [#413](https://github.com/bengzhu/project1_lgbt_naxida/pull/413) checks [33291114888](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33291114888)、merge SHA `475aab7517d09cce374cc978a4ac12a7b27b980f` 与合入后 push CI [33291151655](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33291151655) 均成功。新合同 `11/11`；本地 `348` 个安全合同通过，`27` 个进程／编译／runtime 合同按约束跳过，`375` 个合同总计无失败；Python AST `375/375`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把固定样图外推为通用 OCR/CER 或翻译质量提升。
 
 ## v3.348：Japanese pixel recovery eligibility（2026-08-30，已完成）
 
