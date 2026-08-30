@@ -1500,6 +1500,63 @@ struct VisionOCRService: Sendable {
             return Array(blocks.prefix(limit))
         }
 
+        // Preserve the v3.336 risk-first guarantee across the v3.345 spatial
+        // pass. A weak block in a dense band must not be displaced merely
+        // because other bands contain more strong blocks: spend the bounded
+        // queue on risky blocks first, while still round-robining their bands.
+        // Once every risky candidate has a chance, fill any remaining slots
+        // with the same spatial policy for non-risky blocks.
+        let riskBands = bands.map { offsets in
+            offsets.filter { isJapaneseVerticalBlockAtRisk(blocks[$0]) }
+        }
+        let populatedRiskBands = riskBands.indices.filter { !riskBands[$0].isEmpty }
+        if !populatedRiskBands.isEmpty {
+            var selectedOffsets = Set<Int>()
+            var riskCursors = Array(repeating: 0, count: bandCount)
+            while selectedOffsets.count < limit {
+                var addedCandidate = false
+                for bandIndex in populatedRiskBands {
+                    guard selectedOffsets.count < limit,
+                          riskCursors[bandIndex] < riskBands[bandIndex].count else {
+                        continue
+                    }
+                    let offset = riskBands[bandIndex][riskCursors[bandIndex]]
+                    riskCursors[bandIndex] += 1
+                    selectedOffsets.insert(offset)
+                    addedCandidate = true
+                }
+                guard addedCandidate else { break }
+            }
+
+            if selectedOffsets.count < limit {
+                let nonRiskBands = bands.map { offsets in
+                    offsets.filter { !isJapaneseVerticalBlockAtRisk(blocks[$0]) }
+                }
+                let populatedNonRiskBands = nonRiskBands.indices.filter {
+                    !nonRiskBands[$0].isEmpty
+                }
+                var nonRiskCursors = Array(repeating: 0, count: bandCount)
+                while selectedOffsets.count < limit {
+                    var addedCandidate = false
+                    for bandIndex in populatedNonRiskBands {
+                        guard selectedOffsets.count < limit,
+                              nonRiskCursors[bandIndex] < nonRiskBands[bandIndex].count else {
+                            continue
+                        }
+                        let offset = nonRiskBands[bandIndex][nonRiskCursors[bandIndex]]
+                        nonRiskCursors[bandIndex] += 1
+                        selectedOffsets.insert(offset)
+                        addedCandidate = true
+                    }
+                    guard addedCandidate else { break }
+                }
+            }
+
+            return blocks.enumerated()
+                .filter { selectedOffsets.contains($0.offset) }
+                .map(\.element)
+        }
+
         var selectedOffsets = Set<Int>()
         var cursors = Array(repeating: 0, count: bandCount)
         while selectedOffsets.count < limit {
