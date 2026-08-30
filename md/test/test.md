@@ -1,7 +1,7 @@
-### v3.366 Japanese fallback context scope contract（当前研发分支，待云端验证）
+### v3.366 Japanese fallback context scope contract（已完成）
 
 - 混合日语漫画 `[N]` batch 在格式/质量失败后逐块回退时，只把当前块的文字类型和类型化输出长度提示交给 plain-text 请求与同一 block QA；confirmed 术语和已完成上一批只读摘要继续保留，无 `textKind` 的块不继承批次第一块。
-- 新增 `scripts/test-v3366-japanese-fallback-context-scope-contract.py`，工程版本 `3.366`，workflow 已接入；待安全静态回归与 exact-SHA full。OCR、标签、预算、取消、持久化和非日语路径不变；Koharu/GGUF、授权语料和目标设备不阻塞，`test/3.png` 未提供，不合成样图或质量证据。
+- 新增 `scripts/test-v3366-japanese-fallback-context-scope-contract.py`，工程版本 `3.366`，workflow 已接入；合同 `8/8`。本地安全回归 `365` 个无进程入口合同通过、`27` 个进程/编译/runtime 合同按约束跳过（`392` 总计），Python AST `412/412`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、project versions `3.366/3.366` 与 `git diff --check` 通过。实现 SHA `39cadeb70c0e0d4c800e9b86957913ecf32fb0cb` 的 exact-SHA full [33315051697](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33315051697)、PR [#430](https://github.com/bengzhu/project1_lgbt_naxida/pull/430) checks [33315618865](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33315618865)、merge SHA `a6286f876e80fd6d6d33f062d26078817b708fe4` 与合入后 push CI [33315668737](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33315668737) 均成功；云端 Japanese benchmark、静态/UI/Speech 合同、Xcode build、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。OCR、标签、预算、取消、持久化和非日语路径不变；Koharu/GGUF、授权语料和目标设备不阻塞，`test/3.png` 未提供，不合成样图或质量证据。
 
 ### v3.365 Japanese kind-style scope contract（已完成）
 
