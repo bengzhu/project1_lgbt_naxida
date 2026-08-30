@@ -1,8 +1,8 @@
-### v3.342 Japanese line owner balance contract（当前研发）
+### v3.342 Japanese line owner balance contract（已完成）
 
 - `japaneseMangaLineOCRCandidates` 保留 v3.337 风险优先 text-backed queue；当候选超过 text-backed 预算且原始前缀遗漏 known `verticalTextRegionOwner` 时，`boundedJapaneseMangaLineTextCandidates` 为每个遗漏 owner 选取原队列中最佳候选，优先移除已有 owner 的重复候选，并恢复原队列顺序。ownerless 不被计为 owner，只有无重复 known-owner 可移除时才会被挤出；预算内、单 owner 或已覆盖 owner 的前缀不变。
 - 总 line OCR 上限仍为 8，geometry-only 保留位仍最多 2；detector-owned 排除、line-first、confidence／日语密度 gate、owner coverage、block/tile fallback、翻译 QA、取消、持久化与非图片路径不变。
-- 新合同：`scripts/test-v3342-japanese-line-owner-balance-contract.py`；工程版本 `3.342`，Japanese benchmark route 已接入。本地安全静态回归与云端 exact-SHA full、PR、合入后 CI 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+- 新合同：`scripts/test-v3342-japanese-line-owner-balance-contract.py`；工程版本 `3.342`，Japanese benchmark route 已接入。本地 341 个安全合同通过，27 个进程／编译／runtime 合同按约束跳过；Python AST `368/368`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、JSON `237/237`（排除 2 个已知 JSONC）与 `git diff --check` 通过。本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `a6fdf8f16a85270b933ffeefc676bd36847a999b` 的 exact-SHA full [33282218767](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33282218767)、PR [#406](https://github.com/bengzhu/project1_lgbt_naxida/pull/406) checks [33282657014](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33282657014)、merge SHA `cdc97bb5a67b4f8e4499ab212bd2ed00f1204019` 与合入后 push CI [33282708733](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33282708733) 均成功。
 
 ### v3.341 Japanese vertical tile round-robin contract（已完成）
 

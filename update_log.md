@@ -1,10 +1,10 @@
-## v3.342：Japanese line owner balance（2026-08-30，当前研发）
+## v3.342：Japanese line owner balance（2026-08-30，已完成）
 
 v3.341 已把长图 vertical tile 的既有 18 个窗口改为条件式跨列轮询；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `japaneseMangaLineOCRCandidates` 虽已按风险优先排列 text-backed line，但在超过既有 text-backed 名额时，一个 known vertical TextRegion 的碎片候选仍可能占满前缀，让另一个 known owner 没有 line OCR 复读机会。
 
 可证伪假设：**若保留风险优先队列、最多 8 次 line OCR、最多 2 个 geometry-only 保留位和所有现有质量门，只在 text-backed 候选超出其预算且前缀遗漏 known owner 时，从该 owner 的原队列中提升最佳候选，并优先移除已覆盖 owner 的重复候选，则多个 known TextRegion 在同一预算内都能获得至少一个 line reread 机会；单 owner、预算内、已覆盖 owner 的普通页面保持原队列顺序。**
 
-实现边界：`boundedJapaneseMangaLineTextCandidates` 只统计显式 `verticalTextRegionOwner`，ownerless 候选不制造 owner；候选仍按 v3.337 风险排序，先取原始前缀，缺 owner 时按稳定原队列顺序补入，并按“重复 known owner → ownerless → 最后一个尾项”的顺序腾挪名额，最后恢复原队列顺序。geometry-only reserve、detector-owned 排除、line-first、OCR confidence／日语密度 gate、owner coverage、block fallback、翻译 QA、取消、持久化和非图片路径不变。新增 `scripts/test-v3342-japanese-line-owner-balance-contract.py`，工程版本推进至 `3.342`，Japanese benchmark route 已接入；云端 full 与合入证据待本轮验证后补录。本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+实现边界：`boundedJapaneseMangaLineTextCandidates` 只统计显式 `verticalTextRegionOwner`，ownerless 候选不制造 owner；候选仍按 v3.337 风险排序，先取原始前缀，缺 owner 时按稳定原队列顺序补入，并按“重复 known owner → ownerless → 最后一个尾项”的顺序腾挪名额，最后恢复原队列顺序。geometry-only reserve、detector-owned 排除、line-first、OCR confidence／日语密度 gate、owner coverage、block fallback、翻译 QA、取消、持久化和非图片路径不变。新增 `scripts/test-v3342-japanese-line-owner-balance-contract.py`，工程版本推进至 `3.342`，Japanese benchmark route 已接入。本地 341 个安全 Python 合同通过，27 个进程／编译／runtime 合同按约束跳过；Python AST `368/368`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、JSON `237/237`（排除 2 个已知 JSONC）与 `git diff --check` 全部通过，本地未运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `a6fdf8f16a85270b933ffeefc676bd36847a999b` 的 exact-SHA full [33282218767](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33282218767) 成功；PR [#406](https://github.com/bengzhu/project1_lgbt_naxida/pull/406) checks [33282657014](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33282657014) 成功，并以 merge SHA `cdc97bb5a67b4f8e4499ab212bd2ed00f1204019` 合入 `smalldata_test`；合入后 push CI [33282708733](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33282708733) 成功。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，本轮不外推为通用 OCR/CER 或翻译质量提升。
 
 ## v3.341：Japanese vertical tile round-robin（2026-08-28，已完成）
 
