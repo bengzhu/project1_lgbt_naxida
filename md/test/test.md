@@ -1,7 +1,7 @@
-### v3.362 Japanese translation context-echo contract（候选验证中）
+### v3.362 Japanese translation context-echo contract（已完成）
 
 - 跨 batch QA 只把规范化后完整等于上一批译文、且当前原文不同于上一批原文的输出判为 `previousContextLeakage`；当前译文合法包含上一批短语，或当前原文重复时，不再被 broad `contains` 规则误拒绝。
-- 新增 `scripts/test-v3362-japanese-translation-context-echo-contract.py`，工程版本 `3.362`，workflow 已接入；OCR、layout、请求预算、标签、逐块补译、取消、持久化、UI/renderer 和非日语路径保持不变。`test/3.png` 未提供，不伪造质量证据。
+- 新增 `scripts/test-v3362-japanese-translation-context-echo-contract.py`，工程版本 `3.362`，workflow 已接入；新合同 `6/6`，本地安全回归 `361` 个通过、`27` 个进程/编译/runtime 入口按约束跳过（`388` 总计），Python AST `408/408`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。实现 SHA `90fcf1079d46ae75b11cc677ecdae442453228a7` 的 exact-SHA full [33308856823](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33308856823)、PR [#426](https://github.com/bengzhu/project1_lgbt_naxida/pull/426) checks [33309325698](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33309325698)、merge SHA `b699952bbf5116e70ca7d88f4cb49c43db6b04f5` 与合入后 push CI [33309456645](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33309456645) 均成功，发布 `AITRANS CI/full-validation=success` receipt。OCR、layout、请求预算、标签、逐块补译、取消、持久化、UI/renderer 和非日语路径保持不变；本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。`test/3.png` 未提供，不伪造质量证据。
 
 ### v3.361 Japanese pixel compact-dedupe contract（已完成）
 
