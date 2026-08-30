@@ -1,6 +1,6 @@
-### v3.370 Translation control-marker boundary（验证中）
+### v3.370 Translation control-marker boundary（已完成）
 
-继续提升普通图片日语 OCR→翻译主路径。审计发现 `GemmaLocalService.cleanTranslationOutput` 对自然语言 prompt 控制词使用任意位置截断，合法译文中嵌入 `Translate the following text`、`Output only` 等短语时可能被截断。本轮仅将自然语言控制词收紧为输出开头或独立行首才截断，同时保留 `<start_of_turn>`/`<end_of_turn>` 硬控制 token；模型独立行回显的提示仍清除，既有 placeholder、metadata、source leakage、target-language、数字/术语 QA、标签、逐块回退、取消、持久化、OCR/layout、UI/renderer 和非日语路径不变。新增 `scripts/test-v3370-translation-control-marker-boundary-contract.py`，工程版本 `3.370`，workflow 已接入；本地安全回归与精确 SHA 云端验证待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+继续提升普通图片日语 OCR→翻译主路径。审计发现 `GemmaLocalService.cleanTranslationOutput` 对自然语言 prompt 控制词使用任意位置截断，合法译文中嵌入 `Translate the following text`、`Output only` 等短语时可能被截断。本轮仅将自然语言控制词收紧为输出开头或独立行首才截断，同时保留 `<start_of_turn>`/`<end_of_turn>` 硬控制 token；模型独立行回显的提示仍清除，既有 placeholder、metadata、source leakage、target-language、数字/术语 QA、标签、逐块回退、取消、持久化、OCR/layout、UI/renderer 和非日语路径不变。新增 `scripts/test-v3370-translation-control-marker-boundary-contract.py`，工程版本 `3.370`，workflow 已接入；本地安全回归 `369/369` 通过，27 个进程/编译/runtime 入口按约束跳过，精确 SHA 云端 full、PR checks、合入与合入后 push CI 均成功，`AITRANS CI/full-validation=success` receipt 通过。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
 
 ### v3.369 Translation placeholder precision（已完成）
 

@@ -1,10 +1,10 @@
-## v3.370：Translation control-marker boundary（验证中）
+## v3.370：Translation control-marker boundary（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现 `GemmaLocalService.cleanTranslationOutput` 对自然语言 prompt 控制词使用任意位置截断，合法译文中嵌入 `Translate the following text`、`Translate from`、`Output only` 等短语时可能被提前截断。
 
 本轮可证伪假设：**自然语言控制词仅在输出开头或独立行首才截断；真正的 `<start_of_turn>`/`<end_of_turn>` 仍在任意位置截断。这样模型独立行回显的提示继续被清除，而嵌入自然译文的控制样短语保留。OCR/layout、预算、placeholder/source leakage、数字/术语/目标语言 QA、标签、逐块重试、取消、持久化和非日语路径不变。**
 
-实现调整 `GemmaLocalService.cleanTranslationOutput`，新增 `scripts/test-v3370-translation-control-marker-boundary-contract.py`，工程版本 `3.370`，CI 已接入；本地安全回归、精确 SHA full、PR、合入与 receipt 待验证。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
+实现调整 `GemmaLocalService.cleanTranslationOutput`，新增 `scripts/test-v3370-translation-control-marker-boundary-contract.py`，工程版本 `3.370`，CI 已接入；本地安全回归 `369/369` 通过、27 个进程/编译/runtime 入口按约束跳过，Python AST `396/396`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 diff 检查通过。实现 SHA `fadd4a96e03bcca1933aab50b0f13a5a78d151dc` 的 exact-SHA full [33321228109](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33321228109)、PR [#434](https://github.com/bengzhu/project1_lgbt_naxida/pull/434) checks [33321140688](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33321140688)、merge SHA `728cbcb8684475e08da61d3d3670862a2170958f` 与合入后 push CI [33322001689](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33322001689) 均成功，`AITRANS CI/full-validation=success` receipt 通过；云端 Japanese benchmark、静态/UI/Home/Paste/Speech 合同、Xcode build、JUnit 与 manifest 通过，Koharu/GGUF 按可选边界跳过。`test/3.png` 未提供，不合成样图或质量证据；授权语料和目标设备证据继续不阻塞普通路径。
 
 ## v3.369：Translation placeholder precision（已完成）
 
