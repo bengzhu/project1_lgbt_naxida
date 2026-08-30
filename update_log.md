@@ -1,10 +1,10 @@
-## v3.348：Japanese pixel recovery eligibility（开发中）
+## v3.348：Japanese pixel recovery eligibility（2026-08-30，已完成）
 
 v3.347 后审计普通图片 OCR→翻译主路径发现，pixel-first vertical recovery 的 `existingVerticalRegions` 只要带有 `.vertical` provenance 或 `.verticalLine` role 就会阻止同几何候选，即使页面级竖排读数为空、低置信、非日文或日文字/脚本文本密度不足。这样弱读数会提前声明“已覆盖”，让真正需要复读的区域失去既有 pixel-first 机会。
 
 可证伪假设：**若保留现有方向 provenance、compact owner 例外与几何覆盖关系，但要求 existing vertical geometry 同时通过非空、有限 `[0,1]` confidence `>=.48`、真实日语文字、日语文字密度与脚本文字密度 `>=.5`，则弱页面读数不会再遮蔽 pixel-first recovery，可靠页面/line 读数仍会抑制重复 crop；最多 12 个 pixel-first crop、4 次 opposite orientation、既有 geometry/dedupe、line/tile frontier、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
 
-当前在独立分支 `codex/v3.348-japanese-pixel-recovery-eligibility` 实现；新增 `scripts/test-v3348-japanese-pixel-recovery-eligibility-contract.py`，工程版本推进至 `3.348`，Japanese benchmark route 已接入。当前先执行安全静态合同与云端 full validation；Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把固定样图外推为通用 OCR/CER 或翻译质量提升。
+实现已合入 `smalldata_test`：新增 `scripts/test-v3348-japanese-pixel-recovery-eligibility-contract.py`，工程版本推进至 `3.348`，Japanese benchmark route 已接入。实现 SHA `02e4a51e47f4efc6e68b0a4fc2ea56d398bfe3ba` 的 exact-SHA full [33289570887](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33289570887)、PR [#412](https://github.com/bengzhu/project1_lgbt_naxida/pull/412) checks [33290091078](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290091078)、merge SHA `9bd5f4238e1abc690e7371a6aa5c534268746b07` 与合入后 push CI [33290131510](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290131510) 均成功。新合同 `10/10`；本地 `347` 个安全合同通过，`27` 个进程／编译／runtime 合同按约束跳过，`374` 个合同总计无失败；Python AST `374/374`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把固定样图外推为通用 OCR/CER 或翻译质量提升。
 
 ## v3.347：Japanese recovery frontier（2026-08-30，已完成）
 
