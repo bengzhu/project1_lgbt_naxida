@@ -633,12 +633,62 @@ enum TranslationOutputPolicy {
         return true
     }
 
+    /// Japanese and Simplified Chinese can intentionally share an unchanged
+    /// Han-only token (for example, a place name such as `東京`). Model-output
+    /// cleaners must use the same narrow exception as product QA; otherwise a
+    /// valid translation is rejected before the shared QA boundary sees it.
+    /// This does not allow kana, Latin text, digits, mixed-language output, or
+    /// a source substring with extra content to pass through unchanged.
+    static func allowsUnchangedJapaneseHanTranslation(
+        source: String,
+        output: String,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) -> Bool {
+        guard sourceLanguage == .japanese,
+              targetLanguage == .simplifiedChinese else {
+            return false
+        }
+
+        let normalizedSource = comparableText(source)
+        let normalizedOutput = comparableText(output)
+        guard normalizedSource.count > 1,
+              normalizedSource == normalizedOutput,
+              isSharedHanOnlyJapaneseSource(source) else {
+            return false
+        }
+        return true
+    }
+
     private static func normalize(_ text: String) -> String {
         text
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
             .lowercased()
             .split(whereSeparator: { $0.isWhitespace })
             .joined(separator: " ")
+    }
+
+    private static func comparableText(_ text: String) -> String {
+        text
+            .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
+            .components(separatedBy: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
+            .joined()
+    }
+
+    private static func isSharedHanOnlyJapaneseSource(_ text: String) -> Bool {
+        let visible = text.unicodeScalars.filter { scalar in
+            !CharacterSet.whitespacesAndNewlines.contains(scalar)
+                && !CharacterSet.punctuationCharacters.contains(scalar)
+        }
+        guard !visible.isEmpty else { return false }
+        return visible.allSatisfy { scalar in
+            switch scalar.value {
+            case 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF:
+                true
+            default:
+                false
+            }
+        }
     }
 }
 

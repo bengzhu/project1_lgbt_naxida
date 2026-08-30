@@ -192,6 +192,7 @@ struct GemmaLocalService: LocalLanguageModeling {
                 let cleanedOutput = try cleanTranslationOutput(
                     output,
                     input: request.inputText,
+                    sourceLanguage: request.sourceLanguage,
                     targetLanguage: request.targetLanguage
                 )
                 Self.writeTranslationProbeLog(
@@ -228,7 +229,12 @@ struct GemmaLocalService: LocalLanguageModeling {
                 Self.writeTranslationProbeLog(
                     "manga-batch-attempt-raw index=\(index + 1) output=\(Self.probeField(output))"
                 )
-                let cleanedOutput = try cleanMangaBlockOutput(output, input: request.inputText)
+                let cleanedOutput = try cleanMangaBlockOutput(
+                    output,
+                    input: request.inputText,
+                    sourceLanguage: request.sourceLanguage,
+                    targetLanguage: request.targetLanguage
+                )
                 Self.writeTranslationProbeLog(
                     "manga-batch-attempt-clean index=\(index + 1) output=\(Self.probeField(cleanedOutput))"
                 )
@@ -342,7 +348,12 @@ struct GemmaLocalService: LocalLanguageModeling {
         ]
     }
 
-    private func cleanMangaBlockOutput(_ output: String, input: String) throws -> String {
+    private func cleanMangaBlockOutput(
+        _ output: String,
+        input: String,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) throws -> String {
         var text = output.trimmingCharacters(in: .whitespacesAndNewlines)
         for marker in ["<end_of_turn>", "<start_of_turn>"] {
             if let range = text.range(of: marker) {
@@ -378,8 +389,16 @@ struct GemmaLocalService: LocalLanguageModeling {
                 .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let translatedText = translated.value
                 .trimmingCharacters(in: .whitespacesAndNewlines)
+            let allowsUnchangedSharedHan = TranslationOutputPolicy
+                .allowsUnchangedJapaneseHanTranslation(
+                    source: sourceText,
+                    output: translatedText,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
             return !translatedText.isEmpty
-                && sourceText.localizedCaseInsensitiveCompare(translatedText) != .orderedSame
+                && (allowsUnchangedSharedHan
+                    || sourceText.localizedCaseInsensitiveCompare(translatedText) != .orderedSame)
         }) else {
             throw GemmaLocalServiceError.repeatedInput
         }
@@ -456,6 +475,7 @@ struct GemmaLocalService: LocalLanguageModeling {
     private func cleanTranslationOutput(
         _ output: String,
         input: String,
+        sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage
     ) throws -> String {
         var text = output.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -534,7 +554,12 @@ struct GemmaLocalService: LocalLanguageModeling {
             throw GemmaLocalServiceError.emptyOutput
         }
         let candidate = lines.joined(separator: "\n")
-        return try validateTranslationOutput(candidate, input: input, targetLanguage: targetLanguage)
+        return try validateTranslationOutput(
+            candidate,
+            input: input,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
     }
 
     private func stripFormatting(from output: String) -> String {
@@ -557,6 +582,7 @@ struct GemmaLocalService: LocalLanguageModeling {
     private func validateTranslationOutput(
         _ output: String,
         input: String,
+        sourceLanguage: SupportedLanguage,
         targetLanguage: SupportedLanguage
     ) throws -> String {
         let trimSet = CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters)
@@ -565,10 +591,20 @@ struct GemmaLocalService: LocalLanguageModeling {
         guard !normalizedOutput.isEmpty else {
             throw GemmaLocalServiceError.emptyOutput
         }
-        guard normalizedOutput.localizedCaseInsensitiveCompare(normalizedInput) != ComparisonResult.orderedSame else {
+        let allowsUnchangedSharedHan = TranslationOutputPolicy
+            .allowsUnchangedJapaneseHanTranslation(
+                source: input,
+                output: output,
+                sourceLanguage: sourceLanguage,
+                targetLanguage: targetLanguage
+            )
+        guard allowsUnchangedSharedHan
+            || normalizedOutput.localizedCaseInsensitiveCompare(normalizedInput) != ComparisonResult.orderedSame else {
             throw GemmaLocalServiceError.repeatedInput
         }
-        guard !normalizedOutput.localizedCaseInsensitiveContains(normalizedInput), !normalizedInput.localizedCaseInsensitiveContains(normalizedOutput) else {
+        guard allowsUnchangedSharedHan
+            || (!normalizedOutput.localizedCaseInsensitiveContains(normalizedInput)
+                && !normalizedInput.localizedCaseInsensitiveContains(normalizedOutput)) else {
             throw GemmaLocalServiceError.repeatedInput
         }
         guard !TranslationOutputPolicy.isPlaceholderResponse(output) else {
