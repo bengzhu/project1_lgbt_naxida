@@ -1,3 +1,11 @@
+## v3.354：Japanese direction-confidence owner domain（2026-08-30，当前研发分支）
+
+v3.353 已完成普通图片竖排 block crop 的风险/空间调度；继续审计发现 v3.352 虽已让风险排序使用有限方向置信度域，但中等高度竖排候选筛选、`verticalTextRegionMatchIndices` 与 geometry-only line owner 匹配仍直接比较 `directionConfidence >= .25`。有限越界值或 `+∞` 因而可能被当作有效方向并取得跨块 owner，影响 line fusion 的 owner 边界。
+
+可证伪假设：**若这三处入口都先通过共享 `validJapaneseDirectionConfidence` 的有限闭区间 `[0,1]` 校验，再应用既有 `.25` owner/候选门，则 `NaN/±∞` 与有限越界值不会取得 known owner，合法 `.25`/`.45` 语义、ownerless 兼容及既有 16/8/4/24/12/48 请求上限保持不变；OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
+
+当前实现位于独立分支 `codex/v3.354-japanese-direction-owner-domain`：新增 `scripts/test-v3354-japanese-direction-owner-domain-contract.py`，工程版本推进至 `3.354`，workflow 已接入；本地安全静态回归与 cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+
 ## v3.353：Japanese vertical crop risk balance（2026-08-30，已完成）
 
 v3.352 已完成方向置信度合法域收紧；继续审计普通图片 OCR→翻译主路径发现，v3.345 的多 band 轮询只按空间 band 交替，不区分既有风险 gate：当弱 block 密集在一个 band、强 block 分散在其它 band 时，16 个 crop 名额可能先被强 block 消耗，弱 block 的风险优先级被空间均衡反转。

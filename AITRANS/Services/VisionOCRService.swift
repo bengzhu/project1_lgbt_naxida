@@ -1251,7 +1251,9 @@ struct VisionOCRService: Sendable {
             // do not consume a block crop budget.
             let isKoharuDetectorVerticalCandidate = aspectRatio >= 1.15
                 && block.rect.height >= 0.035
-                && block.directionConfidence >= 0.25
+                && (validJapaneseDirectionConfidence(
+                    block.directionConfidence
+                ).map { $0 >= 0.25 } ?? false)
             // Koharu sends every detector TextRegion through
             // crop_text_block_bbox. A v3.177 compact direction result is a
             // similarly explicit Japanese block, even when its normalized
@@ -3123,7 +3125,10 @@ struct VisionOCRService: Sendable {
         blocks.enumerated().compactMap { index, block in
             let lineRegion = observation.lineRegionRect ?? observation.rect
             guard block.direction == .vertical,
-                  block.directionConfidence >= 0.25,
+                  let directionConfidence = validJapaneseDirectionConfidence(
+                      block.directionConfidence
+                  ),
+                  directionConfidence >= 0.25,
                   JapaneseOCRTextNormalizer.japaneseLetterDensity(block.text) >= 0.5,
                   japaneseScriptDensity(in: block.text) >= 0.5,
                   overlapRatio(observation.rect, block.rect) >= 0.25,
@@ -3398,7 +3403,10 @@ struct VisionOCRService: Sendable {
 
             let matchingBlocks = blocks.filter { block in
                 guard block.direction == .vertical,
-                      block.directionConfidence >= 0.25,
+                      let directionConfidence = validJapaneseDirectionConfidence(
+                          block.directionConfidence
+                      ),
+                      directionConfidence >= 0.25,
                       JapaneseOCRTextNormalizer.japaneseLetterDensity(block.text) >= 0.5,
                       japaneseScriptDensity(in: block.text) >= 0.5 else {
                     return false

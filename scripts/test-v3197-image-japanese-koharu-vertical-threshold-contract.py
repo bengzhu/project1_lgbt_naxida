@@ -42,7 +42,8 @@ class JapaneseKoharuVerticalThresholdContractTests(unittest.TestCase):
         for marker in [
             "let isKoharuDetectorVerticalCandidate = aspectRatio >= 1.15",
             "&& block.rect.height >= 0.035",
-            "&& block.directionConfidence >= 0.25",
+            "validJapaneseDirectionConfidence(",
+            ").map { $0 >= 0.25 } ?? false",
             "|| isKoharuDetectorVerticalCandidate",
             ".prefix(16)",
         ]:

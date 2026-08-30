@@ -63,7 +63,8 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
             "cropQuadHint != nil",
             "isVerticalLineCandidate(region.rect)",
             "block.direction == .vertical",
-            "block.directionConfidence >= 0.25",
+            "validJapaneseDirectionConfidence(",
+            "directionConfidence >= 0.25",
             "japaneseScriptDensity(in: block.text) >= 0.5",
             "matchingBlocks.count == 1",
         ]:
@@ -121,7 +122,7 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
 
     def test_version_and_ci_route(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.353", "3.353"])
+        self.assertEqual(versions, ["3.354", "3.354"])
         current = "python3 -B scripts/test-v3268-koharu-geometry-only-line-recall-contract.py"
         self.assertIn(current, self.workflow)
         self.assertIn(
