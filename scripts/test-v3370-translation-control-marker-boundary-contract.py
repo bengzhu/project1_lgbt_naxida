@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.370 translation metadata filtering."""
+"""Static and pure-policy contract for v3.370 translation control markers."""
 
 from __future__ import annotations
 
@@ -32,24 +32,14 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-LINE_LEAK_MARKERS = (
-    "translation engine",
-    "do not summarize",
-    "do not add explanations",
-    "english ->",
-    "只输出中文译文",
-    "只输出译文",
-    "不要输出英文原文",
-    "简体中文翻译",
-    "预设提示词",
-    "输出风格",
-)
-
-LABEL_MARKERS = (
-    "以下是翻译",
-    "翻译如下",
-    "翻译是：",
-    "这是翻译",
+TERMINAL_CONTROL_MARKERS = ("<end_of_turn>", "<start_of_turn>")
+LINE_START_PROMPT_MARKERS = (
+    "You are a translation engine.",
+    "Hard rules:",
+    "Translate the following text",
+    "Translate from",
+    "User instruction:",
+    "Output only",
 )
 
 
@@ -73,46 +63,33 @@ def trim_edge_punctuation(value: str) -> str:
     return value[start:end]
 
 
-def marker_at_line_start(line: str, marker: str) -> bool:
-    normalized_line = folded(line)
-    normalized_marker = folded(marker)
-    offset = normalized_line.find(normalized_marker)
-    return offset >= 0 and not trim_edge_punctuation(normalized_line[:offset])
+def line_start_marker_offset(value: str, marker: str) -> int | None:
+    folded_value = folded(value)
+    folded_marker = folded(marker)
+    search_start = 0
+    while True:
+        offset = folded_value.find(folded_marker, search_start)
+        if offset < 0:
+            return None
+        line_start = folded_value.rfind("\n", 0, offset) + 1
+        if not trim_edge_punctuation(folded_value[line_start:offset]):
+            return line_start
+        search_start = offset + len(folded_marker)
 
 
-def normalize_translation_lines(output: str) -> str:
-    lines = [line.strip() for line in output.splitlines() if line.strip()]
-    kept: list[str] = []
-
-    for line in lines:
-        bullet_body = line[2:].strip() if line.startswith("- ") else line
-        metadata_bullet = line.startswith("- ") and (
-            not bullet_body
-            or any(marker_at_line_start(bullet_body, marker) for marker in LINE_LEAK_MARKERS)
-        )
-        label_only = False
-        folded_line = folded(line)
-        for marker in LABEL_MARKERS:
-            folded_marker = folded(marker)
-            offset = folded_line.find(folded_marker)
-            if offset < 0:
-                continue
-            before = trim_edge_punctuation(folded_line[:offset])
-            after = trim_edge_punctuation(folded_line[offset + len(folded_marker) :])
-            if not before and not after:
-                label_only = True
-                break
-        if metadata_bullet or (line.startswith("|") and line.endswith("|")):
-            continue
-        if any(marker_at_line_start(line, marker) for marker in LINE_LEAK_MARKERS):
-            continue
-        if label_only:
-            continue
-        kept.append(line)
-    return "\n".join(kept)
+def cut_translation_controls(output: str) -> str:
+    text = output.strip()
+    for marker in TERMINAL_CONTROL_MARKERS:
+        if marker in text:
+            text = text.split(marker, 1)[0].strip()
+    for marker in LINE_START_PROMPT_MARKERS:
+        offset = line_start_marker_offset(text, marker)
+        if offset is not None:
+            text = text[:offset].strip()
+    return text
 
 
-class TranslationMetadataPrefixContractTests(unittest.TestCase):
+class TranslationControlMarkerBoundaryContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
@@ -132,60 +109,70 @@ class TranslationMetadataPrefixContractTests(unittest.TestCase):
             )
         )
 
-    def test_filter_is_line_start_scoped(self) -> None:
-        body = function_body(
+    def test_natural_language_controls_are_line_start_scoped(self) -> None:
+        cleaner = function_body(
             self.gemma,
             "private func cleanTranslationOutput(\n",
         )
         for marker in (
-            "func isPromptMarkerAtLineStart(_ line: String, marker: String)",
-            "isPromptMarkerAtLineStart(bulletBody, marker: marker)",
-            "isPromptMarkerAtLineStart(trimmed, marker: marker)",
-            'let candidate = lines.joined(separator: "\\n")',
+            "let terminalControlMarkers",
+            "let lineStartPromptMarkers",
+            "func lineStartPromptMarkerRange(",
+            "range: searchStart..<value.endIndex",
+            "beforeMarker.isEmpty",
+            "return lineStart..<range.upperBound",
         ):
-            self.assertIn(marker, body)
-        self.assertNotIn("trimmed.localizedCaseInsensitiveContains($0)", body)
-        self.assertNotIn("bulletBody.localizedCaseInsensitiveContains($0)", body)
-
-    def test_embedded_prompt_words_remain_translation_content(self) -> None:
-        self.assertEqual(
-            normalize_translation_lines(
-                "关于 translation engine 的说法。\n这个输出风格很自然。"
-            ),
-            "关于 translation engine 的说法。\n这个输出风格很自然。",
-        )
-        self.assertEqual(
-            normalize_translation_lines("The translation engine is part of the story."),
-            "The translation engine is part of the story.",
+            self.assertIn(marker, cleaner)
+        self.assertNotIn("let cutMarkers", cleaner)
+        self.assertIn("if let range = text.range(of: marker)", cleaner)
+        self.assertIn(
+            "lineStartPromptMarkerRange(in: text, marker: marker)",
+            cleaner,
         )
 
-    def test_explicit_line_start_metadata_still_disappears(self) -> None:
+    def test_embedded_prompt_phrases_remain_translation_content(self) -> None:
         self.assertEqual(
-            normalize_translation_lines(
-                "translation engine\n你好。\n【只输出译文】\n第二句。"
+            cut_translation_controls(
+                "故事里写着 Translate the following text，但这仍是译文。"
             ),
-            "你好。\n第二句。",
+            "故事里写着 Translate the following text，但这仍是译文。",
         )
         self.assertEqual(
-            normalize_translation_lines("- 只输出中文译文\n你好。\n| prompt |"),
+            cut_translation_controls("The story says Output only in the sign."),
+            "The story says Output only in the sign.",
+        )
+        self.assertEqual(
+            cut_translation_controls("关于 Hard rules: 的说明。"),
+            "关于 Hard rules: 的说明。",
+        )
+
+    def test_prompt_echo_at_output_or_line_start_is_removed(self) -> None:
+        self.assertEqual(
+            cut_translation_controls(
+                "你好。\nTranslate the following text\n待处理输入"
+            ),
             "你好。",
         )
         self.assertEqual(
-            normalize_translation_lines("以下是翻译\n你好。\n翻译如下"),
+            cut_translation_controls("Output only: 你好。"),
+            "",
+        )
+        self.assertEqual(
+            cut_translation_controls("【Hard rules:】\n你好。"),
+            "",
+        )
+
+    def test_terminal_turn_tokens_remain_hard_boundaries(self) -> None:
+        self.assertEqual(
+            cut_translation_controls("你好。<end_of_turn>prompt echo"),
+            "你好。",
+        )
+        self.assertEqual(
+            cut_translation_controls("你好。\n<start_of_turn>"),
             "你好。",
         )
 
-    def test_marker_after_translation_content_is_not_a_cut_boundary(self) -> None:
-        self.assertEqual(
-            normalize_translation_lines("你好。 translation engine"),
-            "你好。 translation engine",
-        )
-        self.assertEqual(
-            normalize_translation_lines("她讨论了输出风格，但没有解释。"),
-            "她讨论了输出风格，但没有解释。",
-        )
-
-    def test_existing_validation_and_product_boundaries_remain(self) -> None:
+    def test_existing_translation_validation_and_qa_remain_wired(self) -> None:
         cleaner = function_body(
             self.gemma,
             "private func cleanTranslationOutput(\n",
@@ -218,7 +205,7 @@ class TranslationMetadataPrefixContractTests(unittest.TestCase):
         )
         combined = self.workflow + self.docs
         for marker in (
-            "scripts/test-v3368-translation-metadata-prefix-contract.py",
+            "scripts/test-v3370-translation-control-marker-boundary-contract.py",
             "v3.370",
             "japanese-benchmark-v3.370-",
         ):
@@ -226,7 +213,7 @@ class TranslationMetadataPrefixContractTests(unittest.TestCase):
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:
         contract = read(
-            "scripts/test-v3368-translation-metadata-prefix-contract.py"
+            "scripts/test-v3370-translation-control-marker-boundary-contract.py"
         )
         for source in (self.gemma, self.context, self.store, contract):
             self.assertNotIn("sub" + "process", source)

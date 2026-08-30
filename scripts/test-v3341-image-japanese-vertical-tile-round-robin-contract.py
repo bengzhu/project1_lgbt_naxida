@@ -177,7 +177,7 @@ class JapaneseVerticalTileRoundRobinContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.369", "3.369"],
+            ["3.370", "3.370"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py",

@@ -516,9 +516,16 @@ struct GemmaLocalService: LocalLanguageModeling {
         targetLanguage: SupportedLanguage
     ) throws -> String {
         var text = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cutMarkers = [
+        // Runtime turn markers are unambiguous control tokens and may appear
+        // after a valid translation. Natural-language prompt markers are only
+        // safe to cut at the output start or at an independent line start;
+        // otherwise a legitimate English phrase inside translated prose can
+        // be mistaken for an echoed instruction.
+        let terminalControlMarkers = [
             "<end_of_turn>",
-            "<start_of_turn>",
+            "<start_of_turn>"
+        ]
+        let lineStartPromptMarkers = [
             "You are a translation engine.",
             "Hard rules:",
             "Translate the following text",
@@ -527,10 +534,45 @@ struct GemmaLocalService: LocalLanguageModeling {
             "Output only"
         ]
 
-        for marker in cutMarkers {
+        for marker in terminalControlMarkers {
             if let range = text.range(of: marker) {
                 text = String(text[..<range.lowerBound]).trimmingCharacters(in: .whitespacesAndNewlines)
             }
+        }
+
+        func lineStartPromptMarkerRange(
+            in value: String,
+            marker: String
+        ) -> Range<String.Index>? {
+            var searchStart = value.startIndex
+            while searchStart < value.endIndex,
+                  let range = value.range(
+                      of: marker,
+                      options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive],
+                      range: searchStart..<value.endIndex
+                  ) {
+                let lineStart = value[..<range.lowerBound]
+                    .lastIndex(of: "\n")
+                    .map { value.index(after: $0) }
+                    ?? value.startIndex
+                let beforeMarker = String(value[lineStart..<range.lowerBound])
+                    .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                if beforeMarker.isEmpty {
+                    // Cut the complete metadata line, including any opening
+                    // quote/bracket that was only wrapping the prompt echo.
+                    return lineStart..<range.upperBound
+                }
+                searchStart = range.upperBound
+            }
+            return nil
+        }
+
+        for marker in lineStartPromptMarkers {
+            guard let range = lineStartPromptMarkerRange(in: text, marker: marker) else {
+                continue
+            }
+            text = String(text[..<range.lowerBound])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         var lines = text
