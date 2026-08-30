@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.366 Japanese fallback scoping."""
+"""Static and pure-policy contract for v3.367 Japanese fallback scoping."""
 
 from pathlib import Path
 import re
@@ -146,7 +146,7 @@ class JapaneseFallbackContextScopeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.366", "3.366"],
+            ["3.367", "3.367"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3366-japanese-fallback-context-scope-contract.py",
@@ -154,8 +154,8 @@ class JapaneseFallbackContextScopeContractTests(unittest.TestCase):
         )
         for marker in (
             "scripts/test-v3366-japanese-fallback-context-scope-contract.py",
-            "v3.366",
-            "japanese-benchmark-v3.366-",
+            "v3.367",
+            "japanese-benchmark-v3.367-",
             "test/3.png",
             "未提供",
         ):
