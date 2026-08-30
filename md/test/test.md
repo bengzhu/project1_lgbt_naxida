@@ -1,3 +1,7 @@
+### v3.369 Translation placeholder precision（验证中）
+
+继续提升普通图片日语 OCR→翻译主路径。审计发现 `TranslationOutputPolicy.isPlaceholderResponse` 在请求标记与翻译输入词之间使用过宽的组合：`请提供文本`、`请输入内容` 等合法短译文可能被误当成模型元回复。本轮仅把请求分支收窄为“请求位于行首 + 明确绑定翻译输入的短语”，保留普通短译文；明确拒绝、metadata、source leakage、target-language、数字/术语 QA、标签、逐块回退、取消、持久化、OCR/layout、UI/renderer 和非日语路径不变。新增 `scripts/test-v3369-translation-placeholder-precision-contract.py`，工程版本 `3.369`，workflow 已接入；本地安全回归与精确 SHA 云端验证待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ### v3.368 Translation metadata prefix contract（已完成）
 
 - `GemmaLocalService.cleanTranslationOutput` 的 prompt marker 过滤改为行首边界：自然译文句中出现 `translation engine`、`输出风格` 等内容时整行保留；行首（允许边缘标点）的明确 metadata、metadata bullet、表格和翻译标签继续移除，之后仍进入既有 validation/QA。
