@@ -1,3 +1,11 @@
+## v3.368：Translation metadata prefix boundary（验证中）
+
+继续提升普通图片日语 OCR→翻译主路径。审计发现 `GemmaLocalService.cleanTranslationOutput` 对 `translation engine`、`输出风格` 等 prompt marker 使用任意位置的整行过滤，合法译文中包含同名短语时会被误删，降低多行译文的召回。
+
+本轮可证伪假设：**将 line leak marker 限制为行首（允许边缘标点）的明确 prompt metadata，保留嵌入自然译文的同名短语，同时维持 metadata bullet、表格、翻译标签与既有 validation/QA 的拒绝边界，不改变 OCR、布局、预算、标签、取消、持久化或非日语路径。**
+
+实现改动仅在 `AITRANS/Services/GemmaLocalService.swift`：新增 `isPromptMarkerAtLineStart`，普通行与 metadata bullet 均以行首边界判断 line leak marker；显式 wrapper/cut marker 和后续 `validateTranslationOutput` 不变。新增 `scripts/test-v3368-translation-metadata-prefix-contract.py`，工程版本推进至 `3.368`，workflow 已接入；本地安全回归与云端验证进行中。按约束不运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 尚未提供，不合成样图或把合同结果外推为通用 OCR/CER/翻译质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
+
 ## v3.367：Translation numeric token Unicode QA（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现 `TranslationBatchQualityEvaluator.numericTokens` 只使用 ASCII `\\d`，日语 OCR、用户修正或模型输出保留全角数字/全角数值分隔符时，等价的 `１２３` 与 `123` 会被错误判为 `numberMismatch`；数字 token 的缺失、合并和拆分仍需要保持严格拒绝。

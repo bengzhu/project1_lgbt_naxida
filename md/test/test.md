@@ -1,3 +1,8 @@
+### v3.368 Translation metadata prefix contract（验证中）
+
+- `GemmaLocalService.cleanTranslationOutput` 的 prompt marker 过滤改为行首边界：自然译文句中出现 `translation engine`、`输出风格` 等内容时整行保留；行首（允许边缘标点）的明确 metadata、metadata bullet、表格和翻译标签继续移除，之后仍进入既有 validation/QA。
+- 新增 `scripts/test-v3368-translation-metadata-prefix-contract.py`，工程版本 `3.368`，workflow 已接入；本地安全回归和云端 exact-SHA full 正在进行。OCR/layout、预算、标签、逐块 QA、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，不合成输入或质量证据。
+
 ### v3.367 Translation numeric token Unicode QA contract（已完成）
 
 - `TranslationBatchQualityEvaluator.numberMismatch` 只在数字 token 匹配前把全角数字和全角数值分隔符窄化到 ASCII；`１２３`/`123`、全角/半角日期时间可对齐，前导零、顺序、分隔符、缺失、合并和拆分差异继续 fail-closed。
