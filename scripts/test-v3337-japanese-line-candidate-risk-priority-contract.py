@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.344 risk-first Japanese line OCR."""
+"""Static and pure-policy contract for v3.345 risk-first Japanese line OCR."""
 
 from pathlib import Path
 import math
@@ -258,13 +258,13 @@ class JapaneseLineCandidateRiskPriorityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.344", "3.344"],
+            ["3.345", "3.345"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3337-japanese-line-candidate-risk-priority-contract.py",
-            "v3.344",
-            "japanese-benchmark-v3.344-",
+            "v3.345",
+            "japanese-benchmark-v3.345-",
         ):
             self.assertIn(marker, combined)
         contract = read(
