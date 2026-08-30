@@ -1,3 +1,11 @@
+## v3.344：Japanese weak-block recovery spatial balance（2026-08-30，进行中）
+
+v3.343 已让 Vision perspective/axis line reread 在超预算时避免单一 known owner 饥饿；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recoverWeakJapaneseBlocks` 的最多 4 次 scoped crop recovery 仍只按全局 confidence 取前四项，长图或多面板中可能集中在同一纵向 band，导致其它区域的弱 block 没有既有复读机会。
+
+可证伪假设：**若保留现有弱者优先排序与最多 4 次请求，只在候选超预算且存在多个非空纵向 band 时按 band round-robin 选择，并恢复原 weak-first 处理顺序，则多区域弱 block 能共享同一 recovery 预算；候选不足、单 band、质量门、失败/取消和下游边界不变。**
+
+实现边界：新增 `boundedJapaneseWeakBlockRecoveryCandidates`，以 block bbox 有限中心 y 建立最多 4 个 band；仅多 band 超预算时轮询各 band，最终仍按原候选排序处理。scoped reread 继续复用已有 `.55`、真实日文字母、letter/script density 与 measurable-improvement gate，最多 4 次；OCR/layout、翻译 QA、取消、持久化、非日语路径及可选 Koharu/GGUF 研究边界不变。新增 `scripts/test-v3344-japanese-weak-block-recovery-spatial-balance-contract.py`，工程版本推进至 `3.344`，Japanese benchmark route 已接入，验证与 receipt 待收口。
+
 ## v3.343：Japanese Vision line owner balance（2026-08-30，已完成）
 
 v3.342 已让 8 个 Manga line OCR 名额在超预算时避免单一 known vertical TextRegion owner 饥饿；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recognizeJapaneseVerticalLineCrops` 的 Vision perspective 与 axis reread 队列仍直接从强候选前缀取最多 24 项，多块长图上一个 known owner 的候选可能占满两个 Vision 队列，使其它 owner 没有 line reread 机会。

@@ -95,7 +95,7 @@ class ImageOCRGeometryEditorContractTests(unittest.TestCase):
             self.assertIn(marker, self.project + self.workflow + self.route)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.343", "3.343"],
+            ["3.344", "3.344"],
         )
 
     def test_contract_has_no_process_entry(self) -> None:

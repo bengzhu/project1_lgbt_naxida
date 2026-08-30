@@ -1,3 +1,8 @@
+### v3.344 Japanese weak-block recovery spatial balance contract（进行中）
+
+- `recoverWeakJapaneseBlocks` 保留原有限 confidence 弱者优先队列；当候选超过既有 4 次 scoped reread 上限且 block bbox 分布在多个纵向 band 时，`boundedJapaneseWeakBlockRecoveryCandidates` 以 band round-robin 选择，并按原排序返回。候选不足或单 band 保留原前缀，最多 4 次请求、既有质量/失败/取消/布局/翻译/持久化边界不变。
+- 新合同：`scripts/test-v3344-japanese-weak-block-recovery-spatial-balance-contract.py`；工程版本推进至 `3.344`，Japanese benchmark route 已接入。验证与云端 receipt 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.343 Japanese Vision line owner balance contract（已完成）
 
 - `recognizeJapaneseVerticalLineCrops` 的 perspective 与 axis reread 队列在既有每队最多 24 项上限前复用显式 owner-balanced 选择；只有前缀遗漏 known `verticalTextRegionOwner` 时补入原队列中的该 owner，优先移除重复 known owner，ownerless 不被计为 owner。Manga 8 次 line OCR、2 个 geometry-only 保留位及所有 Vision crop、方向 fallback、像素预算、布局、翻译 QA、取消和持久化边界不变。

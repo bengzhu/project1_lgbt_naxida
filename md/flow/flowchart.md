@@ -1,4 +1,5 @@
 # 项目流程图
+v3.344 Japanese weak-block recovery spatial balance：`weak layout blocks -> finite-confidence priority -> multi-band over-budget round-robin -> bounded four-block scoped reread -> measurable replacement`；只有弱候选超过 4 且分布到多个纵向 band 时均衡既有名额，候选不足/单 band 恢复原前缀，保留质量门、失败/取消、布局、翻译 QA 与持久化边界。
 v3.343 Japanese Vision line owner balance：`Vision line candidates -> over-budget owner-balanced perspective/axis queues -> bounded 24-item rereads -> Manga/Vision fusion`；只在既有 24 项 Vision 队列会漏掉 known vertical TextRegion owner 时替换已覆盖 owner 的重复候选，保留 quad/bbox crop、12 次 orientation fallback、16M perspective 像素预算、Manga 8/2 请求边界、ownerless 历史兼容与下游布局/翻译/取消/持久化边界。
 v3.340 Japanese line coverage source boundary：`page/line observations -> exclude detector TextRegion bbox -> existing owner/quality/geometry one-to-one proof -> block crop fallback`；块级 detector 区域不能单独证明多行已完整识别，既有 OCR 预算、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
 v3.339 detector 同标签跨切片合并闭包：`slice predictions -> same-label existing geometry gates -> merge/replacement -> restart complete slice scan -> TextRegion merge closure -> Manga OCR`；跨切片相邻重复区域不再依赖 detector 输出顺序，阈值、confidence 域、12/48 预算、crop/warp、owner/layout、翻译 QA、取消和持久化不变。
