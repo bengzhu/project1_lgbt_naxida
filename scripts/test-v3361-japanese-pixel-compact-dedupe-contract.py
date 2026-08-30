@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.362 compact-aware pixel dedupe."""
+"""Static and pure-policy contract for v3.363 compact-aware pixel dedupe."""
 
 from dataclasses import dataclass
 import math
@@ -246,14 +246,14 @@ class JapanesePixelCompactDedupeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.362", "3.362"],
+            ["3.363", "3.363"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py",
             "scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py",
-            "v3.362",
-            "japanese-benchmark-v3.362-",
+            "v3.363",
+            "japanese-benchmark-v3.363-",
         ):
             self.assertIn(marker, combined)
         contract = Path(__file__).read_text(encoding="utf-8")

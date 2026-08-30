@@ -1,3 +1,11 @@
+## v3.363：Japanese standard translation prompt（候选）
+
+继续提升普通图片日语 OCR→翻译主路径。审计发现，日语图片批量翻译的 tagged `mangaBlocks` 请求已有明确语言对和漫画约束，但失败块逐块 QA 回退、以及 OCR 重新识别后的单块复译，走的是 plain-text `standard` 请求；通用提示模板对日语没有显式源语言/目标语言声明，弱本地模型可能因此回显、漏译或误解拟声词。
+
+本轮可证伪假设：**若仅对 plain-text standard 的日语→简体中文/英语请求补充显式语言对、忠实/简洁翻译、称谓/专名/语气/拟声词保留和只输出译文约束，则单块回退/复译更可能稳定进入既有 QA；`mangaBlocks` 标签协议、OCR/layout、请求预算、取消、持久化和非日语路径保持不变。**
+
+实现待通过本地安全静态合同与云端 full validation 后收口；新增 `scripts/test-v3363-japanese-standard-translation-prompt-contract.py`，工程版本推进至 `3.363`，workflow 已接入。当前不运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 尚未提供，不合成样图，也不把静态合同结果外推为通用 OCR/CER/翻译质量证据。
+
 ## v3.361：Japanese pixel compact dedupe（已完成）
 
 v3.360 已收紧普通图片日语 recovery frontier 的重复 block crop；继续审计发现，pixel-first detector 在两个旋转 Vision 视图上按既有高度/几何顺序去重时，后到的 compact envelope 可能被较高 regular 框抹掉，因而失去进入既有最多 4 个 compact recovery 名额的资格。

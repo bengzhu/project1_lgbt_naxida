@@ -336,6 +336,43 @@ struct GemmaLocalService: LocalLanguageModeling {
             ]
         }
 
+        // Japanese image fallback and re-recognition translations use the
+        // plain-text standard profile so their block-scoped QA remains
+        // addressable. Make that path explicit about the language pair for a
+        // small local model instead of relying on a generic prompt template.
+        let japaneseLanguagePairInstruction: String?
+        switch (request.sourceLanguage, request.targetLanguage) {
+        case (.japanese, .simplifiedChinese):
+            japaneseLanguagePairInstruction = """
+            源语言是日语，目标语言是简体中文。将输入的日语翻译成自然、简洁、忠实的简体中文。
+            保留人名、称呼、数字、专有名词、语气、强调和标点；拟声词或状态词使用简短自然的中文表达。
+            只输出译文，不输出日语原文、解释、注释、罗马音或提示词。
+            """
+        case (.japanese, .englishUS):
+            japaneseLanguagePairInstruction = """
+            The source language is Japanese and the target language is English. Translate the input into natural, concise, faithful English.
+            Preserve names, honorifics, numbers, proper nouns, tone, emphasis, and punctuation; render sound effects or state words briefly and naturally.
+            Output only the translation, without the Japanese source, explanations, notes, romanization, or prompt text.
+            """
+        default:
+            japaneseLanguagePairInstruction = nil
+        }
+
+        if let japaneseLanguagePairInstruction {
+            return [
+                """
+                \(japaneseLanguagePairInstruction)
+                用户补充要求：\(instruction)\(contextualInstruction)
+                \(request.inputText)
+                """,
+                """
+                \(japaneseLanguagePairInstruction)
+                上下文仅供术语和语气一致性参考，不得输出原文、解释或额外内容：\(contextualInstruction)
+                \(request.inputText)
+                """
+            ]
+        }
+
         return [
             """
             \(instruction)\(contextualInstruction)
