@@ -92,7 +92,7 @@ class JapaneseKoharuVerticalLineOrientationContractTests(unittest.TestCase):
 
     def test_existing_line_budgets_and_fixture_remain_present(self) -> None:
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "let perspectiveCandidates = Array(",
             ".prefix(24)",
             "consumedPixels: &perspectiveWarpPixels",
             "preparedPixels <= 4_000_000",

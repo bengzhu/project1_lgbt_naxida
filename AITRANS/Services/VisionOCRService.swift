@@ -2640,7 +2640,12 @@ struct VisionOCRService: Sendable {
             uniqueCandidates.append(candidate)
         }
 
-        let perspectiveCandidates = Array(uniqueCandidates.prefix(24))
+        let perspectiveCandidates = Array(
+            boundedJapaneseVisionLineCandidates(
+                uniqueCandidates,
+                limit: 24
+            ).prefix(24)
+        )
         // Vision may split a narrow vertical Japanese column into near-square
         // one- or two-glyph observations. Koharu's detector emits one line
         // region before OCR, so replace those fragmented axis-aligned rereads
@@ -2666,8 +2671,10 @@ struct VisionOCRService: Sendable {
             })
         }
         let axisCandidates = Array(
-            deduplicateJapaneseObservations(axisSeeds)
-                .prefix(24)
+            boundedJapaneseVisionLineCandidates(
+                deduplicateJapaneseObservations(axisSeeds),
+                limit: 24
+            ).prefix(24)
         )
 
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
@@ -3015,6 +3022,18 @@ struct VisionOCRService: Sendable {
         }
 
         return selectedIndices.sorted().map { candidates[$0] }
+    }
+
+    /// Reuse the deterministic owner-balanced prefix policy for Vision's
+    /// perspective and axis line rereads. These queues may contain geometry
+    /// or synthesized candidates in addition to text-backed observations, so
+    /// the public boundary is kept separate from the Manga-only helper while
+    /// preserving the same explicit-owner, no-new-budget semantics.
+    private static func boundedJapaneseVisionLineCandidates(
+        _ candidates: [VisionOCRObservation],
+        limit: Int
+    ) -> [VisionOCRObservation] {
+        boundedJapaneseMangaLineTextCandidates(candidates, limit: limit)
     }
 
     /// Derive recognition-only line geometry from Vision's rotated

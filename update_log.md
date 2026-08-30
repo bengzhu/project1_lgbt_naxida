@@ -1,3 +1,11 @@
+## v3.343：Japanese Vision line owner balance（2026-08-30，研发中）
+
+v3.342 已让 8 个 Manga line OCR 名额在超预算时避免单一 known vertical TextRegion owner 饥饿；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recognizeJapaneseVerticalLineCrops` 的 Vision perspective 与 axis reread 队列仍直接从强候选前缀取最多 24 项，多块长图上一个 known owner 的候选可能占满两个 Vision 队列，使其它 owner 没有 line reread 机会。
+
+可证伪假设：**若 perspective 与 axis 队列在既有 24 项上限前复用显式 owner-balanced 选择，只在前缀遗漏 known owner 时从原队列补入该 owner，并优先移除已覆盖 owner 的重复候选，则多块页面能在相同 Vision 预算内获得更完整的 line reread 覆盖；预算内、单 owner、已覆盖 owner 和 ownerless 页面保持原选择。**
+
+实现边界：新增 Vision line 队列适配器，复用 v3.342 的确定性 owner balance；两个队列仍各自保留 `.prefix(24)` 硬上限，显式 `verticalTextRegionOwner` 才参与公平统计，ownerless 不制造 owner。perspective quad、axis crop、最多 12 次 opposite fallback、16M perspective 像素预算、Manga 8/2 名额、detector ownership、line/block/tile fallback、布局、翻译 QA、取消、持久化和非图片路径不变。新增 `scripts/test-v3343-japanese-vision-line-owner-balance-contract.py`，工程版本推进至 `3.343`，Japanese benchmark route 已接入；云端 full 与合并验收待本轮完成。本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime，Koharu/GGUF、授权语料和目标设备证据不作为普通 OCR 阻塞条件。
+
 ## v3.342：Japanese line owner balance（2026-08-30，已完成）
 
 v3.341 已把长图 vertical tile 的既有 18 个窗口改为条件式跨列轮询；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `japaneseMangaLineOCRCandidates` 虽已按风险优先排列 text-backed line，但在超过既有 text-backed 名额时，一个 known vertical TextRegion 的碎片候选仍可能占满前缀，让另一个 known owner 没有 line OCR 复读机会。

@@ -72,7 +72,7 @@ class JapaneseLinePathDedupeContractTests(unittest.TestCase):
 
     def test_scope_and_existing_line_budget_remain_safe(self) -> None:
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "let perspectiveCandidates = Array(",
             "let axisCandidates = Array(",
             ".prefix(24)",
             "consumedPixels: &perspectiveWarpPixels",

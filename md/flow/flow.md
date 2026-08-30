@@ -1,7 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
-当前 v3.342 Japanese line owner balance：`risk-first text-backed line queue -> bounded owner-balanced selection when the text budget is exceeded -> reserved geometry-only slots -> Manga/Vision fusion`；保留既有风险优先顺序和最多 8 次 line OCR／2 个 geometry-only 名额，只在预算会遗漏 known vertical TextRegion owner 时以最佳候选补齐 owner，普通页、单 owner、已覆盖 owner 和所有下游翻译/取消/持久化边界不变。
+当前 v3.343 Japanese Vision line owner balance：`risk-first line geometry -> owner-balanced perspective/axis queues -> bounded 24-item Vision rereads -> Manga/Vision fusion`；复用显式 owner 的确定性补齐策略，两个 Vision 队列各自仍最多 24 项，只在前缀遗漏 known vertical TextRegion owner 时替换重复 owner，ownerless、12 次 orientation fallback、16M perspective 像素预算、Manga 8/2 名额和下游翻译/取消/持久化边界不变。
 当前 v3.340 Japanese line coverage source boundary：`page/line observations -> exclude block-level detector TextRegion from source-line set -> existing owner/quality/geometry one-to-one proof -> bounded block crop fallback`；块级 detector bbox 不再伪造多行完整覆盖，既有 line/block OCR 预算、阈值、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
 当前 v3.339 detector 同标签跨切片合并边界：`slice detector predictions -> existing same-label containment/IoU/adjacent geometry gates -> merge/replacement -> restart complete slice scan -> v3.338 TextRegion closure -> confidence sort/Manga OCR`；只封闭跨切片候选的遍历顺序缺口，检测阈值、confidence 合法域、12/48 请求预算、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。
 当前 v3.338 detector TextRegion 合并边界：`detector predictions -> existing IoU/containment relation -> union envelope -> restart scan -> deterministic merged TextRegion -> existing confidence sort/Manga OCR`；合并后重新检查此前跳过的候选，重叠链不再因 `popLast` 顺序留下重复区域；检测阈值、confidence 合法域、12/48 请求上限、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。

@@ -47,7 +47,7 @@ class JapaneseVerticalFragmentLineContractTests(unittest.TestCase):
 
     def test_fragmented_candidates_become_bounded_axis_line_crops(self) -> None:
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "let perspectiveCandidates = Array(",
             "synthesizeJapaneseVerticalLineCandidates(",
             "let axisCandidates = Array(",
             ".prefix(24)",

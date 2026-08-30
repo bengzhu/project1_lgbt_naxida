@@ -58,7 +58,7 @@ class JapaneseSyntheticLineReplacementContractTests(unittest.TestCase):
 
     def test_perspective_quads_and_quality_fallback_remain_available(self) -> None:
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "let perspectiveCandidates = Array(",
             "recognizeJapanesePerspectiveLineCrop(",
             "consumedPixels: &perspectiveWarpPixels",
             "orientationFallbacksRemaining",
@@ -68,7 +68,7 @@ class JapaneseSyntheticLineReplacementContractTests(unittest.TestCase):
         # The replacement is axis-only; original observations still seed the
         # perspective path above the synthetic candidate construction.
         self.assertLess(
-            self.lines.index("let perspectiveCandidates = Array(uniqueCandidates.prefix(24))"),
+            self.lines.index("let perspectiveCandidates = Array("),
             self.lines.index("let synthesizedCandidates = synthesizeJapaneseVerticalLineCandidates("),
         )
 

@@ -227,7 +227,7 @@ class JapaneseVisionLineDensityContractTests(unittest.TestCase):
         )
         self.assertNotIn("meaningfulJapaneseRecoveryObservations", page_selector)
         self.assertIn("maximumJapaneseMangaLineOCRRequests = 8", self.vision)
-        self.assertIn("Array(uniqueCandidates.prefix(24))", self.line)
+        self.assertIn("boundedJapaneseVisionLineCandidates(", self.line)
         self.assertIn(".prefix(24)", self.line)
         axis_start = self.line.index("let primary = recognizeJapaneseCropPass(")
         self.assertEqual(self.line[axis_start:].count("recognizeJapaneseCropPass("), 2)
@@ -242,7 +242,7 @@ class JapaneseVisionLineDensityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.342", "3.342"],
+            ["3.343", "3.343"],
         )
         combined = (
             self.workflow

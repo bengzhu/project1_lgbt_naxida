@@ -1,3 +1,8 @@
+### v3.343 Japanese Vision line owner balance contract（研发中）
+
+- `recognizeJapaneseVerticalLineCrops` 的 perspective 与 axis reread 队列在既有每队最多 24 项上限前复用显式 owner-balanced 选择；只有前缀遗漏 known `verticalTextRegionOwner` 时补入原队列中的该 owner，优先移除重复 known owner，ownerless 不被计为 owner。Manga 8 次 line OCR、2 个 geometry-only 保留位及所有 Vision crop、方向 fallback、像素预算、布局、翻译 QA、取消和持久化边界不变。
+- 新合同：`scripts/test-v3343-japanese-vision-line-owner-balance-contract.py`；工程版本推进至 `3.343`，Japanese benchmark route 已接入。云端 full/PR/merge 验收待本轮完成；本地只做静态 Python 合同与配置检查，不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.342 Japanese line owner balance contract（已完成）
 
 - `japaneseMangaLineOCRCandidates` 保留 v3.337 风险优先 text-backed queue；当候选超过 text-backed 预算且原始前缀遗漏 known `verticalTextRegionOwner` 时，`boundedJapaneseMangaLineTextCandidates` 为每个遗漏 owner 选取原队列中最佳候选，优先移除已有 owner 的重复候选，并恢复原队列顺序。ownerless 不被计为 owner，只有无重复 known-owner 可移除时才会被挤出；预算内、单 owner 或已覆盖 owner 的前缀不变。
