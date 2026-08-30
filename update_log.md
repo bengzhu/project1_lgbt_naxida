@@ -1,10 +1,10 @@
-## v3.356：Japanese compact spatial balance（2026-08-30，当前研发分支）
+## v3.356：Japanese compact spatial balance（2026-08-30，已完成）
 
 v3.355 已修复 geometry-only line reserve 的 known-owner 饥饿；继续审计发现 pixel-first 路径的 compact 候选虽预留最多 4 个名额，但仍按 `y/x` 直接取前四个，多个页面 band 的短 SFX/短列可能集中在同一 band，其他 band 的候选没有进入复读。
 
 可证伪假设：**若在既有 compact 候选识别与稳定 `y/x` 排序之后，仅对超过 4 个且跨多个 band 的 compact pool 采用 band round-robin，则可让不同 band 获得有限 compact 复读机会；under-budget、single-band、compact 优先级、12/4 pixel/方向上限、quality/geometry、OCR/layout、翻译 QA、取消、持久化和非日语路径保持不变。**
 
-当前实现位于独立分支 `codex/v3.356-japanese-compact-spatial-balance`：新增 `scripts/test-v3356-japanese-compact-spatial-balance-contract.py`，工程版本推进至 `3.356`，workflow 已接入；本地安全静态回归与 cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+实现已由 `a3b53349bc28013ba674d0d4a026e7db6e55d62c` 合入 `smalldata_test`，merge SHA 为 `aa8fc40b9054fd943f8e1ece4db0d31d6dda4ae2`；新增 `scripts/test-v3356-japanese-compact-spatial-balance-contract.py`，工程版本推进至 `3.356`，workflow 已接入。本地安全回归为 355 个安全合同通过、27 个进程/编译入口合同按约束跳过（382 总计），Python AST `382/382`、JSON `237/237`、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。exact-SHA cloud full [33299312826](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299312826)、PR [#420](https://github.com/bengzhu/project1_lgbt_naxida/pull/420) checks [33299888372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299888372)、合入后 push CI [33299935514](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299935514) 均成功；Koharu/GGUF、授权语料和目标设备证据仅作可选研究/质量证明，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
 
 ## v3.355：Japanese geometry-owner balance（2026-08-30，已完成）
 

@@ -1,6 +1,6 @@
-### v3.356 Japanese compact spatial-balance contract（当前研发分支）
+### v3.356 Japanese compact spatial-balance contract（已完成）
 
-- pixel-first 路径为 compact 日语候选预留最多 4 个名额，但旧逻辑按 `y/x` 前缀选择，多个页面 band 的短 SFX/短列可能集中在同一 band。v3.356 仅在 compact pool 超过 4 且存在多个 band 时采用稳定 band round-robin，保留 compact 优先级、under-budget/single-band、12/4 pixel/方向上限及 OCR/layout、翻译 QA、取消、持久化边界不变。新增 `scripts/test-v3356-japanese-compact-spatial-balance-contract.py`，工程版本 `3.356`；实现与 cloud full 待执行，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+- pixel-first 路径为 compact 日语候选预留最多 4 个名额，但旧逻辑按 `y/x` 前缀选择，多个页面 band 的短 SFX/短列可能集中在同一 band。v3.356 仅在 compact pool 超过 4 且存在多个 band 时采用稳定 band round-robin，保留 compact 优先级、under-budget/single-band、12/4 pixel/方向上限及 OCR/layout、翻译 QA、取消、持久化边界不变。新增 `scripts/test-v3356-japanese-compact-spatial-balance-contract.py`，工程版本 `3.356`；新合同 `9/9`，本地安全回归 `355` 个通过、`27` 个进程/编译入口合同按约束跳过（`382` 总计），Python AST `382/382`、JSON `237/237`、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `a3b53349bc28013ba674d0d4a026e7db6e55d62c` 的 exact-SHA full [33299312826](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299312826)、PR [#420](https://github.com/bengzhu/project1_lgbt_naxida/pull/420) checks [33299888372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299888372)、merge SHA `aa8fc40b9054fd943f8e1ece4db0d31d6dda4ae2` 与合入后 push CI [33299935514](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299935514) 均成功；未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
 
 ### v3.355 Japanese geometry-owner balance contract（已完成）
 
