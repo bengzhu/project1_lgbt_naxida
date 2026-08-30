@@ -1,3 +1,7 @@
+### v3.349 Japanese tile coverage eligibility contract（开发中）
+
+- `recognizeJapaneseVerticalTileFallback` 不再让全部 `verticalBlocks` 仅凭几何阻止宽 tile；只有 vertical、非空、有限 `[0,1]` confidence `>=.48`、真实日语文字、日语文字密度与脚本文本密度 `>=.5` 的 block 才声明 tile coverage，弱/空/非日语/低密度 block 保留既有窗口机会。最多 6 个 tile、18 个窗口、4 次方向 fallback、可靠 line frontier、pixel-first、block recovery、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新合同为 `scripts/test-v3349-japanese-tile-coverage-eligibility-contract.py`，工程版本 `3.349`；本地安全静态回归与云端 full validation 待执行，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.348 Japanese pixel recovery eligibility contract（已完成）
 
 文档收口 push CI [33290225605](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290225605) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。

@@ -1,5 +1,7 @@
 # AITRANS iOS Prototype
 
+v3.349（2026-08-30，开发中）收紧普通图片日语 tile fallback 的 existing block coverage：`verticalBlocks` 不再仅凭几何阻止宽窗口，只有 vertical、非空、有限 confidence `>=.48`、真实日语文字和日语/脚本文本密度 `>=.5` 的 block 才抑制重复 tile；弱/空/非日语/低密度 block 继续保留既有最多 6 个 tile、18 个窗口、4 次方向 fallback 与下游 pixel-first/line/block/OCR/layout/翻译 QA/取消/持久化边界。新增 v3.349 contract，工程版本 `3.349`；验证进行中，不声称通用 OCR/CER 或翻译质量提升。
+
 v3.348（2026-08-30，已完成）收紧普通图片日语 pixel-first recovery 的 existing vertical coverage：`.vertical` provenance 或 `.verticalLine` role 不再单独声明几何已覆盖，只有非空、有限 confidence `>=.48`、真实日语文字和日语/脚本文本密度 `>=.5` 的读数才抑制重复 crop；弱页面读数继续保留既有最多 12 个 pixel-first crop、4 次方向 fallback 与下游 line/tile/OCR/layout/翻译 QA/取消/持久化边界。新增 v3.348 contract，工程版本 `3.348`；实现 SHA `02e4a51e47f4efc6e68b0a4fc2ea56d398bfe3ba` 的 exact-SHA full [33289570887](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33289570887)、PR [#412](https://github.com/bengzhu/project1_lgbt_naxida/pull/412) checks [33290091078](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290091078)、merge SHA `9bd5f4238e1abc690e7371a6aa5c534268746b07` 与合入后 push CI [33290131510](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290131510) 均成功；文档收口 push CI [33290225605](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290225605) 已成功。不声称通用 OCR/CER 或翻译质量提升。
 
 v3.347 文档收口 push CI：[33288959454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288959454) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。

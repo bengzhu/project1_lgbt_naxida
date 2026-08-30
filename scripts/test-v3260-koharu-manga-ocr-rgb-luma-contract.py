@@ -78,7 +78,7 @@ class KoharuMangaOCRRGBLumaContractTests(unittest.TestCase):
 
     def test_project_version_is_3260(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.348", "3.348"])
+        self.assertEqual(versions, ["3.349", "3.349"])
 
 
 if __name__ == "__main__":
