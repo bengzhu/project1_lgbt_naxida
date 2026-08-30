@@ -1,3 +1,8 @@
+### v3.363 Japanese standard translation prompt contract（候选）
+
+- 日语图片翻译的 plain-text standard 请求补充明确的日语源语言、目标语言、忠实/简洁风格、称谓/专名/拟声词保留和只输出译文约束；该提示同时覆盖批量失败块 QA 回退与 OCR 重新识别后的单块复译。
+- 新增 `scripts/test-v3363-japanese-standard-translation-prompt-contract.py`，工程版本 `3.363`，workflow 已接入；待安全静态回归和云端 full validation。`mangaBlocks` 的 `[N]` 标签、OCR/layout、请求预算、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，不合成输入或质量证据。
+
 ### v3.362 Japanese translation context-echo contract（已完成）
 
 - 跨 batch QA 只把规范化后完整等于上一批译文、且当前原文不同于上一批原文的输出判为 `previousContextLeakage`；当前译文合法包含上一批短语，或当前原文重复时，不再被 broad `contains` 规则误拒绝。
