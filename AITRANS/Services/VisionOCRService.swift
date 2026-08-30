@@ -2261,17 +2261,27 @@ struct VisionOCRService: Sendable {
             }
             return lhs.detectorRotation == 270 && rhs.detectorRotation != 270
         }) {
-            guard !unique.contains(where: {
+            guard let duplicateIndex = unique.firstIndex(where: {
                 isSameJapanesePixelFirstRegion(candidate, as: $0)
             }) else {
+                unique.append(candidate)
+                // Collect a bounded overflow before applying the 12-request cap so
+                // compact candidates in a long-page band cannot be hidden behind
+                // taller Vision boxes. The final selection below reserves at most
+                // four compact candidates and still returns no more than 12.
+                if unique.count == 128 { break }
                 continue
             }
-            unique.append(candidate)
-            // Collect a bounded overflow before applying the 12-request cap so
-            // compact candidates in a long-page band cannot be hidden behind
-            // taller Vision boxes. The final selection below reserves at most
-            // four compact candidates and still returns no more than 12.
-            if unique.count == 128 { break }
+            // Two rotated Vision passes can describe the same tight envelope
+            // with different character counts. Preserve the compact recovery
+            // qualification when the envelopes are genuinely comparable; a
+            // materially broader regular box remains the historical winner.
+            if shouldPreferJapanesePixelFirstCompactRegion(
+                candidate,
+                over: unique[duplicateIndex]
+            ) {
+                unique[duplicateIndex] = candidate
+            }
         }
         let compactCandidates = unique
             .filter {
@@ -2743,6 +2753,39 @@ struct VisionOCRService: Sendable {
     ) -> Bool {
         intersectionOverUnion(candidate.rect, other.rect) >= 0.45
             || overlapRatio(candidate.rect, other.rect) >= 0.65
+    }
+
+    /// A compact candidate can be shorter than its duplicate because the two
+    /// rotated Vision passes expose slightly different character envelopes.
+    /// Let that compact qualification survive only for a tight, comparable
+    /// duplicate; do not replace a materially broader regular region that may
+    /// represent the full vertical line.
+    private static func shouldPreferJapanesePixelFirstCompactRegion(
+        _ candidate: JapanesePixelFirstRegion,
+        over incumbent: JapanesePixelFirstRegion
+    ) -> Bool {
+        guard isJapanesePixelFirstCompactCandidate(
+            candidate.rect,
+            characterCount: candidate.characterCount
+        ),
+              !isJapanesePixelFirstCompactCandidate(
+                  incumbent.rect,
+                  characterCount: incumbent.characterCount
+              ) else {
+            return false
+        }
+        let candidateArea = candidate.rect.width * candidate.rect.height
+        let incumbentArea = incumbent.rect.width * incumbent.rect.height
+        guard candidateArea.isFinite,
+              incumbentArea.isFinite,
+              candidateArea > 0,
+              incumbentArea > 0 else {
+            return false
+        }
+        let smallerToLarger = min(candidateArea, incumbentArea)
+            / max(candidateArea, incumbentArea)
+        return smallerToLarger >= 0.50
+            && intersectionOverUnion(candidate.rect, incumbent.rect) >= 0.45
     }
 
     /// Recover Japanese vertical columns that the page-level Vision passes did

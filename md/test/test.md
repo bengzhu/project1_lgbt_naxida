@@ -1,3 +1,8 @@
+### v3.361 Japanese pixel compact-dedupe contract（候选验证中）
+
+- 像素首读的旋转 Vision 结果先按既有 geometry 去重；若后到候选与已有框确属同一、面积可比 envelope 且只有后者满足 2–4 字 compact gate，则保留 compact 资格进入既有 compact reserve。面积明显更小或 IoU 不足的 compact 候选不能替换可能覆盖完整竖排的 regular 框。
+- 新增 `scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py`，工程版本 `3.361`，CI 已接入；本地合同已通过，候选 exact-SHA full 尚待完成。12 个 pixel crop、4 次方向 fallback、OCR/layout、翻译 QA、取消、持久化、UI/renderer 和非日语路径不变；`test/3.png` 未提供，不伪造输入或质量证据。
+
 ### v3.360 Japanese recovery-frontier block-skip contract（已完成）
 
 - v3.359 后继续审计普通图片 OCR recovery：block loop 旧 guard 只读取 `lineRefined`，因此唯一归属某个 TextRegion 的 pixel/tile 逐源行完整结果仍可能重复触发宽 block crop。v3.360 将 line/pixel/tile 合成只读 frontier，仅让唯一 owner、可靠日语、竖排 geometry 且通过严格一对一 coverage proof 的 recovery 结果跳过该 crop；弱、部分、ownerless、歧义和 foreign-owner 结果继续保留 fallback，输出替换、请求预算、方向 fallback、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。
