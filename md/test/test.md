@@ -1,3 +1,8 @@
+### v3.348 Japanese pixel recovery eligibility contract（开发中）
+
+- `detectJapanesePixelFirstVerticalRegions` 继续保留 `.vertical` provenance／`.verticalLine` role、弱 compact owner 例外和原有 geometry coverage，但 existing vertical geometry 只有在非空、有限 `[0,1]` confidence `>=.48`、真实日语文字、日语文字密度与脚本文字密度 `>=.5` 时才可阻止重复 pixel-first candidate；弱页面读数不再提前声明覆盖。
+- 最多 12 个 pixel-first crop、4 次 opposite orientation、character geometry、line frontier、tile fallback、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新合同为 `scripts/test-v3348-japanese-pixel-recovery-eligibility-contract.py`，工程版本 `3.348`；本地安全静态回归与云端 full validation 待执行，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.347 Japanese recovery frontier contract（已完成）
 
 文档收口 push CI [33288959454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288959454) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。

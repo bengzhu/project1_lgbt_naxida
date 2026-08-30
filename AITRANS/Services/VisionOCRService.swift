@@ -2036,6 +2036,19 @@ struct VisionOCRService: Sendable {
             if isWeakCompactJapaneseOwner(observation) {
                 return nil
             }
+            // Direction provenance alone is not recognition coverage. A weak
+            // page-level vertical read must leave its geometry eligible for
+            // pixel-first reread; only usable Japanese text may suppress a
+            // duplicate recovery candidate.
+            let text = postProcessJapaneseOCRText(observation.text)
+            guard !text.isEmpty,
+                  validOCRConfidence(observation.confidence) != nil,
+                  observation.confidence >= 0.48,
+                  JapaneseOCRTextNormalizer.containsJapaneseLetter(text),
+                  JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5,
+                  japaneseScriptDensity(in: text) >= 0.5 else {
+                return nil
+            }
             return observation.lineRegionRect ?? observation.rect
         }
         let reliableLineRegions = lineObservations.compactMap { observation in

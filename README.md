@@ -1,5 +1,7 @@
 # AITRANS iOS Prototype
 
+v3.348（2026-08-30，开发中）收紧普通图片日语 pixel-first recovery 的 existing vertical coverage：`.vertical` provenance 或 `.verticalLine` role 不再单独声明几何已覆盖，只有非空、有限 confidence `>=.48`、真实日语文字和日语/脚本文本密度 `>=.5` 的读数才抑制重复 crop；弱页面读数继续保留既有最多 12 个 pixel-first crop、4 次方向 fallback 与下游 line/tile/OCR/layout/翻译 QA/取消/持久化边界。新增 v3.348 contract，工程版本 `3.348`；验证进行中，不声称通用 OCR/CER 或翻译质量提升。
+
 v3.347 文档收口 push CI：[33288959454](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288959454) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 v3.347（2026-08-30）修复普通图片日语 OCR recovery frontier：line-first 与 pixel-first 复读产生的可靠 `.verticalLine` observation 共同进入既有 tile fallback 的只读 coverage frontier，避免可靠 pixel-first 区域被宽 tile 重复处理并挤出后续未覆盖窗口；弱／空／非竖排结果仍由既有 `japaneseLinePathRegion` gate 保留 fallback。最多 18 个 tile window、4 次反向方向复读、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。新增 v3.347 contract，工程版本 `3.347`；本地 346 个安全合同通过，27 个进程／编译／runtime 合同跳过，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。实现 SHA `a3fd100d908da4ade62ad8b4311afad95cb7a690` 的 exact-SHA full [33288126373](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288126373)、PR [#411](https://github.com/bengzhu/project1_lgbt_naxida/pull/411)、merge SHA `112c5dfcf4e4c3eb1ce51d8501911eb9112982bf` 与合入后 push CI [33288808855](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33288808855) 均成功。Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，不据此外推通用 OCR／CER 或翻译质量提升。
