@@ -5,6 +5,7 @@ v3.354 已封闭普通图片日语竖排 owner 的有限 direction confidence �
 可证伪假设：**若在既有 text-backed coverage filter、严格单 owner geometry gate 与稳定几何排序之后，复用 owner-only bounded selector，则仅在 geometry pool 超过 `geometryReserve <= 2` 且存在多个 known owner 时平衡候选；under-budget、single-owner、ownerless 兼容、8/2 line/geometry 上限、Vision/Manga OCR、layout、翻译 QA、取消、持久化和非日语路径保持不变。**
 
 实现已由 `0568d4d10b2132ce55b2a64b2ce3317606291f3f` 合入 `smalldata_test`，merge SHA 为 `be23a758952d7b8713267acb8d0667ab85ffefc5`；新增 `scripts/test-v3355-japanese-geometry-owner-balance-contract.py`，工程版本推进至 `3.355`，workflow 已接入。本地安全静态回归与 exact-SHA cloud full [33298161646](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298161646)、PR [#419](https://github.com/bengzhu/project1_lgbt_naxida/pull/419) checks [33298597548](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298597548)、合入后 push CI [33298644345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298644345) 均成功。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+v3.355 文档收口 push CI [33298747648](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33298747648) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 ## v3.354：Japanese direction-confidence owner domain（2026-08-30，已完成）
 
