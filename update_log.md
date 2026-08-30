@@ -1,3 +1,11 @@
+## v3.361：Japanese pixel compact dedupe（候选验证中）
+
+v3.360 已收紧普通图片日语 recovery frontier 的重复 block crop；继续审计发现，pixel-first detector 在两个旋转 Vision 视图上按既有高度/几何顺序去重时，后到的 compact envelope 可能被较高 regular 框抹掉，因而失去进入既有最多 4 个 compact recovery 名额的资格。
+
+本轮可证伪假设：**若仅在两个候选确属同一、面积可比的 envelope（有限正面积比 `>=.50` 且 IoU `>=.45`）时保留 compact 资格，则同一 tight envelope 的 compact 复读不会因旋转视图 metadata 差异而被丢弃；明显更宽的 regular 框、非重复 geometry 与无效数值仍按历史规则。12 个 pixel crop、4 次方向 fallback、OCR/layout、翻译 QA、标签、取消、持久化、UI/renderer 和非日语路径不变。**
+
+实现与验证正在 `codex/v3.361-japanese-pixel-compact-dedupe` 候选分支进行：新增 `scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py`，工程版本推进至 `3.361`，workflow 已接入；本地安全合同已通过，exact-SHA cloud full 尚待完成。按约束未运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 未提供，不合成输入，不以静态合同结果宣称通用 OCR/CER 或翻译质量提升；Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，仅作可选研究/质量证明。
+
 ## v3.360：Japanese recovery-frontier block skip（已完成）
 
 v3.359 已收紧普通图片日语→简体中文 shared-Han QA；继续审计 OCR recovery 主路径发现，`recognizeJapaneseVerticalCrops` 的 block loop 只用 `lineRefined` 判断完整覆盖。即使 pixel-first 或 tile 已产生一个几何上覆盖该 known TextRegion 全部源行的可靠结果，仍可能再执行一次宽 block crop，造成重复读取并消耗既有 bounded block-crop 机会。

@@ -129,7 +129,7 @@ class ImageOCRProvenanceContractTests(unittest.TestCase):
         self.assertIn("v3.281 image OCR provenance evaluator passed", self.fixture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.360", "3.360"],
+            ["3.361", "3.361"],
         )
 
 
