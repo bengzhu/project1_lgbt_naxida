@@ -2261,7 +2261,10 @@ struct VisionOCRService: Sendable {
                 if lhs.rect.y != rhs.rect.y { return lhs.rect.y < rhs.rect.y }
                 return lhs.rect.x > rhs.rect.x
             }
-        let reservedCompact = Array(compactCandidates.prefix(4))
+        let reservedCompact = Self.boundedJapanesePixelFirstCompactCandidates(
+            compactCandidates,
+            limit: 4
+        )
         let regularCandidates = unique.filter { candidate in
             !reservedCompact.contains(where: {
                 $0.rect == candidate.rect
@@ -2283,6 +2286,59 @@ struct VisionOCRService: Sendable {
     /// height/geometry priority; only an over-budget, multi-band queue is
     /// reselected and the returned candidates retain that original order.
     private static func boundedJapanesePixelFirstRegularCandidates(
+        _ candidates: [JapanesePixelFirstRegion],
+        limit: Int
+    ) -> [JapanesePixelFirstRegion] {
+        guard limit > 0, candidates.count > limit else { return candidates }
+
+        let bandCount = min(limit, candidates.count)
+        var bands = Array(repeating: [Int](), count: bandCount)
+        for (offset, candidate) in candidates.enumerated() {
+            let centerY = candidate.rect.y + candidate.rect.height / 2
+            let boundedCenterY = centerY.isFinite
+                ? min(max(centerY, 0), 1)
+                : 0
+            let bandIndex = min(
+                Int(boundedCenterY * Double(bandCount)),
+                bandCount - 1
+            )
+            bands[bandIndex].append(offset)
+        }
+
+        let populatedBands = bands.indices.filter { !bands[$0].isEmpty }
+        guard populatedBands.count > 1 else {
+            return Array(candidates.prefix(limit))
+        }
+
+        var selectedOffsets = Set<Int>()
+        var cursors = Array(repeating: 0, count: bandCount)
+        while selectedOffsets.count < limit {
+            var addedCandidate = false
+            for bandIndex in populatedBands {
+                guard selectedOffsets.count < limit,
+                      cursors[bandIndex] < bands[bandIndex].count else {
+                    continue
+                }
+                let offset = bands[bandIndex][cursors[bandIndex]]
+                cursors[bandIndex] += 1
+                selectedOffsets.insert(offset)
+                addedCandidate = true
+            }
+            guard addedCandidate else { break }
+        }
+
+        return candidates.enumerated()
+            .filter { selectedOffsets.contains($0.offset) }
+            .map(\.element)
+    }
+
+    /// Keep the compact recovery reservation, but prevent all four compact
+    /// slots from landing in one vertical page band when short Japanese
+    /// candidates are distributed across a long image. The input is already
+    /// ordered by the historical top-to-bottom/right-to-left compact priority;
+    /// only an over-budget, multi-band queue is reselected and the returned
+    /// candidates retain that original order.
+    private static func boundedJapanesePixelFirstCompactCandidates(
         _ candidates: [JapanesePixelFirstRegion],
         limit: Int
     ) -> [JapanesePixelFirstRegion] {
