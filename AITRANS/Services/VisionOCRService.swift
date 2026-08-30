@@ -800,9 +800,11 @@ struct VisionOCRService: Sendable {
         let text = postProcessJapaneseOCRText(block.original)
         guard !text.isEmpty else { return false }
         let direction = block.effectiveSourceDirection
+        let directionConfidence = block.directionConfidence
         let directionIsWeak = direction == nil
             || direction == .unknown
-            || (block.directionConfidence ?? 1) < 0.45
+            || validJapaneseDirectionConfidence(directionConfidence) == nil
+            || (directionConfidence ?? 0) < 0.45
         let letters = japaneseLetterCountForRecovery(text)
         return validOCRConfidence(block.confidence) == nil
             || block.confidence < 0.60
@@ -817,7 +819,7 @@ struct VisionOCRService: Sendable {
     ) -> Bool {
         let text = postProcessJapaneseOCRText(block.text)
         let directionIsWeak = block.direction != .vertical
-            || !block.directionConfidence.isFinite
+            || validJapaneseDirectionConfidence(block.directionConfidence) == nil
             || block.directionConfidence < 0.45
         let letters = japaneseLetterCountForRecovery(text)
         return validOCRConfidence(block.confidence) == nil
@@ -1025,6 +1027,22 @@ struct VisionOCRService: Sendable {
 
     private static func validOCRConfidence(_ confidence: Float) -> Float? {
         guard confidence.isFinite, (0...1).contains(confidence) else {
+            return nil
+        }
+        return confidence
+    }
+
+    /// Direction confidence participates in vertical recovery eligibility and
+    /// ordering only inside the same normalized domain as the coverage gates.
+    /// Treat NaN, infinities, and finite out-of-range values as weak so an
+    /// invalid score cannot masquerade as a reliable direction and consume a
+    /// bounded crop slot ahead of recoverable Japanese text.
+    private static func validJapaneseDirectionConfidence(
+        _ confidence: Double?
+    ) -> Double? {
+        guard let confidence,
+              confidence.isFinite,
+              (0...1).contains(confidence) else {
             return nil
         }
         return confidence
@@ -1269,12 +1287,12 @@ struct VisionOCRService: Sendable {
                 // bounded crop queue agree with weak-block recovery priority.
                 return lhsConfidence < rhsConfidence
             }
-            let lhsDirectionConfidence = lhs.directionConfidence.isFinite
-                ? lhs.directionConfidence
-                : -.infinity
-            let rhsDirectionConfidence = rhs.directionConfidence.isFinite
-                ? rhs.directionConfidence
-                : -.infinity
+            let lhsDirectionConfidence = validJapaneseDirectionConfidence(
+                lhs.directionConfidence
+            ) ?? -.infinity
+            let rhsDirectionConfidence = validJapaneseDirectionConfidence(
+                rhs.directionConfidence
+            ) ?? -.infinity
             if lhsDirectionConfidence != rhsDirectionConfidence {
                 return lhsDirectionConfidence < rhsDirectionConfidence
             }

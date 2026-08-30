@@ -131,7 +131,7 @@ class JapaneseVerticalCropRiskPriorityContractTests(unittest.TestCase):
             "let lhsConfidence = validOCRConfidence(lhs.confidence) ?? -.infinity",
             "let rhsConfidence = validOCRConfidence(rhs.confidence) ?? -.infinity",
             "return lhsConfidence < rhsConfidence",
-            "lhs.directionConfidence.isFinite",
+            "validJapaneseDirectionConfidence(\n                lhs.directionConfidence\n            ) ?? -.infinity",
             "return lhsDirectionConfidence < rhsDirectionConfidence",
         ):
             self.assertIn(marker, self.crop_stage)
@@ -148,7 +148,7 @@ class JapaneseVerticalCropRiskPriorityContractTests(unittest.TestCase):
             "text.isEmpty",
             "JapaneseOCRTextNormalizer.japaneseLetterDensity(text) < 0.5",
             "japaneseScriptDensity(in: text) < 0.5",
-            "!block.directionConfidence.isFinite",
+            "validJapaneseDirectionConfidence(block.directionConfidence) == nil",
             "block.directionConfidence < 0.45",
             "letters <= 2",
         ):
@@ -202,7 +202,7 @@ class JapaneseVerticalCropRiskPriorityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.351", "3.351"],
+            ["3.352", "3.352"],
         )
         combined = self.workflow + self.flow + self.route + self.test_log + self.update_log
         for marker in (
