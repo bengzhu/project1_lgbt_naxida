@@ -1,7 +1,7 @@
-### v3.359 Japanese shared-Han QA exactness contract（候选验证中）
+### v3.359 Japanese shared-Han QA exactness contract（已完成）
 
 - v3.358 的模型清洗器已经只对规范化后完全相同的纯汉字共享词放行，但产品 QA 的 `isSourceLeakage` 仍把 `日本→日本人` 等原文子串当作例外。v3.359 让 QA 直接复用同一 exact shared-Han policy；仅日语→简体中文、至少两个字符、纯汉字且规范化后完全相同的输出免于泄漏失败，单字、假名/拉丁/数字、额外原文和其它语言对仍进入拒绝/补译边界。
-- 新增 `scripts/test-v3359-japanese-shared-han-qa-exactness-contract.py`，工程版本 `3.359`，CI 已接入；云端 full、PR checks、合入后 CI 与 receipt 待候选 SHA 验证后补录。本地仍只允许运行安全 Python 合同、AST/YAML/shell/plist 静态检查和 `git diff --check`，不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF。OCR、geometry/layout、请求预算、tag、取消、持久化、UI/renderer 和非日语路径不因该 QA 收紧而改变；`test/3.png` 尚未提供，不合成样图代替证据。
+- 新增 `scripts/test-v3359-japanese-shared-han-qa-exactness-contract.py`，工程版本 `3.359`，CI 已接入；新合同 `7/7`，本地安全回归为 358 个安全合同通过、27 个进程/编译入口合同按约束跳过（385 总计），Python AST `405/405`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。实现 SHA `2dc4b0fd6162a01052a08200e53e4f7005c3c01d` 的 exact-SHA full [33303966969](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33303966969)、PR [#423](https://github.com/bengzhu/project1_lgbt_naxida/pull/423) checks [33304583260](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33304583260)、merge SHA `e3be7f7a76db0abb732d064a4954470d6bc6bc1a` 与合入后 push CI [33304633237](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33304633237) 均成功；exact full 的 Xcode build、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 通过。本地仍只允许运行安全 Python 合同、AST/YAML/shell/plist 静态检查和 `git diff --check`，不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF。OCR、geometry/layout、请求预算、tag、取消、持久化、UI/renderer 和非日语路径不因该 QA 收紧而改变；`test/3.png` 尚未提供，不合成样图代替证据。
 
 ### v3.358 Japanese shared-Han model-cleanup contract（已完成）
 

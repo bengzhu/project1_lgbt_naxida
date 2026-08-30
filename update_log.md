@@ -1,8 +1,8 @@
-## v3.359：Japanese shared-Han QA exactness（2026-08-30，候选验证中）
+## v3.359：Japanese shared-Han QA exactness（2026-08-30，已完成）
 
 继续推进普通图片日语 OCR→翻译主线。审计发现 v3.358 已在 `GemmaLocalService` 的标准/漫画 tagged 清洗中统一了窄 shared-Han 例外，但 `TranslationBatchQualityEvaluator.isSourceLeakage` 对日语→简体中文纯汉字源只检查“输出包含原文”，从而把 `日本→日本人` 这类原文子串+额外内容误放行。v3.359 让该 gate 把原始输出交给同一 `TranslationOutputPolicy.allowsUnchangedJapaneseHanTranslation`：只有规范化后完全相同、至少两个字符且源为纯汉字的共享词免于 `sourceLeakage`；单字、假名/拉丁/数字、额外内容和其它语言对仍拒绝。失败继续由既有图片 block QA 只补译当前块，不触发 OCR、检测、布局、整页重跑，不改变标签、预算、取消、持久化、UI/renderer 和非日语路径。
 
-新增 `scripts/test-v3359-japanese-shared-han-qa-exactness-contract.py`，工程版本推进至 `3.359`，workflow 已接入；候选分支的本地安全合同、静态检查和 exact-SHA 云端 full/PR/merge receipt 待本轮验证后补录。`test/3.png` 仍未提供，不合成输入；Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR/翻译主路径，仅作可选研究/质量证明。
+新增 `scripts/test-v3359-japanese-shared-han-qa-exactness-contract.py`，工程版本推进至 `3.359`，workflow 已接入；新合同 `7/7`，本地安全回归为 358 个安全合同通过、27 个进程/编译入口合同按约束跳过（385 总计），Python AST `405/405`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。实现 SHA `2dc4b0fd6162a01052a08200e53e4f7005c3c01d` 的 exact-SHA full [33303966969](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33303966969)、PR [#423](https://github.com/bengzhu/project1_lgbt_naxida/pull/423) checks [33304583260](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33304583260)、merge SHA `e3be7f7a76db0abb732d064a4954470d6bc6bc1a` 与合入后 push CI [33304633237](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33304633237) 均成功；exact full 的 Xcode build、JUnit `10/10` 与 `AITRANS CI/full-validation=success` receipt 通过。`test/3.png` 仍未提供，不合成输入；Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR/翻译主路径，仅作可选研究/质量证明。
 
 ## v3.358：Japanese shared-Han model cleanup（2026-08-30，已完成）
 
