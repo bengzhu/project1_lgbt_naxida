@@ -1,3 +1,8 @@
+### v3.365 Japanese kind-style scope contract（已完成）
+
+- 混合日语漫画 `[N]` batch 为对白、旁白、拟声词、标题和其它文字类型分别生成只绑定对应全局块序号的提示；单块请求保留局部类型提示。OCR、标签、预算、QA、取消、持久化和非日语路径不变。
+- 新增 `scripts/test-v3365-japanese-kind-style-scope-contract.py`，工程版本 `3.365`，workflow 已接入；合同 `7/7`。本地安全回归 `364` 个无进程入口合同通过、`27` 个进程/编译/runtime 合同按约束跳过（`391` 总计），Python AST `411/411`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。实现 SHA `1a37c127` 的 exact-SHA full [33313408977](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33313408977)、PR [#429](https://github.com/bengzhu/project1_lgbt_naxida/pull/429) checks [33313973492](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33313973492)、merge SHA `782cc7be` 与合入后 push CI [33314013235](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33314013235) 均成功；云端 Xcode/JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。该合同只检查 prompt metadata 的类型作用域、既有批量边界与无进程入口；Koharu 按配置跳过，`test/3.png` 未提供，不合成质量证据。
+
 ### v3.364 Japanese SFX scope contract（已完成）
 
 - 混合日语漫画 `[N]` batch 的 SFX/状态字提示只绑定 `batchStartIndex` 推导出的实际全局块序号；对白、旁白、标题等其它编号块继续使用各自的文字类型提示，单块 standard SFX 仍保留局部提示。
@@ -1958,7 +1963,3 @@ python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
 - 未经人工明确要求，不因为 Swift 代码变化就在本机默认跑 Xcode build 或完整漫画探针。
 - 漫画探针或翻译链路修改后，最终回复必须汇总关键数字。
 - 如果 clean text 仍失败，优先讨论模型质量，不要继续盲目调 OCR 或放宽规则。
-### v3.365 Japanese kind-style scope contract（候选，待云端验证）
-
-- 混合日语漫画 `[N]` batch 为对白、旁白、拟声词、标题和其它文字类型分别生成只绑定对应全局块序号的提示；单块请求保留局部类型提示。OCR、标签、预算、QA、取消、持久化和非日语路径不变。
-- 新增 `scripts/test-v3365-japanese-kind-style-scope-contract.py`，工程版本 `3.365`，workflow 已接入；候选实现与云端 full/PR/merge 证据待补。该合同只检查 prompt metadata 的类型作用域、既有批量边界与无进程入口；`test/3.png` 未提供，不合成质量证据。
