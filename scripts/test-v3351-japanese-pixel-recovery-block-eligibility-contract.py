@@ -284,13 +284,13 @@ class JapanesePixelRecoveryBlockEligibilityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.354", "3.354"],
+            ["3.355", "3.355"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3351-japanese-pixel-recovery-block-eligibility-contract.py",
             "v3.351",
-            "japanese-benchmark-v3.354-",
+            "japanese-benchmark-v3.355-",
         ):
             self.assertIn(marker, combined)
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):

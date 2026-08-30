@@ -3261,9 +3261,13 @@ struct VisionOCRService: Sendable {
             textBacked,
             limit: textLimit
         )
+        let selectedGeometry = boundedJapaneseGeometryOnlyLineCandidates(
+            uncoveredGeometry,
+            limit: geometryReserve
+        )
         return Array(
             selectedTextBacked
-                + Array(uncoveredGeometry.prefix(geometryReserve))
+                + selectedGeometry
         ).prefix(maximumJapaneseMangaLineOCRRequests).map { $0 }
     }
 
@@ -3338,6 +3342,18 @@ struct VisionOCRService: Sendable {
         }
 
         return selectedIndices.sorted().map { candidates[$0] }
+    }
+
+    /// Geometry-only line candidates have no OCR text or confidence to rank,
+    /// but they still carry the exact TextRegion owner established upstream.
+    /// Reuse the owner-only bounded selector so two reserved geometry slots do
+    /// not both belong to one known owner when another owner has an uncovered
+    /// line candidate. Under-budget and single-owner queues retain their order.
+    private static func boundedJapaneseGeometryOnlyLineCandidates(
+        _ candidates: [VisionOCRObservation],
+        limit: Int
+    ) -> [VisionOCRObservation] {
+        boundedJapaneseMangaLineTextCandidates(candidates, limit: limit)
     }
 
     /// Reuse the deterministic owner-balanced prefix policy for Vision's

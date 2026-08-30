@@ -212,7 +212,7 @@ class JapaneseLineCandidateRiskPriorityContractTests(unittest.TestCase):
             "maximumJapaneseMangaLineOCRRequests = 8",
             "min(2, maximumJapaneseMangaLineOCRRequests)",
             "maximumJapaneseMangaLineOCRRequests - geometryReserve",
-            "uncoveredGeometry.prefix(geometryReserve)",
+            "let selectedGeometry = boundedJapaneseGeometryOnlyLineCandidates(",
             ".prefix(maximumJapaneseMangaLineOCRRequests)",
         ):
             self.assertIn(marker, self.candidates + self.vision)
@@ -226,7 +226,10 @@ class JapaneseLineCandidateRiskPriorityContractTests(unittest.TestCase):
             "textBacked.prefix(textLimit)" in self.candidates
             or "boundedJapaneseMangaLineTextCandidates(" in self.candidates
         )
-        self.assertIn("uncoveredGeometry.prefix(geometryReserve)", self.candidates)
+        self.assertIn(
+            "let selectedGeometry = boundedJapaneseGeometryOnlyLineCandidates(",
+            self.candidates,
+        )
         self.assertIn(".prefix(maximumJapaneseMangaLineOCRRequests)", self.candidates)
 
     def test_manga_line_result_gates_and_cancellation_remain_unchanged(self) -> None:
@@ -258,7 +261,7 @@ class JapaneseLineCandidateRiskPriorityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.354", "3.354"],
+            ["3.355", "3.355"],
         )
         combined = self.workflow + self.docs
         for marker in (
