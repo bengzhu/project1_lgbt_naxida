@@ -1,10 +1,10 @@
-## v3.367：Translation numeric token Unicode QA（实现已完成，验证进行中）
+## v3.367：Translation numeric token Unicode QA（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现 `TranslationBatchQualityEvaluator.numericTokens` 只使用 ASCII `\\d`，日语 OCR、用户修正或模型输出保留全角数字/全角数值分隔符时，等价的 `１２３` 与 `123` 会被错误判为 `numberMismatch`；数字 token 的缺失、合并和拆分仍需要保持严格拒绝。
 
 本轮可证伪假设：**若数字 QA 只将全角数字、逗号、句点、斜线、冒号和连字符归一化为 ASCII，再用显式 `[0-9]` token 规则比较，则合法的全角/半角表示不会触发无谓补译，同时前导零、顺序、分隔符、缺失、合并和拆分变化仍 fail-closed。**
 
-实现改动仅在 `AITRANS/Models/TranslationContextQuality.swift`：新增 `canonicalNumericTokenText`，在 `numberMismatch` 比较前处理有限数值相关 Unicode；新增 `scripts/test-v3367-translation-numeric-token-unicode-contract.py`，工程版本推进至 `3.367`，workflow 已接入。OCR、detector、crop/warp、geometry/layout、8 blocks/1,800 字符、标签、逐块重试、取消、持久化、UI/renderer 和非日语路径不变。`test/3.png` 仍未提供，不合成样图或把合同结果外推为通用 OCR/CER/翻译质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
+实现改动仅在 `AITRANS/Models/TranslationContextQuality.swift`：新增 `canonicalNumericTokenText`，在 `numberMismatch` 比较前处理有限数值相关 Unicode；新增 `scripts/test-v3367-translation-numeric-token-unicode-contract.py`，工程版本推进至 `3.367`，workflow 已接入。新合同 `7/7`；本地安全回归 `366` 个无进程入口合同通过、`27` 个进程/编译/runtime 合同按约束跳过（`393` 总计），Python AST `413/413`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `456e84c8f51f5c83c45acaa3e84597b8532d6ea2` 的 exact-SHA full [33316619753](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33316619753)、PR [#431](https://github.com/bengzhu/project1_lgbt_naxida/pull/431) checks [33316611350](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33316611350)、merge SHA `47d49cee95590e45d4e50255c1298d82199f5fb3` 与合入后 push CI [33317161956](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33317161956) 均成功；云端 Xcode build、JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。OCR、detector、crop/warp、geometry/layout、8 blocks/1,800 字符、标签、逐块重试、取消、持久化、UI/renderer 和非日语路径不变。按约束未运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 仍未提供，不合成样图或把合同结果外推为通用 OCR/CER/翻译质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
 
 ## v3.366：Japanese fallback context scope（已完成）
 

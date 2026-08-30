@@ -1,7 +1,7 @@
-### v3.367 Translation numeric token Unicode QA contract（实现已完成，验证进行中）
+### v3.367 Translation numeric token Unicode QA contract（已完成）
 
 - `TranslationBatchQualityEvaluator.numberMismatch` 只在数字 token 匹配前把全角数字和全角数值分隔符窄化到 ASCII；`１２３`/`123`、全角/半角日期时间可对齐，前导零、顺序、分隔符、缺失、合并和拆分差异继续 fail-closed。
-- 新增 `scripts/test-v3367-translation-numeric-token-unicode-contract.py`，工程版本 `3.367`，workflow 已接入；不改变 OCR、geometry/layout、8 blocks/1,800 字符、标签、逐块 QA、取消、持久化、UI/renderer 或非日语路径。`test/3.png` 未提供，不合成样图或质量证据。
+- 新增 `scripts/test-v3367-translation-numeric-token-unicode-contract.py`，工程版本 `3.367`，workflow 已接入；合同 `7/7`。本地安全回归 `366` 个无进程入口合同通过、`27` 个进程/编译/runtime 合同按约束跳过（`393` 总计），Python AST `413/413`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4`、project versions `3.367/3.367` 与 `git diff --check` 通过。实现 SHA `456e84c8f51f5c83c45acaa3e84597b8532d6ea2` 的 exact-SHA full [33316619753](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33316619753)、PR [#431](https://github.com/bengzhu/project1_lgbt_naxida/pull/431) checks [33316611350](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33316611350)、merge SHA `47d49cee95590e45d4e50255c1298d82199f5fb3` 与合入后 push CI [33317161956](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33317161956) 均成功；云端 Xcode/JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。不改变 OCR、geometry/layout、8 blocks/1,800 字符、标签、逐块 QA、取消、持久化、UI/renderer 或非日语路径。`test/3.png` 未提供，不合成样图或质量证据。
 
 ### v3.366 Japanese fallback context scope contract（已完成）
 
