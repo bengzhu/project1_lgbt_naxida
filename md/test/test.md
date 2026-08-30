@@ -1,6 +1,7 @@
 ### v3.354 Japanese direction-confidence owner-domain contract（已完成）
 
 - v3.352 已让风险排序与 coverage gate 使用有限 `[0,1]` direction confidence，但中等高度竖排候选筛选、`verticalTextRegionMatchIndices` 与 geometry-only line owner 匹配仍有直接 `>=.25` 比较；v3.354 让三处先经过同一有限域 helper，`NaN/±∞` 与有限越界值 fail closed，合法 `.25`/`.45` 语义、ownerless 兼容及既有 OCR/layout 边界保持不变。最多 16 个 vertical block crop、8 次方向 fallback、4 个 weak-block scoped reread、24/24 Vision line、12/12 pixel-first、48 长图 Manga OCR 上限不变。新增 `scripts/test-v3354-japanese-direction-owner-domain-contract.py`，工程版本 `3.354`；实现 SHA `86500c81563042abee526b08d43ce8dd9928c4fd` 的 exact-SHA full [33297024649](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297024649)、PR [#418](https://github.com/bengzhu/project1_lgbt_naxida/pull/418) checks [33297508110](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297508110)、merge SHA `885dc9ea2a9eadd5d6d18a9598e75a505fe44d76` 与合入后 push CI [33297547961](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297547961) 均成功；本地安全静态回归为 353 个安全合同通过，27 个进程／编译／runtime 合同跳过（380 总计）；Python AST `380/380`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+v3.354 文档收口 push CI [33297705934](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297705934) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 ### v3.353 Japanese vertical crop risk-balance contract（已完成）
 
