@@ -1,3 +1,7 @@
+### v3.351 Japanese pixel recovery block eligibility contract（当前研发分支）
+
+- `detectJapanesePixelFirstVerticalRegions` 不再让全部 `verticalBlocks` 仅凭几何阻止 pixel-first candidate；只有 vertical、`directionConfidence` 有限且位于 `[0,1]`、`>=.45`，并通过既有非空、OCR confidence `>=.48`、真实日语文字、日语文字密度与脚本文本密度 `>=.5` 的 block 才声明 geometry 已覆盖。弱/空/非日语/低密度/方向不确定 block 继续保留既有 pixel-first 机会；可靠 block 仍按既有 `japanesePixelDetectorRegionIsCovered` 抑制重复 geometry。最多 12 个 pixel-first crop、4 次方向 fallback、line frontier、tile/block recovery、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新增 `scripts/test-v3351-japanese-pixel-recovery-block-eligibility-contract.py`，工程版本 `3.351`；本地安全静态回归与云端 full validation 待执行，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.350 Japanese tile direction eligibility contract（已完成）
 
 文档收口 push CI [33292525345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292525345) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。

@@ -1,3 +1,11 @@
+## v3.351：Japanese pixel recovery block eligibility（2026-08-30，当前研发分支）
+
+v3.350 后继续审计普通图片 OCR→翻译主路径发现，v3.348 虽已让弱 observation 不声明 pixel-first coverage，但 `detectJapanesePixelFirstVerticalRegions` 仍以全部 `verticalBlocks` 的几何直接拦截候选；弱、空、低密度或方向不确定的 layout block 可能因此挡住本应执行的 pixel-first geometry reread。
+
+可证伪假设：**若保留既有 `japanesePixelDetectorRegionIsCovered` 几何关系，仅让通过有限 `[0,1]` `directionConfidence >=.45`、非空、有限 OCR confidence `>=.48`、真实日语文字、日语文字密度与脚本文本密度 `>=.5` 的 vertical block 声明 pixel geometry 已覆盖，则弱 block 会重新保留既有 pixel-first candidate，可靠 block 仍抑制重复 geometry；最多 12 个 pixel-first crop、4 次方向 fallback、existing observation/line frontier、tile/block recovery、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
+
+当前实现在独立分支 `codex/v3.351-pixel-recovery-block-eligibility`：新增 `scripts/test-v3351-japanese-pixel-recovery-block-eligibility-contract.py`，工程版本推进至 `3.351`，workflow 已接入；本地安全静态回归与 exact-SHA cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+
 ## v3.350：Japanese tile direction eligibility（2026-08-30，已完成）
 
 文档收口 push CI [33292525345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292525345) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。

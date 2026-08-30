@@ -2054,6 +2054,26 @@ struct VisionOCRService: Sendable {
         let reliableLineRegions = lineObservations.compactMap { observation in
             japaneseLinePathRegion(observation)
         }
+        // A layout block is recognition coverage only after its direction and
+        // Japanese text quality are usable. Keep weak, empty, non-Japanese,
+        // low-density, and directionally uncertain blocks from hiding a
+        // pixel-first geometry candidate; the same candidate may be the only
+        // bounded reread that recovers a missed column. This mirrors the
+        // tile-coverage eligibility boundary without changing the block's
+        // layout ownership or the pixel-first request budget.
+        let reliableVerticalBlocks = verticalBlocks.filter { block in
+            let text = postProcessJapaneseOCRText(block.text)
+            return block.direction == .vertical
+                && block.directionConfidence.isFinite
+                && (0...1).contains(block.directionConfidence)
+                && block.directionConfidence >= 0.45
+                && !text.isEmpty
+                && validOCRConfidence(block.confidence) != nil
+                && block.confidence >= 0.48
+                && JapaneseOCRTextNormalizer.containsJapaneseLetter(text)
+                && JapaneseOCRTextNormalizer.japaneseLetterDensity(text) >= 0.5
+                && japaneseScriptDensity(in: text) >= 0.5
+        }
         var candidates: [JapanesePixelFirstRegion] = []
         for angle in [90, 270] {
             guard let rotated = try? rotatedImage(image, angle: angle) else {
@@ -2095,7 +2115,7 @@ struct VisionOCRService: Sendable {
                     mappedRect,
                     characterCount: characterCount
                 )
-                let overlapsLayoutBlock = verticalBlocks.contains {
+                let overlapsLayoutBlock = reliableVerticalBlocks.contains {
                     japanesePixelDetectorRegionIsCovered(
                         $0.rect,
                         by: mappedRect

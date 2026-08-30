@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.350 tile direction eligibility."""
+"""Static and pure-policy contract for v3.351 tile direction eligibility."""
 
 from dataclasses import dataclass
 import math
@@ -83,7 +83,7 @@ def vertical_tile_is_covered(
 
 
 def eligible_tile_blocks(blocks: list[TileBlock]) -> list[TileBlock]:
-    """Model v3.350's fail-closed direction and OCR coverage gate."""
+    """Model v3.351's fail-closed direction and OCR coverage gate."""
     return [
         block
         for block in blocks
@@ -371,13 +371,13 @@ class JapaneseTileDirectionEligibilityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.350", "3.350"],
+            ["3.351", "3.351"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3350-japanese-tile-direction-eligibility-contract.py",
-            "v3.350",
-            "japanese-benchmark-v3.350-",
+            "v3.351",
+            "japanese-benchmark-v3.351-",
         ):
             self.assertIn(marker, combined)
         contract = read(
