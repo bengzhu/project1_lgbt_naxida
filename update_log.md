@@ -1,10 +1,10 @@
-## v3.364：Japanese SFX prompt scope（候选）
+## v3.364：Japanese SFX prompt scope（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计 `test/2.png` 这类混合漫画批量翻译的 prompt metadata 发现，`TranslationPromptContext` 虽然已经携带每块文字类型，但旧 SFX 规则是无编号的全局句子；弱本地模型可能把拟声词/状态字约束错误套到对白、旁白或标题块。
 
 本轮可证伪假设：**若混合 batch 的 SFX 规则只列出由 `batchTextKinds` 与 `batchStartIndex` 推导出的实际全局 `[N]` 块序号，并明确其它编号块按各自类型翻译，则 SFX 风格约束不会污染同批非 SFX 块；单块 standard SFX 仍保留局部提示。**
 
-实现只调整 `TranslationContextQuality.promptSection()` 的混合 SFX 文案作用域，新增 `scripts/test-v3364-japanese-sfx-scope-contract.py`（8/8）；OCR、候选/geometry/layout、`[N]` 标签、最多 8 块/1,800 字符预算、逐块 QA、取消、持久化和非日语路径不变。工程版本推进至 `3.364`，workflow 已接入；候选 full 待验证。本轮未运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/2.png` 仅为已有输入参考，`test/3.png` 未提供，不合成样图，也不把合同结果外推为通用 OCR/CER/翻译质量证据。
+实现只调整 `TranslationContextQuality.promptSection()` 的混合 SFX 文案作用域，新增 `scripts/test-v3364-japanese-sfx-scope-contract.py`（8/8）；OCR、候选/geometry/layout、`[N]` 标签、最多 8 块/1,800 字符预算、逐块 QA、取消、持久化和非日语路径不变。工程版本推进至 `3.364`，workflow 已接入。本地安全回归 `363` 个通过、`27` 个进程/编译/runtime 入口按约束跳过（`390` 总计），Python AST `409/409`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。实现 SHA `0f576fb78d6ef80d24459a825ec3d42023b5f9f1` 的 exact-SHA full [33311997816](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33311997816)、PR [#428](https://github.com/bengzhu/project1_lgbt_naxida/pull/428) checks [33312526828](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33312526828)、merge SHA `bba2cb8404d4cb092d02bc67f2d548e641c3edf4` 与合入后 push CI [33312575192](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33312575192) 均成功；云端 Xcode/JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。本轮未运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/2.png` 仅为已有输入参考，`test/3.png` 未提供，不合成样图，也不把合同结果外推为通用 OCR/CER/翻译质量证据。
 
 ## v3.363：Japanese standard translation prompt（已完成）
 

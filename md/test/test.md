@@ -1,7 +1,7 @@
-### v3.364 Japanese SFX scope contract（候选）
+### v3.364 Japanese SFX scope contract（已完成）
 
 - 混合日语漫画 `[N]` batch 的 SFX/状态字提示只绑定 `batchStartIndex` 推导出的实际全局块序号；对白、旁白、标题等其它编号块继续使用各自的文字类型提示，单块 standard SFX 仍保留局部提示。
-- 新增 `scripts/test-v3364-japanese-sfx-scope-contract.py`，工程版本 `3.364`，workflow 已接入；候选 full 待验证。该合同只检查 prompt metadata 的作用域、既有批量边界与无进程入口；`test/2.png` 仅作混合漫画参考，`test/3.png` 未提供，不把静态结果当作通用 OCR/翻译质量证据。
+- 新增 `scripts/test-v3364-japanese-sfx-scope-contract.py`，工程版本 `3.364`，workflow 已接入；新合同 `8/8`，本地安全回归 `363` 个通过、`27` 个进程/编译/runtime 入口按约束跳过（`390` 总计），Python AST `409/409`、tracked JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `5/5` 与 `git diff --check` 通过。实现 SHA `0f576fb7` 的 exact-SHA full [33311997816](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33311997816)、PR [#428](https://github.com/bengzhu/project1_lgbt_naxida/pull/428) checks [33312526828](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33312526828)、merge SHA `bba2cb84` 与合入后 push CI [33312575192](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33312575192) 均成功；云端 Xcode/JUnit、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。该合同只检查 prompt metadata 的作用域、既有批量边界与无进程入口；`test/2.png` 仅作混合漫画参考，`test/3.png` 未提供，不把静态结果当作通用 OCR/翻译质量证据。
 
 ### v3.363 Japanese standard translation prompt contract（已完成）
 
