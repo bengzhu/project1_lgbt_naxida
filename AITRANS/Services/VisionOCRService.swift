@@ -1347,19 +1347,34 @@ struct VisionOCRService: Sendable {
         refined.append(contentsOf: pixelFirstRefined)
 
         // A successful pixel-first crop is already a reliable vertical-line
-        // observation after the shared recovery gate. Feed it into the same
-        // read-only frontier used by the tile fallback so a broad tile does
-        // not spend one of the existing 18 windows rereading an area that the
-        // narrower detector crop has just covered. Weak/empty pixel-first
-        // output is absent from this array and therefore cannot suppress the
-        // broader recovery path.
+        // observation after the shared recovery gate. Feed the line/pixel
+        // frontier into the tile fallback so a broad tile does not spend one
+        // of the existing 18 windows rereading an area that the narrower
+        // detector crop has just covered. Owner assignment is deferred to the
+        // read-only block-skip frontier below, where ambiguous matches remain
+        // ownerless and cannot prove coverage for a known block.
         let recoveryFrontierObservations = lineRefined + pixelFirstRefined
-        refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
+        let tileRefined = Self.recognizeJapaneseVerticalTileFallback(
             in: image,
             verticalBlocks: verticalBlockArray,
             lineObservations: recoveryFrontierObservations,
             recognitionLanguages: recognitionLanguages
-        ))
+        )
+        refined.append(contentsOf: tileRefined)
+
+        // The existing block-crop guard historically considers lineRefined
+        // alone. Keep that boundary first, then let the read-only combined
+        // recovery frontier prove a known owner's complete source-line set.
+        // Annotate each recovery observation only for this proof: the shared
+        // helper keeps only a unique TextRegion owner, and its one-to-one
+        // quality/geometry checks reject weak, partial, ownerless, and
+        // cross-owner observations before a block crop can be skipped.
+        let ownerAnnotatedRecoveryObservations = annotateJapaneseVerticalTextRegionOwners(
+            pixelFirstRefined + tileRefined,
+            blocks: verticalBlockArray
+        )
+        let blockRecoveryFrontierObservations = lineRefined
+            + ownerAnnotatedRecoveryObservations
 
         let imageSize = CGSize(width: CGFloat(image.width), height: CGFloat(image.height))
         var orientationFallbacksRemaining = 8
@@ -1375,6 +1390,14 @@ struct VisionOCRService: Sendable {
                     && japaneseLineRegionOverlapsBlock(observation, block: block)
             } && hasCompleteLineCoverage
             guard !hasLineOCRResult else { continue }
+
+            let hasCompleteRecoveryCoverage = Self.hasCompleteJapaneseLineCoverage(
+                for: block,
+                sourceObservations: ownerAnnotatedObservations,
+                lineRefined: blockRecoveryFrontierObservations,
+                allowsBlockCropResults: true
+            )
+            guard !hasCompleteRecoveryCoverage else { continue }
 
             let angle = ownerAnnotatedObservations
                 .filter {

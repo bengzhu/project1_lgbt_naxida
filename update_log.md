@@ -1,3 +1,11 @@
+## v3.360：Japanese recovery-frontier block skip（候选验证中）
+
+v3.359 已收紧普通图片日语→简体中文 shared-Han QA；继续审计 OCR recovery 主路径发现，`recognizeJapaneseVerticalCrops` 的 block loop 只用 `lineRefined` 判断完整覆盖。即使 pixel-first 或 tile 已产生一个几何上覆盖该 known TextRegion 全部源行的可靠结果，仍可能再执行一次宽 block crop，造成重复读取并消耗既有 bounded block-crop 机会。
+
+本轮可证伪假设：**若将 line/pixel/tile recovery 结果合成只读 frontier，并仅在 recovery observation 几何唯一匹配一个 temporary TextRegion owner、通过既有有限 confidence/日语质量/竖排 geometry gate，且用 `hasCompleteJapaneseLineCoverage(..., allowsBlockCropResults: true)` 完成严格一对一源行 coverage proof 时跳过 block crop，则可靠 recovery 可避免重复宽读取；弱、部分、ownerless、歧义或 foreign-owner 结果仍走原有 block fallback。line/pixel/tile/block/方向预算、owner/layout、OCR 输出、翻译 QA、标签、取消、持久化、UI/renderer 和非日语路径不变。**
+
+实现与验证正在候选分支 `codex/v3.360-japanese-recovery-frontier-block-skip` 进行：新增 `scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py`，工程版本推进至 `3.360`，workflow 已接入。候选本地安全回归和 exact-SHA cloud full 尚未完成；按约束不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 尚未提供，不合成输入，不以静态合同结果宣称通用 OCR/CER 或翻译质量提升。Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，仅作可选研究/质量证明。
+
 ## v3.359：Japanese shared-Han QA exactness（2026-08-30，已完成）
 
 继续推进普通图片日语 OCR→翻译主线。审计发现 v3.358 已在 `GemmaLocalService` 的标准/漫画 tagged 清洗中统一了窄 shared-Han 例外，但 `TranslationBatchQualityEvaluator.isSourceLeakage` 对日语→简体中文纯汉字源只检查“输出包含原文”，从而把 `日本→日本人` 这类原文子串+额外内容误放行。v3.359 让该 gate 把原始输出交给同一 `TranslationOutputPolicy.allowsUnchangedJapaneseHanTranslation`：只有规范化后完全相同、至少两个字符且源为纯汉字的共享词免于 `sourceLeakage`；单字、假名/拉丁/数字、额外内容和其它语言对仍拒绝。失败继续由既有图片 block QA 只补译当前块，不触发 OCR、检测、布局、整页重跑，不改变标签、预算、取消、持久化、UI/renderer 和非日语路径。

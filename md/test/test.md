@@ -1,3 +1,8 @@
+### v3.360 Japanese recovery-frontier block-skip contract（候选验证中）
+
+- v3.359 后继续审计普通图片 OCR recovery：block loop 旧 guard 只读取 `lineRefined`，因此唯一归属某个 TextRegion 的 pixel/tile 逐源行完整结果仍可能重复触发宽 block crop。v3.360 将 line/pixel/tile 合成只读 frontier，仅让唯一 owner、可靠日语、竖排 geometry 且通过严格一对一 coverage proof 的 recovery 结果跳过该 crop；弱、部分、ownerless、歧义和 foreign-owner 结果继续保留 fallback，输出替换、请求预算、方向 fallback、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。
+- 新增 `scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py`，工程版本 `3.360`，CI 已接入；本地安全回归、exact-SHA cloud full、PR 和合入证据待候选完成后补记。当前不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 未提供，不合成输入或质量证据。
+
 ### v3.359 Japanese shared-Han QA exactness contract（已完成）
 
 - v3.358 的模型清洗器已经只对规范化后完全相同的纯汉字共享词放行，但产品 QA 的 `isSourceLeakage` 仍把 `日本→日本人` 等原文子串当作例外。v3.359 让 QA 直接复用同一 exact shared-Han policy；仅日语→简体中文、至少两个字符、纯汉字且规范化后完全相同的输出免于泄漏失败，单字、假名/拉丁/数字、额外原文和其它语言对仍进入拒绝/补译边界。
