@@ -1958,3 +1958,7 @@ python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
 - 未经人工明确要求，不因为 Swift 代码变化就在本机默认跑 Xcode build 或完整漫画探针。
 - 漫画探针或翻译链路修改后，最终回复必须汇总关键数字。
 - 如果 clean text 仍失败，优先讨论模型质量，不要继续盲目调 OCR 或放宽规则。
+### v3.365 Japanese kind-style scope contract（候选，待云端验证）
+
+- 混合日语漫画 `[N]` batch 为对白、旁白、拟声词、标题和其它文字类型分别生成只绑定对应全局块序号的提示；单块请求保留局部类型提示。OCR、标签、预算、QA、取消、持久化和非日语路径不变。
+- 新增 `scripts/test-v3365-japanese-kind-style-scope-contract.py`，工程版本 `3.365`，workflow 已接入；候选实现与云端 full/PR/merge 证据待补。该合同只检查 prompt metadata 的类型作用域、既有批量边界与无进程入口；`test/3.png` 未提供，不合成质量证据。

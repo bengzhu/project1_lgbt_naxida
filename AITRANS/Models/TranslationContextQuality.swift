@@ -17,6 +17,21 @@ enum TranslationTextKind: String, Codable, Sendable, Hashable {
         }
     }
 
+    var promptStyleGuidance: String {
+        switch self {
+        case .dialogue:
+            "保留说话人的口语语气、关系和情绪；不要补写旁白或解释性句子。"
+        case .narration:
+            "保持简洁的叙述语气；不要改写成角色对白或添加说话人。"
+        case .sfx:
+            "仅使用简短的中文拟声或动作表达，保留节奏；不要补写主语、解释动作或扩写成完整句子。"
+        case .title:
+            "保持紧凑的标题式表达；不要添加解释句、标点说明或正文语气。"
+        case .other:
+            "忠实、自然地翻译并保留信息；不要套用对白、旁白或声效的专属风格。"
+        }
+    }
+
     func defaultMaximumOutputCharacters(for sourceCount: Int) -> Int {
         let count = max(sourceCount, 1)
         switch self {
@@ -459,9 +474,11 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
             for (index, kind) in context.batchTextKinds.enumerated() {
                 let ordinal = (context.batchStartIndex ?? 0) + index + 1
                 lines.append("第\(ordinal)块：\(kind.promptLabel)")
+                lines.append("仅对第\(ordinal)块生效的文字类型提示（\(kind.promptLabel)）：\(kind.promptStyleGuidance)")
             }
         } else {
             lines.append("本次文字类型：\(context.textKind.promptLabel)")
+            lines.append("本次文字类型提示：\(context.textKind.promptStyleGuidance)")
         }
         let hasSFXBatchKind = context.batchTextKinds.contains(.sfx)
         let sfxOrdinals = context.batchTextKinds.enumerated().compactMap { index, kind -> Int? in
