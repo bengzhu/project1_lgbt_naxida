@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.369 numeric token Unicode QA."""
+"""Static and pure-policy contract for v3.370 numeric token Unicode QA."""
 
 from pathlib import Path
 import re
@@ -125,7 +125,7 @@ class TranslationNumericTokenUnicodeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_test3_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.369", "3.369"],
+            ["3.370", "3.370"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3367-translation-numeric-token-unicode-contract.py",
@@ -133,8 +133,8 @@ class TranslationNumericTokenUnicodeContractTests(unittest.TestCase):
         )
         for marker in (
             "scripts/test-v3367-translation-numeric-token-unicode-contract.py",
-            "v3.369",
-            "japanese-benchmark-v3.369-",
+            "v3.370",
+            "japanese-benchmark-v3.370-",
             "test/3.png",
             "未提供",
         ):

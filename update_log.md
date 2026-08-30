@@ -1,3 +1,11 @@
+## v3.370：Translation control-marker boundary（验证中）
+
+继续提升普通图片日语 OCR→翻译主路径。审计发现 `GemmaLocalService.cleanTranslationOutput` 对自然语言 prompt 控制词使用任意位置截断，合法译文中嵌入 `Translate the following text`、`Translate from`、`Output only` 等短语时可能被提前截断。
+
+本轮可证伪假设：**自然语言控制词仅在输出开头或独立行首才截断；真正的 `<start_of_turn>`/`<end_of_turn>` 仍在任意位置截断。这样模型独立行回显的提示继续被清除，而嵌入自然译文的控制样短语保留。OCR/layout、预算、placeholder/source leakage、数字/术语/目标语言 QA、标签、逐块重试、取消、持久化和非日语路径不变。**
+
+实现调整 `GemmaLocalService.cleanTranslationOutput`，新增 `scripts/test-v3370-translation-control-marker-boundary-contract.py`，工程版本 `3.370`，CI 已接入；本地安全回归、精确 SHA full、PR、合入与 receipt 待验证。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
+
 ## v3.369：Translation placeholder precision（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现，placeholder policy 将请求标记与任意通用对象词组合后就判定为元回复，可能误拒绝 `请提供文本`、`请输入内容` 等合法短译文。
