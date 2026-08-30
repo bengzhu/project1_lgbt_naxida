@@ -2,7 +2,7 @@
 
 - 新增共享 `validJapaneseDirectionConfidence`，让 `needsJapaneseWeakBlockRecovery`、`isJapaneseVerticalBlockAtRisk` 与 vertical crop 的 direction tie-break 共同拒绝 `NaN/±∞` 和有限越界值；合法 `[0,1]`、`.45` 风险门、最多 16 个 vertical block crop、8 次方向 fallback、4 个 weak-block scoped reread、pixel/line/tile/frontier、owner、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新增 `scripts/test-v3352-japanese-direction-confidence-risk-domain-contract.py`，工程版本 `3.352`；实现 SHA `321e52831b4ca9d202ae897276316c980f541fe7` 的 exact-SHA full [33294222837](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294222837)、PR [#416](https://github.com/bengzhu/project1_lgbt_naxida/pull/416) checks [33294632461](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294632461)、merge SHA `180f47f50cfa483a5796801d6247ccebef4ff493` 与合入后 push CI [33294679936](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294679936) 均成功；新合同 `10/10`，本地 `351` 个安全合同通过，`27` 个进程／编译／runtime 合同跳过，`378` 个合同总计无失败；Python AST `378/378`、JSON `237/237`（排除 2 个已知 JSONC）、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
 
-v3.352 文档收口 push CI 待执行；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+v3.352 文档收口 push CI [33294843498](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33294843498) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 ### v3.351 Japanese pixel recovery block eligibility contract（已完成）
 
