@@ -1,7 +1,7 @@
-### v3.358 Japanese shared-Han model-cleanup contract（候选实现）
+### v3.358 Japanese shared-Han model-cleanup contract（已完成）
 
 - 产品 QA 已允许日语→简体中文的纯汉字共享词保持同形，但本地模型清洗层此前在标准输出与带 `[N]` 漫画 batch 中仍将其判为原文重复。v3.358 通过 `TranslationOutputPolicy` 统一窄条件：源/输出规范化后相同、源文本至少两个字符且纯汉字，并且语言对严格为日语→简体中文时才放行；假名、拉丁字母、数字、额外原文和其它语言对仍走原有拒绝门。
-- 新增 `scripts/test-v3358-japanese-shared-han-model-cleanup-contract.py`，工程版本 `3.358`，CI 已接入；实现候选先完成静态合同，exact-SHA cloud full、PR checks、合入后 push CI 和 receipt 待提交后补记。OCR、candidate/geometry/layout、模型、请求预算、标签/QA、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，收到真实文件后再纳入同一回归；不以合同结果宣称通用 OCR/CER 或翻译质量提升。
+- 新增 `scripts/test-v3358-japanese-shared-han-model-cleanup-contract.py`，工程版本 `3.358`，CI 已接入；新合同 `6/6`，本地安全回归 `357` 个通过、`27` 个进程/编译入口合同按约束跳过（`384` 总计），Python AST `403/403`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。实现 SHA `a0b79e70aed0ef5ed10db8e55e3aca3192913a31` 的 exact-SHA full [33302341558](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33302341558)、PR [#422](https://github.com/bengzhu/project1_lgbt_naxida/pull/422) checks [33302812433](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33302812433)、merge SHA `020f4eb30cf69c5864024eae1178660f410a83b0` 与合入后 push CI [33302865592](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33302865592) 均成功；Xcode build 成功，JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`。本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。OCR、candidate/geometry/layout、模型、请求预算、标签/QA、取消、持久化和非日语路径不变。`test/3.png` 尚未提供，收到真实文件后再纳入同一回归；不以合同或该窄例外结果宣称通用 OCR/CER 或翻译质量提升。
 
 ### v3.357 Japanese kana SFX translation-recall contract（已完成）
 

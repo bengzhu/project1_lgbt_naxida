@@ -1,10 +1,10 @@
-## v3.358：Japanese shared-Han model cleanup（2026-08-30，候选实现）
+## v3.358：Japanese shared-Han model cleanup（2026-08-30，已完成）
 
 继续只优化 AITRANS 普通图片 OCR→日语翻译主路径。已有 `TranslationBatchQualityEvaluator` 对日语→简体中文纯汉字共享词有窄例外，但 `GemmaLocalService` 在标准译文与 `[N]` 漫画 batch 清洗时仍把规范化后同形输出当作原文重复，导致合法的“日本”“東京”等结果在进入产品 QA 前被拒绝。
 
 本轮可证伪假设：**若仅在日语→简体中文、源/输出规范化后相同、源文本至少两个字符且纯汉字的条件下，让标准与带标签的模型清洗复用统一 `TranslationOutputPolicy` 例外，则共享汉字词不再被错误丢弃；假名、拉丁字母、数字、额外原文、其它语言对和既有 placeholder/target-language/产品 QA 拒绝门保持不变。**
 
-实现改动为 `TranslationContextQuality.swift` 的窄 shared-Han policy，以及 `GemmaLocalService.swift` 的标准/漫画 tagged cleaner 接线；OCR、candidate/geometry/layout、模型选择、请求预算、tag/QA、取消、持久化、UI/renderer 和非日语路径不变。新增 `scripts/test-v3358-japanese-shared-han-model-cleanup-contract.py`，工程版本推进至 `3.358`，workflow 已接入；当前先记录候选实现，exact-SHA cloud full、PR checks、合入后 push CI 和 receipt 待提交后补记。`test/3.png` 尚未提供，不合成样图，不以合同结果宣称通用 OCR/CER 或翻译质量提升；Koharu/GGUF、授权语料和目标设备证据继续只作可选研究/质量证明。
+实现改动为 `TranslationContextQuality.swift` 的窄 shared-Han policy，以及 `GemmaLocalService.swift` 的标准/漫画 tagged cleaner 接线；OCR、candidate/geometry/layout、模型选择、请求预算、tag/QA、取消、持久化、UI/renderer 和非日语路径不变。新增 `scripts/test-v3358-japanese-shared-han-model-cleanup-contract.py`，工程版本推进至 `3.358`，workflow 已接入；新合同 `6/6`，本地安全回归为 357 个安全合同通过、27 个进程/编译入口合同按约束跳过（384 总计），Python AST `403/403`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。实现 SHA `a0b79e70aed0ef5ed10db8e55e3aca3192913a31` 的 exact-SHA full [33302341558](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33302341558)、PR [#422](https://github.com/bengzhu/project1_lgbt_naxida/pull/422) checks [33302812433](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33302812433)、merge SHA `020f4eb30cf69c5864024eae1178660f410a83b0` 与合入后 push CI [33302865592](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33302865592) 均成功；exact full 的 Xcode build 成功、JUnit `10/10`（0 failures），发布 `AITRANS CI/full-validation=success`；本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。`test/3.png` 尚未提供，不合成样图，不以合同、静态结果或共享汉字例外宣称通用 OCR/CER 或翻译质量提升；Koharu/GGUF、授权语料和目标设备证据继续只作可选研究/质量证明。
 
 ## v3.357：Japanese kana SFX translation recall（2026-08-30，已完成）
 
