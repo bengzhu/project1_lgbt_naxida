@@ -225,7 +225,7 @@ class JapaneseScopedOneSidedQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.358", "3.358"],
+            ["3.359", "3.359"],
         )
         combined = (
             self.workflow
