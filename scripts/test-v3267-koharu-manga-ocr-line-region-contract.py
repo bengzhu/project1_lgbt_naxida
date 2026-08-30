@@ -113,7 +113,7 @@ class KoharuMangaOCRLineRegionContractTests(unittest.TestCase):
 
     def test_project_version_and_ci_route_follow_v3266(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.349", "3.349"])
+        self.assertEqual(versions, ["3.350", "3.350"])
         previous = "python3 -B scripts/test-v3266-image-ocr-inline-rerecognition-cancel-contract.py"
         current = "python3 -B scripts/test-v3267-koharu-manga-ocr-line-region-contract.py"
         self.assertIn(previous, self.workflow)

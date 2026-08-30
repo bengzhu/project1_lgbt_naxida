@@ -2622,12 +2622,19 @@ struct VisionOCRService: Sendable {
             stripWidth: tileWidth
         )
         // A layout block is geometry context, not recognition coverage by
-        // itself. Keep weak, empty, non-Japanese, and low-density vertical
-        // blocks eligible for the existing tile fallback; only a usable
-        // Japanese block may suppress a broad reconnaissance window.
+        // itself. Keep weak, empty, non-Japanese, low-density, and
+        // directionally uncertain vertical blocks eligible for the existing
+        // tile fallback; only a usable Japanese block with a confident
+        // vertical classification may suppress a broad reconnaissance
+        // window. The direction score is the layout engine's geometry
+        // confidence, not the OCR confidence above, so keep both gates
+        // explicit.
         let reliableVerticalBlocks = verticalBlocks.filter { block in
             let text = postProcessJapaneseOCRText(block.text)
             return block.direction == .vertical
+                && block.directionConfidence.isFinite
+                && (0...1).contains(block.directionConfidence)
+                && block.directionConfidence >= 0.45
                 && !text.isEmpty
                 && validOCRConfidence(block.confidence) != nil
                 && block.confidence >= 0.48

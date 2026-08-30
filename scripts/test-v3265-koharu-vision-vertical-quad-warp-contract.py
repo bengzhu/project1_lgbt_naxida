@@ -131,7 +131,7 @@ class KoharuVisionVerticalQuadWarpContractTests(unittest.TestCase):
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         self.assertTrue((ROOT / "test/jap.jpg").is_file())
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.349", "3.349"])
+        self.assertEqual(versions, ["3.350", "3.350"])
 
 
 if __name__ == "__main__":

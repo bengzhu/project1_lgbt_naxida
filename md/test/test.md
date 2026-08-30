@@ -1,3 +1,7 @@
+### v3.350 Japanese tile direction eligibility contract（开发中）
+
+- `recognizeJapaneseVerticalTileFallback` 只有在 block 方向为 vertical、`directionConfidence` 有限且位于 `[0,1]`、`>=.45`，并同时通过既有非空、OCR confidence `>=.48`、真实日语文字、日语文字密度与脚本文本密度 `>=.5` 时，才用 block 几何声明 tile 已覆盖；方向不确定的 vertical block 继续保留既有宽 tile 复读机会。最多 6 个 tile、18 个窗口、4 次方向 fallback、line frontier、pixel-first、block recovery、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新合同为 `scripts/test-v3350-japanese-tile-direction-eligibility-contract.py`，工程版本 `3.350`。本轮尚未运行云端验证，未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.349 Japanese tile coverage eligibility contract（已完成）
 
 文档收口 push CI [33291243730](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33291243730) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
