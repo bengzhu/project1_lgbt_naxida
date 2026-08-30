@@ -1,3 +1,8 @@
+### v3.367 Translation numeric token Unicode QA contract（实现已完成，验证进行中）
+
+- `TranslationBatchQualityEvaluator.numberMismatch` 只在数字 token 匹配前把全角数字和全角数值分隔符窄化到 ASCII；`１２３`/`123`、全角/半角日期时间可对齐，前导零、顺序、分隔符、缺失、合并和拆分差异继续 fail-closed。
+- 新增 `scripts/test-v3367-translation-numeric-token-unicode-contract.py`，工程版本 `3.367`，workflow 已接入；不改变 OCR、geometry/layout、8 blocks/1,800 字符、标签、逐块 QA、取消、持久化、UI/renderer 或非日语路径。`test/3.png` 未提供，不合成样图或质量证据。
+
 ### v3.366 Japanese fallback context scope contract（已完成）
 
 - 混合日语漫画 `[N]` batch 在格式/质量失败后逐块回退时，只把当前块的文字类型和类型化输出长度提示交给 plain-text 请求与同一 block QA；confirmed 术语和已完成上一批只读摘要继续保留，无 `textKind` 的块不继承批次第一块。

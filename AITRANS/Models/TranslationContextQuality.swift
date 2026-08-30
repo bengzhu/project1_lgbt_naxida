@@ -1089,10 +1089,42 @@ enum TranslationBatchQualityEvaluator {
     }
 
     private static func numericTokens(in text: String) -> [String] {
-        guard let regex = try? NSRegularExpression(pattern: #"\d+(?:[.,:/-]\d+)*"#) else { return [] }
-        let nsText = text as NSString
-        return regex.matches(in: text, range: NSRange(location: 0, length: nsText.length))
+        // OCR and a translation model may use fullwidth Japanese digits and
+        // separators even when the other side uses ASCII. Canonicalize only
+        // the numeric width variants before matching so number preservation
+        // stays exact for token order, punctuation, and leading zeroes.
+        let canonicalText = canonicalNumericTokenText(text)
+        guard let regex = try? NSRegularExpression(pattern: #"[0-9]+(?:[.,:/-][0-9]+)*"#) else { return [] }
+        let nsText = canonicalText as NSString
+        return regex.matches(in: canonicalText, range: NSRange(location: 0, length: nsText.length))
             .map { nsText.substring(with: $0.range).lowercased() }
+    }
+
+    private static func canonicalNumericTokenText(_ text: String) -> String {
+        var canonical = ""
+        for scalar in text.unicodeScalars {
+            switch scalar.value {
+            case 0xFF10...0xFF19:
+                if let mapped = UnicodeScalar(scalar.value - 0xFEE0) {
+                    canonical.unicodeScalars.append(mapped)
+                } else {
+                    canonical.unicodeScalars.append(scalar)
+                }
+            case 0xFF0C:
+                canonical.append(",")
+            case 0xFF0E:
+                canonical.append(".")
+            case 0xFF0F:
+                canonical.append("/")
+            case 0xFF1A:
+                canonical.append(":")
+            case 0xFF0D:
+                canonical.append("-")
+            default:
+                canonical.unicodeScalars.append(scalar)
+            }
+        }
+        return canonical
     }
 
     private static func targetLanguageDensity(_ text: String, language: SupportedLanguage) -> Double {
