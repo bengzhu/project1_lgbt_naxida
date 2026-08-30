@@ -888,10 +888,19 @@ enum TranslationBatchQualityEvaluator {
                sourceLanguage: configuration.sourceLanguage,
                targetLanguage: configuration.targetLanguage
            ) {
-            let normalizedOutput = comparableText(translatedText)
             let copiedPreviousBatch = previousBatchSummary.items.contains { item in
                 let previousTarget = comparableText(item.targetExcerpt)
-                return previousTarget.count >= 4 && normalizedOutput.contains(previousTarget)
+                guard previousTarget.count >= 4,
+                      normalizedOutput == previousTarget else {
+                    return false
+                }
+                // Repeating the same source block can legitimately produce the
+                // same translation. Only treat an exact output echo as context
+                // leakage when the current source is different from the prior
+                // source excerpt; a longer current translation may also contain
+                // a previously translated phrase without being an echo.
+                let previousSource = comparableText(item.sourceExcerpt)
+                return previousSource != normalizedSource
             }
             if copiedPreviousBatch {
                 failures.append("previousContextLeakage")

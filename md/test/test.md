@@ -1,3 +1,8 @@
+### v3.362 Japanese translation context-echo contract（候选验证中）
+
+- 跨 batch QA 只把规范化后完整等于上一批译文、且当前原文不同于上一批原文的输出判为 `previousContextLeakage`；当前译文合法包含上一批短语，或当前原文重复时，不再被 broad `contains` 规则误拒绝。
+- 新增 `scripts/test-v3362-japanese-translation-context-echo-contract.py`，工程版本 `3.362`，workflow 已接入；OCR、layout、请求预算、标签、逐块补译、取消、持久化、UI/renderer 和非日语路径保持不变。`test/3.png` 未提供，不伪造质量证据。
+
 ### v3.361 Japanese pixel compact-dedupe contract（已完成）
 
 - 像素首读的旋转 Vision 结果先按既有 geometry 去重；若后到候选与已有框确属同一、面积可比 envelope 且只有后者满足 2–4 字 compact gate，则保留 compact 资格进入既有 compact reserve。面积明显更小或 IoU 不足的 compact 候选不能替换可能覆盖完整竖排的 regular 框。

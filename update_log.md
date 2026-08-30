@@ -10743,3 +10743,12 @@ detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag
 当前 Vision、bundled Manga OCR 和共享混合脚本归一化把 `・` 与 ASCII 点号一起压缩；日语姓名、外来词和分隔词因此可能从 `ア・ニメ` 变成 `ア.ニメ`，损失原文标点语义。本轮的可证伪假设是：**若只把真正的 ASCII/全角句点与省略号纳入点号归一化，并让 U+30FB 中点原样保留，则日语 OCR 输入的姓名/外来词标点保真会提高，同时不改变候选选择、geometry/layout、请求预算或翻译边界。**
 
 实现边界：`JapaneseOCRTextNormalizer`、Vision Japanese fallback 和 bundled Manga OCR fallback 都停止把 U+30FB 计入 `dotCount`；ASCII `.`、全角 `．` 和 `…` 仍按既有规则处理。新增 `scripts/test-v3312-japanese-middle-dot-fidelity-contract.py`，工程版本推进至 `3.312`，CI Japanese benchmark contract route 已接入。Koharu/GPL、GGUF、授权语料和目标设备证据不参与本轮产品选择。
+## v3.362：Japanese translation context-echo boundary（候选验证中）
+
+继续推进普通图片日语 OCR→翻译主线。审计发现跨 batch QA 的 `previousContextLeakage` 只要看到上一批译文作为当前输出的子串就失败；当前句子合法复用该短语时，会被误判并进入不必要的逐块补译。
+
+本轮可证伪假设：**若只有在当前输出规范化后完整等于上一批 target excerpt、上一批 target 至少 4 个字符，且当前 source 与该摘要的 source excerpt 不同的条件下判定 `previousContextLeakage`，则 exact context echo 仍被拒绝，而合法嵌入上一批短语和重复同一 source block 不再被误拒绝。既有 source leakage、数字/确认术语/目标语言密度/长度、tag completeness、失败块重译、取消和部分持久化边界保持不变。**
+
+产品 `TranslationBatchQualityEvaluator` 与 cloud-only `evaluate-japanese-translation-context-qa.py` 同步使用 exact normalized echo + different source 规则；新增 `scripts/test-v3362-japanese-translation-context-echo-contract.py`，覆盖 exact echo、合法嵌入短语、重复 source、短 target 和既有跨 batch fixture。OCR、detector、crop/warp、candidate/geometry/layout、请求预算、模型选择、UI/renderer、非日语路径以及 Koharu/GGUF/授权语料/目标设备边界不变。
+
+工程版本推进至 `3.362`，候选阶段只做安全 Python contract、AST/YAML/shell/plist 静态检查和 `git diff --check`；不运行本地 Xcode、Swift/Core ML/App runtime、Rust/Cargo/GGUF，不合成缺失的 `test/3.png`，不以合同结果宣称通用 OCR/CER 或翻译质量提升。

@@ -129,7 +129,7 @@ class JapaneseOCRUnicodeCanonicalizationContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.361", "3.361"],
+            ["3.362", "3.362"],
         )
         for marker in (
             "scripts/test-v3315-japanese-ocr-unicode-canonicalization-contract.py",
