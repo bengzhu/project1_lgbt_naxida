@@ -68,7 +68,9 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             "let rhsConfidence = validOCRConfidence(rhs.element.confidence)",
             "return lhsConfidence < rhsConfidence",
             "return lhs.offset < rhs.offset",
-            ".prefix(Self.maximumJapaneseWeakBlockRecoveryRequests)",
+            ".map { (offset: $0.offset, block: $0.element) }",
+            "Self.boundedJapaneseWeakBlockRecoveryCandidates(",
+            "limit: Self.maximumJapaneseWeakBlockRecoveryRequests",
             "Task.checkCancellation()",
         ):
             self.assertIn(marker, body)
@@ -174,7 +176,7 @@ class ImageJapaneseWeakBlockRecoveryContractTests(unittest.TestCase):
             )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.343", "3.343"],
+            ["3.344", "3.344"],
         )
 
     def test_static_contract_has_no_process_entry(self) -> None:

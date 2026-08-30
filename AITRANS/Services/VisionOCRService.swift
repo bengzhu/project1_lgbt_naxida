@@ -691,7 +691,7 @@ struct VisionOCRService: Sendable {
         in image: CGImage,
         blocks: [ImageTranslationBlock]
     ) async throws -> [ImageTranslationBlock] {
-        let candidates = blocks.enumerated()
+        let prioritizedCandidates = blocks.enumerated()
             .filter { needsJapaneseWeakBlockRecovery($0.element) }
             .sorted { lhs, rhs in
                 let lhsConfidence = validOCRConfidence(lhs.element.confidence)
@@ -703,7 +703,11 @@ struct VisionOCRService: Sendable {
                 }
                 return lhs.offset < rhs.offset
             }
-            .prefix(Self.maximumJapaneseWeakBlockRecoveryRequests)
+            .map { (offset: $0.offset, block: $0.element) }
+        let candidates = Self.boundedJapaneseWeakBlockRecoveryCandidates(
+            prioritizedCandidates,
+            limit: Self.maximumJapaneseWeakBlockRecoveryRequests
+        )
         guard !candidates.isEmpty else { return blocks }
 
         var recovered = blocks
@@ -713,12 +717,12 @@ struct VisionOCRService: Sendable {
                 guard let reread = try await Self.recognizeTextBlockDetached(
                     image: image,
                     sourceLanguage: .japanese,
-                    block: candidate.element,
+                    block: candidate.block,
                     selectionReason: .existingLayoutFusion
                 ),
                       Self.isBetterJapaneseWeakBlockRecovery(
                           reread,
-                          than: candidate.element
+                          than: candidate.block
                       ) else {
                     continue
                 }
@@ -732,6 +736,62 @@ struct VisionOCRService: Sendable {
             }
         }
         return recovered
+    }
+
+    /// Keep the existing weak-first ordering, but prevent a long page or a
+    /// multi-panel image from spending all four scoped rereads in one vertical
+    /// band. Only an over-budget candidate set with more than one populated
+    /// band is reselected; the returned candidates retain the original weak
+    /// ordering so request sequencing and all under-budget pages remain stable.
+    private static func boundedJapaneseWeakBlockRecoveryCandidates(
+        _ candidates: [(offset: Int, block: ImageTranslationBlock)],
+        limit: Int
+    ) -> [(offset: Int, block: ImageTranslationBlock)] {
+        guard limit > 0, candidates.count > limit else {
+            return candidates
+        }
+
+        let bandCount = min(limit, candidates.count)
+        var bands = Array(
+            repeating: [(offset: Int, block: ImageTranslationBlock)](),
+            count: bandCount
+        )
+        for candidate in candidates {
+            let centerY = candidate.block.boundingBox.y
+                + candidate.block.boundingBox.height / 2
+            let boundedCenterY = centerY.isFinite
+                ? min(max(centerY, 0), 1)
+                : 0
+            let bandIndex = min(
+                Int(boundedCenterY * Double(bandCount)),
+                bandCount - 1
+            )
+            bands[bandIndex].append(candidate)
+        }
+
+        let populatedBands = bands.indices.filter { !bands[$0].isEmpty }
+        guard populatedBands.count > 1 else {
+            return Array(candidates.prefix(limit))
+        }
+
+        var selectedOffsets = Set<Int>()
+        var cursors = Array(repeating: 0, count: bandCount)
+        while selectedOffsets.count < limit {
+            var addedCandidate = false
+            for bandIndex in populatedBands {
+                guard selectedOffsets.count < limit,
+                      cursors[bandIndex] < bands[bandIndex].count else {
+                    continue
+                }
+                let candidate = bands[bandIndex][cursors[bandIndex]]
+                cursors[bandIndex] += 1
+                selectedOffsets.insert(candidate.offset)
+                addedCandidate = true
+            }
+            guard addedCandidate else { break }
+        }
+
+        return candidates.filter { selectedOffsets.contains($0.offset) }
     }
 
     private static func needsJapaneseWeakBlockRecovery(
