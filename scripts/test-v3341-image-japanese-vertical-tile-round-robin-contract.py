@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.342 tile scheduling."""
+"""Static and pure-policy contract for v3.343 tile scheduling."""
 
 from pathlib import Path
 import math
@@ -177,7 +177,7 @@ class JapaneseVerticalTileRoundRobinContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.342", "3.342"],
+            ["3.343", "3.343"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py",
@@ -187,8 +187,8 @@ class JapaneseVerticalTileRoundRobinContractTests(unittest.TestCase):
             "python3 -B scripts/test-v3341-image-japanese-vertical-tile-round-robin-contract.py",
             self.workflow,
         )
-        self.assertIn("japanese-benchmark-v3.342-", self.workflow)
-        self.assertIn("v3.342", self.docs)
+        self.assertIn("japanese-benchmark-v3.343-", self.workflow)
+        self.assertIn("v3.343", self.docs)
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, Path(__file__).read_text(encoding="utf-8"))
 

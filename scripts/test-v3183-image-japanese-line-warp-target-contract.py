@@ -90,7 +90,7 @@ class JapaneseLineWarpTargetContractTests(unittest.TestCase):
             "private static func recognizeJapaneseVerticalLineCrops(",
         )
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "let perspectiveCandidates = Array(",
             "consumedPixels: &perspectiveWarpPixels",
             "prepareJapaneseCropForVision(warped)",
             "consumedPixels + preparedPixels <= 16_000_000",

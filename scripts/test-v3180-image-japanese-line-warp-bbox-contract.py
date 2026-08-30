@@ -47,7 +47,7 @@ class JapaneseLineWarpBBoxContractTests(unittest.TestCase):
 
     def test_perspective_candidates_keep_bounded_koharu_line_path(self) -> None:
         for marker in [
-            "let perspectiveCandidates = Array(uniqueCandidates.prefix(24))",
+            "let perspectiveCandidates = Array(",
             "recognizeJapanesePerspectiveLineCrop(",
             "consumedPixels: &perspectiveWarpPixels",
             "prepareJapaneseCropForVision(warped)",
