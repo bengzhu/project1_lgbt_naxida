@@ -371,13 +371,13 @@ class JapaneseTileDirectionEligibilityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.353", "3.353"],
+            ["3.354", "3.354"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3350-japanese-tile-direction-eligibility-contract.py",
             "v3.351",
-            "japanese-benchmark-v3.353-",
+            "japanese-benchmark-v3.354-",
         ):
             self.assertIn(marker, combined)
         contract = read(
