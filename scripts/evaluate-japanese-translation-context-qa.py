@@ -148,23 +148,26 @@ def is_placeholder_response(value: str) -> bool:
         "需要翻译的文本",
         "想要翻译的文本",
         "待翻译文本",
-        "翻译文本",
-        "原文",
-        "译文",
-        "文本",
-        "内容",
-        "句子",
-        "文字",
-        "text",
-        "sourcetext",
-        "translation",
-        "sentence",
-        "content",
+        "待翻译内容",
+        "需要翻译内容",
+        "要翻译的句子",
+        "翻译以下文本",
+        "翻译以上文本",
+        "翻译上述文本",
+        "待翻译文字",
+        "text to translate",
+        "source text to translate",
+        "text for translation",
+        "the text you want translated",
+        "translation input",
+        "input text",
     )
+    normalized_request_markers = tuple(normalize_text(marker) for marker in request_markers)
+    normalized_input_markers = tuple(normalize_text(marker) for marker in translation_input_markers)
     return (
         len(compact) <= 96
-        and any(marker in compact for marker in request_markers)
-        and any(marker in compact for marker in translation_input_markers)
+        and any(compact.startswith(marker) for marker in normalized_request_markers)
+        and any(marker in compact for marker in normalized_input_markers)
     )
 
 

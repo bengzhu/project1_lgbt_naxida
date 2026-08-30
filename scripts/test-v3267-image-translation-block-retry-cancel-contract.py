@@ -77,7 +77,7 @@ class ImageTranslationBlockRetryCancelContractTests(unittest.TestCase):
 
     def test_version_and_ci_route_follow_v3267(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.368", "3.368"])
+        self.assertEqual(versions, ["3.369", "3.369"])
         previous = "python3 -B scripts/test-v3267-koharu-manga-ocr-line-region-contract.py"
         current = "python3 -B scripts/test-v3267-image-translation-block-retry-cancel-contract.py"
         self.assertIn(previous, self.workflow)

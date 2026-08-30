@@ -674,22 +674,29 @@ enum TranslationOutputPolicy {
             "需要翻译的文本",
             "想要翻译的文本",
             "待翻译文本",
-            "翻译文本",
-            "原文",
-            "译文",
-            "文本",
-            "内容",
-            "句子",
-            "文字",
-            "text",
-            "sourcetext",
-            "translation",
-            "sentence",
-            "content"
+            "待翻译内容",
+            "需要翻译内容",
+            "要翻译的句子",
+            "翻译以下文本",
+            "翻译以上文本",
+            "翻译上述文本",
+            "待翻译文字",
+            "text to translate",
+            "source text to translate",
+            "text for translation",
+            "the text you want translated",
+            "translation input",
+            "input text"
         ]
+        let startsWithRequestMarker = requestMarkers.contains { marker in
+            compact.hasPrefix(marker.filter { !$0.isWhitespace && !$0.isPunctuation })
+        }
+        let hasExplicitTranslationInput = translationInputMarkers.contains { marker in
+            compact.contains(marker.filter { !$0.isWhitespace && !$0.isPunctuation })
+        }
         guard compact.count <= 96,
-              requestMarkers.contains(where: { compact.contains($0.filter { !$0.isWhitespace && !$0.isPunctuation }) }),
-              translationInputMarkers.contains(where: { compact.contains($0.filter { !$0.isWhitespace && !$0.isPunctuation }) }) else {
+              startsWithRequestMarker,
+              hasExplicitTranslationInput else {
             return false
         }
         return true
