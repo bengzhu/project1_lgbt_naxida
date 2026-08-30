@@ -314,7 +314,8 @@ def text_failures(
     if previous_summary is not None:
         if any(
             len(normalize_text(item["targetExcerpt"])) >= 4
-            and normalize_text(item["targetExcerpt"]) in output_normalized
+            and normalize_text(item["targetExcerpt"]) == output_normalized
+            and normalize_text(item["sourceExcerpt"]) != source_normalized
             for item in previous_summary["items"]
         ):
             failures.append("previousContextLeakage")
