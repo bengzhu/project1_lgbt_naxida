@@ -463,8 +463,20 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         } else {
             lines.append("本次文字类型：\(context.textKind.promptLabel)")
         }
-        if context.textKind == .sfx || context.batchTextKinds.contains(.sfx) {
-            lines.append("标记为拟声词/状态字的文字块：仅使用简短的中文拟声或动作表达，保留节奏；不要补写主语、解释动作；不要扩写成完整句子。")
+        let hasSFXBatchKind = context.batchTextKinds.contains(.sfx)
+        let sfxOrdinals = context.batchTextKinds.enumerated().compactMap { index, kind -> Int? in
+            guard kind == .sfx else { return nil }
+            return (context.batchStartIndex ?? 0) + index + 1
+        }
+        if hasSFXBatchKind {
+            let sfxScope = sfxOrdinals
+                .map { "第\($0)块" }
+                .joined(separator: "、")
+            if !sfxScope.isEmpty {
+                lines.append("仅对\(sfxScope)生效的拟声词/状态字规则：仅使用简短的中文拟声或动作表达，保留节奏；不要补写主语、解释动作；不要扩写成完整句子。其它编号块仍按各自文字类型翻译。")
+            }
+        } else if context.batchTextKinds.isEmpty && context.textKind == .sfx {
+            lines.append("本次文字块是拟声词/状态字：仅使用简短的中文拟声或动作表达，保留节奏；不要补写主语、解释动作；不要扩写成完整句子。")
         }
         if !context.confirmedTerms.isEmpty {
             lines.append("已确认术语/人名/称呼（只采用 confirmed 项；旧项撤销后不得继续采用）：")
