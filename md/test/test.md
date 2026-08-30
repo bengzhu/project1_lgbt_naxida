@@ -1,7 +1,7 @@
-### v3.344 Japanese weak-block recovery spatial balance contract（进行中）
+### v3.344 Japanese weak-block recovery spatial balance contract（已完成）
 
 - `recoverWeakJapaneseBlocks` 保留原有限 confidence 弱者优先队列；当候选超过既有 4 次 scoped reread 上限且 block bbox 分布在多个纵向 band 时，`boundedJapaneseWeakBlockRecoveryCandidates` 以 band round-robin 选择，并按原排序返回。候选不足或单 band 保留原前缀，最多 4 次请求、既有质量/失败/取消/布局/翻译/持久化边界不变。
-- 新合同：`scripts/test-v3344-japanese-weak-block-recovery-spatial-balance-contract.py`；工程版本推进至 `3.344`，Japanese benchmark route 已接入。验证与云端 receipt 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+- 新合同：`scripts/test-v3344-japanese-weak-block-recovery-spatial-balance-contract.py`；工程版本推进至 `3.344`，Japanese benchmark route 已接入。本地 343 个安全合同通过，27 个进程／编译／runtime 合同按约束跳过；Python AST `370/370`、JSON `237/237`（排除 2 个已知 JSONC）、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `6b5b7cddc8000c2f7307c1e68cc454d76aa8577b` 的 exact-SHA full [33284695807](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33284695807)、PR [#408](https://github.com/bengzhu/project1_lgbt_naxida/pull/408) checks [33285213884](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33285213884)、merge SHA `a5d38a06a2ce768ec5974ea4bb464e23fe8dc057` 与合入后 push CI [33285256178](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33285256178) 均成功。本地未运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
 
 ### v3.343 Japanese Vision line owner balance contract（已完成）
 
