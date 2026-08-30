@@ -87,11 +87,14 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
             "geometryOnlyCandidates: [VisionOCRObservation]",
             "min(2, maximumJapaneseMangaLineOCRRequests)",
             "maximumJapaneseMangaLineOCRRequests - geometryReserve",
-            "textBacked.prefix(textLimit)",
             "uncoveredGeometry.prefix(geometryReserve)",
             ".prefix(maximumJapaneseMangaLineOCRRequests)",
         ]:
             self.assertIn(marker, self.candidates + self.vision)
+        self.assertTrue(
+            "textBacked.prefix(textLimit)" in self.candidates
+            or "boundedJapaneseMangaLineTextCandidates(" in self.candidates
+        )
         self.assertIn(
             "geometryOnlyCandidates = japaneseGeometryOnlyVerticalLineCandidates(",
             self.vision,
@@ -118,7 +121,7 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
 
     def test_version_and_ci_route(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.341", "3.341"])
+        self.assertEqual(versions, ["3.342", "3.342"])
         current = "python3 -B scripts/test-v3268-koharu-geometry-only-line-recall-contract.py"
         self.assertIn(current, self.workflow)
         self.assertIn(

@@ -2934,10 +2934,87 @@ struct VisionOCRService: Sendable {
             0,
             maximumJapaneseMangaLineOCRRequests - geometryReserve
         )
+        let selectedTextBacked = boundedJapaneseMangaLineTextCandidates(
+            textBacked,
+            limit: textLimit
+        )
         return Array(
-            textBacked.prefix(textLimit)
-                + uncoveredGeometry.prefix(geometryReserve)
+            selectedTextBacked
+                + Array(uncoveredGeometry.prefix(geometryReserve))
         ).prefix(maximumJapaneseMangaLineOCRRequests).map { $0 }
+    }
+
+    /// Preserve the existing risk-first line queue, but prevent one known
+    /// vertical TextRegion from consuming every text-backed slot when the
+    /// bounded line budget is exceeded. Only a missing owner is promoted into
+    /// the selected prefix; the final array is restored to the original queue
+    /// order so request/result matching and all ordinary under-budget pages are
+    /// unchanged. ownerless candidates are not counted as owners and are only
+    /// displaced when no duplicate known-owner candidate can be removed.
+    private static func boundedJapaneseMangaLineTextCandidates(
+        _ candidates: [VisionOCRObservation],
+        limit: Int
+    ) -> [VisionOCRObservation] {
+        guard limit > 0 else { return [] }
+        guard candidates.count > limit else { return candidates }
+
+        var knownOwners: [Int] = []
+        for candidate in candidates {
+            guard let owner = candidate.verticalTextRegionOwner,
+                  !knownOwners.contains(owner) else {
+                continue
+            }
+            knownOwners.append(owner)
+        }
+        guard knownOwners.count > 1 else {
+            return Array(candidates.prefix(limit))
+        }
+
+        var selectedIndices = Array(candidates.indices.prefix(limit))
+        var selectedOwnerCounts: [Int: Int] = [:]
+        for index in selectedIndices {
+            if let owner = candidates[index].verticalTextRegionOwner {
+                selectedOwnerCounts[owner, default: 0] += 1
+            }
+        }
+        let selectedOwners = Set(selectedOwnerCounts.keys)
+        guard selectedOwners.count < knownOwners.count else {
+            return selectedIndices.map { candidates[$0] }
+        }
+
+        for owner in knownOwners where !selectedOwnerCounts.keys.contains(owner) {
+            guard let candidateIndex = candidates.indices.first(where: { index in
+                candidates[index].verticalTextRegionOwner == owner
+                    && !selectedIndices.contains(index)
+            }) else {
+                continue
+            }
+
+            let duplicateOwnerDropIndex = selectedIndices.reversed().first { index in
+                guard let selectedOwner = candidates[index].verticalTextRegionOwner else {
+                    return false
+                }
+                return (selectedOwnerCounts[selectedOwner] ?? 0) > 1
+            }
+            let dropIndex = duplicateOwnerDropIndex
+                ?? selectedIndices.reversed().first { index in
+                    candidates[index].verticalTextRegionOwner == nil
+                }
+                ?? selectedIndices.last
+            guard let dropIndex else { continue }
+
+            if let droppedOwner = candidates[dropIndex].verticalTextRegionOwner {
+                selectedOwnerCounts[droppedOwner, default: 1] -= 1
+                if selectedOwnerCounts[droppedOwner] == 0 {
+                    selectedOwnerCounts.removeValue(forKey: droppedOwner)
+                }
+            }
+            selectedIndices.removeAll { $0 == dropIndex }
+            selectedIndices.append(candidateIndex)
+            selectedOwnerCounts[owner, default: 0] += 1
+        }
+
+        return selectedIndices.sorted().map { candidates[$0] }
     }
 
     /// Derive recognition-only line geometry from Vision's rotated

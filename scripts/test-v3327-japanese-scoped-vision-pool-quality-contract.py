@@ -287,7 +287,7 @@ class JapaneseScopedVisionPoolQualityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.341", "3.341"],
+            ["3.342", "3.342"],
         )
         combined = (
             self.workflow
