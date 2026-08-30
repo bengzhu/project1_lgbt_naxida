@@ -1,5 +1,7 @@
 ## v3.350：Japanese tile direction eligibility（2026-08-30，已完成）
 
+文档收口 push CI [33292525345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292525345) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+
 v3.349 后继续审计普通图片 OCR→翻译主路径发现，方向判定仅为弱/不确定的 vertical block 仍可能声明 tile coverage；这与既有 `isJapaneseVerticalBlockAtRisk` 的方向风险边界不一致。
 
 可证伪假设：**若保留既有 `verticalTileIsCovered` 几何关系与 v3.349 的 OCR/日语质量门，仅让 `directionConfidence` 有限、位于 `[0,1]` 且 `>=.45` 的 vertical block 抑制宽 tile，则方向不确定的 block 会重新保留既有 tile 机会，可靠方向 block 与可靠 line frontier 仍抑制重复窗口；最多 6 个 tile、18 个窗口、4 次 opposite orientation、pixel-first/line/block recovery、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**

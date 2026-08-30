@@ -1,5 +1,7 @@
 ### v3.350 Japanese tile direction eligibility contract（已完成）
 
+文档收口 push CI [33292525345](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292525345) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+
 - `recognizeJapaneseVerticalTileFallback` 只有在 block 方向为 vertical、`directionConfidence` 有限且位于 `[0,1]`、`>=.45`，并同时通过既有非空、OCR confidence `>=.48`、真实日语文字、日语文字密度与脚本文本密度 `>=.5` 时，才用 block 几何声明 tile 已覆盖；方向不确定的 vertical block 继续保留既有宽 tile 复读机会。最多 6 个 tile、18 个窗口、4 次方向 fallback、line frontier、pixel-first、block recovery、OCR/layout、翻译 QA、取消、持久化与非日语路径不变。新合同为 `scripts/test-v3350-japanese-tile-direction-eligibility-contract.py`，工程版本 `3.350`。实现 SHA `46c105605c215ccef61e4bd013b71d7e1c8e1799` 的 exact-SHA full [33291869290](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33291869290)、PR [#414](https://github.com/bengzhu/project1_lgbt_naxida/pull/414) checks [33292290297](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292290297)、merge SHA `0d53fa31e12e3dcd653aa25a9c230c44ce8c1c46` 与合入后 push CI [33292322548](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33292322548) 均成功。新合同 `13/13`，本地 `349` 个安全合同通过，`27` 个进程／编译／runtime 合同跳过，Python AST `376/376`、JSON `237/237`（排除 2 个已知 JSONC）、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
 
 ### v3.349 Japanese tile coverage eligibility contract（已完成）
