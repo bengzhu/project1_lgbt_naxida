@@ -1,10 +1,12 @@
-## v3.353：Japanese vertical crop risk balance（2026-08-30，当前研发分支）
+## v3.353：Japanese vertical crop risk balance（2026-08-30，已完成）
 
 v3.352 已完成方向置信度合法域收紧；继续审计普通图片 OCR→翻译主路径发现，v3.345 的多 band 轮询只按空间 band 交替，不区分既有风险 gate：当弱 block 密集在一个 band、强 block 分散在其它 band 时，16 个 crop 名额可能先被强 block 消耗，弱 block 的风险优先级被空间均衡反转。
 
 可证伪假设：**若在既有超预算、多 band selector 中先按 `isJapaneseVerticalBlockAtRisk` 分为风险与非风险两类，并仅在每一类内部 round-robin bands，则风险候选会先获得既有限额，同类内仍保持空间覆盖；风险候选不足时再以剩余名额补齐非风险类，未超预算、单 band、无风险队列保持历史选择，最多 16 个 vertical block crop、8 次方向 fallback、line/pixel/tile/frontier、owner、OCR/layout、翻译 QA、取消、持久化、Koharu/GGUF 研究边界和非日语路径不变。**
 
-当前实现位于独立分支 `codex/v3.353-japanese-vertical-crop-risk-balance`：新增 `scripts/test-v3353-japanese-vertical-crop-risk-balance-contract.py`，工程版本推进至 `3.353`，workflow 已接入；本地安全静态回归与 cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+实现已合入 `smalldata_test`：新增 `scripts/test-v3353-japanese-vertical-crop-risk-balance-contract.py`，工程版本推进至 `3.353`，workflow 已接入；实现 SHA `9e60fcbca3ca4c36a7ad67ed99ae45d42ce81ed2` 的 exact-SHA full [33295448242](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33295448242)、PR [#417](https://github.com/bengzhu/project1_lgbt_naxida/pull/417) checks [33295982257](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33295982257)、merge SHA `16db200bfc881702363eca2f67dd7bd513d72ae9` 与合入后 push CI [33296036459](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33296036459) 均成功。本地安全静态回归为 352 个安全合同通过、27 个进程／编译／runtime 合同跳过（379 总计），Python AST `379/379`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过；未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+
+v3.353 文档收口 push CI 待执行；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
 
 ## v3.352：Japanese direction-confidence risk domain（2026-08-30，已完成）
 
