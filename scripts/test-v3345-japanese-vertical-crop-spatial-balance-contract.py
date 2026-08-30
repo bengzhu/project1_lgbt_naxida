@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.345 vertical crop spatial balance."""
+"""Static and pure-policy contract for v3.346 vertical crop spatial balance."""
 
 from dataclasses import dataclass
 import math
@@ -40,7 +40,7 @@ class Block:
 def bounded_vertical_crop_blocks(
     blocks: list[Block], limit: int
 ) -> list[Block]:
-    """Model v3.345 after the existing risk-first block ordering."""
+    """Model v3.346 after the existing risk-first block ordering."""
     if limit <= 0 or len(blocks) <= limit:
         return blocks
 
@@ -225,13 +225,13 @@ class JapaneseVerticalCropSpatialBalanceContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.345", "3.345"],
+            ["3.346", "3.346"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3345-japanese-vertical-crop-spatial-balance-contract.py",
-            "v3.345",
-            "japanese-benchmark-v3.345-",
+            "v3.346",
+            "japanese-benchmark-v3.346-",
         ):
             self.assertIn(marker, combined)
         contract = read(

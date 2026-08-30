@@ -2150,7 +2150,63 @@ struct VisionOCRService: Sendable {
             })
         }
         let remaining = max(0, 12 - reservedCompact.count)
-        return reservedCompact + regularCandidates.prefix(remaining)
+        let selectedRegular = Self.boundedJapanesePixelFirstRegularCandidates(
+            regularCandidates,
+            limit: remaining
+        )
+        return reservedCompact + selectedRegular
+    }
+
+    /// Keep the existing compact-candidate reservation, but prevent the
+    /// remaining pixel-first recovery slots from clustering in one vertical
+    /// band on a long page. The input is already ordered by the historical
+    /// height/geometry priority; only an over-budget, multi-band queue is
+    /// reselected and the returned candidates retain that original order.
+    private static func boundedJapanesePixelFirstRegularCandidates(
+        _ candidates: [JapanesePixelFirstRegion],
+        limit: Int
+    ) -> [JapanesePixelFirstRegion] {
+        guard limit > 0, candidates.count > limit else { return candidates }
+
+        let bandCount = min(limit, candidates.count)
+        var bands = Array(repeating: [Int](), count: bandCount)
+        for (offset, candidate) in candidates.enumerated() {
+            let centerY = candidate.rect.y + candidate.rect.height / 2
+            let boundedCenterY = centerY.isFinite
+                ? min(max(centerY, 0), 1)
+                : 0
+            let bandIndex = min(
+                Int(boundedCenterY * Double(bandCount)),
+                bandCount - 1
+            )
+            bands[bandIndex].append(offset)
+        }
+
+        let populatedBands = bands.indices.filter { !bands[$0].isEmpty }
+        guard populatedBands.count > 1 else {
+            return Array(candidates.prefix(limit))
+        }
+
+        var selectedOffsets = Set<Int>()
+        var cursors = Array(repeating: 0, count: bandCount)
+        while selectedOffsets.count < limit {
+            var addedCandidate = false
+            for bandIndex in populatedBands {
+                guard selectedOffsets.count < limit,
+                      cursors[bandIndex] < bands[bandIndex].count else {
+                    continue
+                }
+                let offset = bands[bandIndex][cursors[bandIndex]]
+                cursors[bandIndex] += 1
+                selectedOffsets.insert(offset)
+                addedCandidate = true
+            }
+            guard addedCandidate else { break }
+        }
+
+        return candidates.enumerated()
+            .filter { selectedOffsets.contains($0.offset) }
+            .map(\.element)
     }
 
     /// Prefer the detector's character-level envelope as the closest Vision

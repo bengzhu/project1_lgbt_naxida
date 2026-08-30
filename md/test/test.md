@@ -1,3 +1,8 @@
+### v3.346 Japanese pixel-first regular crop spatial balance contract（进行中）
+
+- pixel-first vertical recovery 保留 compact 候选前 4 个预留与最多 12 个总 crop；当去除 compact 保留项后的 regular 候选超过剩余名额且跨多个纵向 band 时，`boundedJapanesePixelFirstRegularCandidates` 按 band round-robin 选择，再按原高度/几何顺序返回。候选不足或单 band 保留原前缀，4 次 opposite orientation、Vision geometry/dedupe/preprocess、OCR/layout、翻译 QA、取消和持久化边界不变。
+- 新合同：`scripts/test-v3346-japanese-pixel-first-spatial-balance-contract.py`；工程版本推进至 `3.346`，Japanese benchmark route 已接入。验证与云端 receipt 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.345 Japanese vertical crop spatial balance contract（已完成）
 
 - `recognizeJapaneseVerticalCrops` 保留 v3.336 的风险/有限 confidence 优先排序；当 vertical block 候选超过既有 16 个 crop 名额且分布在多个纵向 band 时，`boundedJapaneseVerticalCropBlocks` 按 band round-robin 选择，再按原风险顺序返回。候选不足或单 band 保留原前缀，16 个 block、8 次 orientation fallback、line/pixel/tile 路径与既有质量/失败/取消/布局/翻译/持久化边界不变。

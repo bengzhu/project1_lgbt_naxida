@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.345 slice merge closure."""
+"""Static and pure-policy contract for v3.346 slice merge closure."""
 
 from pathlib import Path
 import re
@@ -118,7 +118,7 @@ def merge_rect(first: Rect, second: Rect) -> Rect | None:
 
 
 def merge_slice_once(regions: list[Region]) -> list[Region]:
-    """Model the pre-v3.345 scan, including swap-remove ordering."""
+    """Model the pre-v3.346 scan, including swap-remove ordering."""
     remaining = list(regions)
     index = 0
     while index < len(remaining):
@@ -148,7 +148,7 @@ def merge_slice_once(regions: list[Region]) -> list[Region]:
 
 
 def merge_slice_to_closure(regions: list[Region]) -> list[Region]:
-    """Model v3.345's restart-after-merge closure."""
+    """Model v3.346's restart-after-merge closure."""
     remaining = list(regions)
     index = 0
     while index < len(remaining):
@@ -286,13 +286,13 @@ class JapaneseDetectorSliceMergeClosureContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.345", "3.345"],
+            ["3.346", "3.346"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3339-image-japanese-detector-slice-merge-closure-contract.py",
-            "v3.345",
-            "japanese-benchmark-v3.345-",
+            "v3.346",
+            "japanese-benchmark-v3.346-",
         ):
             self.assertIn(marker, combined)
 
