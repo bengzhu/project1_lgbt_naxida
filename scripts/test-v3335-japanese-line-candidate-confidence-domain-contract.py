@@ -102,7 +102,7 @@ class JapaneseLineCandidateConfidenceDomainContractTests(unittest.TestCase):
             "maximumJapaneseMangaLineOCRRequests = 8",
             "min(2, maximumJapaneseMangaLineOCRRequests)",
             "maximumJapaneseMangaLineOCRRequests - geometryReserve",
-            "uncoveredGeometry.prefix(geometryReserve)",
+            "let selectedGeometry = boundedJapaneseGeometryOnlyLineCandidates(",
             ".prefix(maximumJapaneseMangaLineOCRRequests)",
         ):
             self.assertIn(marker, self.candidates + self.vision)
@@ -131,7 +131,7 @@ class JapaneseLineCandidateConfidenceDomainContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.354", "3.354"],
+            ["3.355", "3.355"],
         )
         combined = self.workflow + self.docs
         for marker in (

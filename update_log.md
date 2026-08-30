@@ -1,3 +1,11 @@
+## v3.355：Japanese geometry-owner balance（2026-08-30，当前研发分支）
+
+v3.354 已封闭普通图片日语竖排 owner 的有限 direction confidence 域；继续审计发现 `japaneseMangaLineOCRCandidates` 的 2 个 geometry-only line 保留名额仍按高度/位置直接取前缀。同一 known owner 的多个候选可能占满这两个名额，其他 TextRegion 的 line geometry 因而没有机会进入 bundled Manga OCR。
+
+可证伪假设：**若在既有 text-backed coverage filter、严格单 owner geometry gate 与稳定几何排序之后，复用 owner-only bounded selector，则仅在 geometry pool 超过 `geometryReserve <= 2` 且存在多个 known owner 时平衡候选；under-budget、single-owner、ownerless 兼容、8/2 line/geometry 上限、Vision/Manga OCR、layout、翻译 QA、取消、持久化和非日语路径保持不变。**
+
+当前实现位于独立分支 `codex/v3.355-japanese-geometry-owner-balance`：新增 `scripts/test-v3355-japanese-geometry-owner-balance-contract.py`，工程版本推进至 `3.355`，workflow 已接入；本地安全静态回归与 cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+
 ## v3.354：Japanese direction-confidence owner domain（2026-08-30，已完成）
 
 v3.353 已完成普通图片竖排 block crop 的风险/空间调度；继续审计发现 v3.352 虽已让风险排序使用有限方向置信度域，但中等高度竖排候选筛选、`verticalTextRegionMatchIndices` 与 geometry-only line owner 匹配仍直接比较 `directionConfidence >= .25`。有限越界值或 `+∞` 因而可能被当作有效方向并取得跨块 owner，影响 line fusion 的 owner 边界。
