@@ -287,7 +287,7 @@ class JapaneseTileDirectionEligibilityContractTests(unittest.TestCase):
 
     def test_risk_classifier_uses_the_same_direction_boundary(self) -> None:
         for marker in (
-            "!block.directionConfidence.isFinite",
+            "validJapaneseDirectionConfidence(block.directionConfidence) == nil",
             "block.directionConfidence < 0.45",
         ):
             self.assertIn(marker, self.risk)
@@ -371,13 +371,13 @@ class JapaneseTileDirectionEligibilityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.351", "3.351"],
+            ["3.352", "3.352"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3350-japanese-tile-direction-eligibility-contract.py",
             "v3.351",
-            "japanese-benchmark-v3.351-",
+            "japanese-benchmark-v3.352-",
         ):
             self.assertIn(marker, combined)
         contract = read(

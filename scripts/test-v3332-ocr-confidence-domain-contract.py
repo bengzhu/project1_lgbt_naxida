@@ -163,7 +163,7 @@ class OCRConfidenceDomainContractTests(unittest.TestCase):
         self.assertIn("(0...1).contains(confidence)", self.validator)
         self.assertIn("return nil", self.validator)
         self.assertIn("return confidence", self.validator)
-        self.assertEqual(self.vision.count("confidence.isFinite"), 1)
+        self.assertEqual(self.validator.count("confidence.isFinite"), 1)
 
     def test_candidate_comparison_score_and_fallback_use_valid_domain(self) -> None:
         valid = self.selector.index("let validCandidates = candidates.filter")
@@ -231,7 +231,7 @@ class OCRConfidenceDomainContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.351", "3.351"],
+            ["3.352", "3.352"],
         )
         combined = self.workflow + self.docs
         for marker in (
