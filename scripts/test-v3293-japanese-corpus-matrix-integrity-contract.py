@@ -169,7 +169,7 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
             "canonical four-engine dev matrix",
         ):
             self.assertIn(marker, self.source + self.workflow + self.route + self.update_log + self.test_log)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.363", "3.363"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.364", "3.364"])
 
 
 if __name__ == "__main__":

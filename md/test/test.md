@@ -1,3 +1,8 @@
+### v3.364 Japanese SFX scope contract（候选）
+
+- 混合日语漫画 `[N]` batch 的 SFX/状态字提示只绑定 `batchStartIndex` 推导出的实际全局块序号；对白、旁白、标题等其它编号块继续使用各自的文字类型提示，单块 standard SFX 仍保留局部提示。
+- 新增 `scripts/test-v3364-japanese-sfx-scope-contract.py`，工程版本 `3.364`，workflow 已接入；候选 full 待验证。该合同只检查 prompt metadata 的作用域、既有批量边界与无进程入口；`test/2.png` 仅作混合漫画参考，`test/3.png` 未提供，不把静态结果当作通用 OCR/翻译质量证据。
+
 ### v3.363 Japanese standard translation prompt contract（已完成）
 
 - 日语图片翻译的 plain-text standard 请求补充明确的日语源语言、目标语言、忠实/简洁风格、称谓/专名/拟声词保留和只输出译文约束；该提示同时覆盖批量失败块 QA 回退与 OCR 重新识别后的单块复译。
