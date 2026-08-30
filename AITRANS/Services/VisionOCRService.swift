@@ -1317,17 +1317,27 @@ struct VisionOCRService: Sendable {
         )
         refined.append(contentsOf: lineRefined)
 
-        refined.append(contentsOf: Self.recognizeJapanesePixelFirstVerticalCrops(
+        let pixelFirstRefined = Self.recognizeJapanesePixelFirstVerticalCrops(
             in: image,
             observations: ownerAnnotatedObservations,
             verticalBlocks: verticalBlockArray,
             lineObservations: lineRefined,
             recognitionLanguages: recognitionLanguages
-        ))
+        )
+        refined.append(contentsOf: pixelFirstRefined)
+
+        // A successful pixel-first crop is already a reliable vertical-line
+        // observation after the shared recovery gate. Feed it into the same
+        // read-only frontier used by the tile fallback so a broad tile does
+        // not spend one of the existing 18 windows rereading an area that the
+        // narrower detector crop has just covered. Weak/empty pixel-first
+        // output is absent from this array and therefore cannot suppress the
+        // broader recovery path.
+        let recoveryFrontierObservations = lineRefined + pixelFirstRefined
         refined.append(contentsOf: Self.recognizeJapaneseVerticalTileFallback(
             in: image,
             verticalBlocks: verticalBlockArray,
-            lineObservations: lineRefined,
+            lineObservations: recoveryFrontierObservations,
             recognitionLanguages: recognitionLanguages
         ))
 

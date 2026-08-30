@@ -1,3 +1,11 @@
+## v3.347：Japanese recovery frontier（2026-08-30，进行中）
+
+v3.346 已让 pixel-first regular crop 在多纵向 band 间共享既有 12 个名额；继续审计普通图片 OCR→翻译主路径发现，pixel-first 复读在既有质量门后已经产出可靠 `.verticalLine` observation，但同一轮后续 tile fallback 仍只接收 `lineRefined`，不会把可靠 pixel-first 结果纳入覆盖前沿。这样已被窄 crop 读出的区域仍可能触发宽 tile，消耗既有 18 个 tile 窗口并挤出之后的未覆盖区域。
+
+可证伪假设：**若把 `lineRefined + pixelFirstRefined` 作为 tile 的只读 coverage frontier，并继续由 `japaneseLinePathRegion` 统一执行 `.verticalLine`、有限 `[0,1]` confidence、实际日语文字/脚本密度与竖排 geometry gate，则可靠 pixel-first 区域不会重复进入 tile，弱/空/非竖排结果仍保留既有 fallback；tile 仍最多 18 个窗口、最多 4 次反向方向复读，OCR/layout、翻译 QA、取消、持久化与非日语路径不变。**
+
+当前实现与合同已在候选分支推进；云端 exact-SHA full、PR 合入和 `smalldata_test` receipt 待完成。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把该边界外推为通用 OCR/CER 或翻译质量提升。
+
 ## v3.346：Japanese pixel-first regular crop spatial balance（2026-08-30，已完成）
 
 v3.345 已让超预算的 vertical layout block crop 在多个纵向 band 间共享既有 16 个名额；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 pixel-first vertical recovery 的候选列表仍按候选高度/几何排序，compact 候选虽保留前 4 个名额，但剩余普通候选超过 12 总上限时仍可能集中在页面同一纵向区域，导致其它未被 block 覆盖的区域没有既有 pixel-first crop 机会。

@@ -121,7 +121,7 @@ class KoharuGeometryOnlyLineRecallContractTests(unittest.TestCase):
 
     def test_version_and_ci_route(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.346", "3.346"])
+        self.assertEqual(versions, ["3.347", "3.347"])
         current = "python3 -B scripts/test-v3268-koharu-geometry-only-line-recall-contract.py"
         self.assertIn(current, self.workflow)
         self.assertIn(

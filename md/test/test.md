@@ -1,3 +1,8 @@
+### v3.347 Japanese recovery frontier contract（进行中）
+
+- `recognizeJapaneseVerticalCrops` 先完成既有 line-first 与 pixel-first recovery，再把 `lineRefined + pixelFirstRefined` 传给 tile fallback 的只读 coverage frontier；tile 仍只用 `japaneseLinePathRegion` 接受 `.verticalLine`、有限 `[0,1]` confidence、真实日语文字/脚本密度和竖排 geometry 合格结果，弱/空 pixel-first 输出不抑制宽 tile。最多 18 个 tile window、4 次 opposite orientation、既有 crop/geometry、布局、翻译 QA、取消和持久化边界不变。
+- 新合同：`scripts/test-v3347-japanese-recovery-frontier-contract.py`；工程版本推进至 `3.347`，Japanese benchmark route 已接入。云端 exact-SHA full、PR 合入和 `smalldata_test` receipt 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.346 Japanese pixel-first regular crop spatial balance contract（已完成）
 
 - pixel-first vertical recovery 保留 compact 候选前 4 个预留与最多 12 个总 crop；当去除 compact 保留项后的 regular 候选超过剩余名额且跨多个纵向 band 时，`boundedJapanesePixelFirstRegularCandidates` 按 band round-robin 选择，再按原高度/几何顺序返回。候选不足或单 band 保留原前缀，4 次 opposite orientation、Vision geometry/dedupe/preprocess、OCR/layout、翻译 QA、取消和持久化边界不变。

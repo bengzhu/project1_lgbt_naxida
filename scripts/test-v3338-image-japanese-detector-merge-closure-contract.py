@@ -187,13 +187,13 @@ class JapaneseDetectorMergeClosureContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.346", "3.346"],
+            ["3.347", "3.347"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3338-image-japanese-detector-merge-closure-contract.py",
-            "v3.346",
-            "japanese-benchmark-v3.346-",
+            "v3.347",
+            "japanese-benchmark-v3.347-",
         ):
             self.assertIn(marker, combined)
 

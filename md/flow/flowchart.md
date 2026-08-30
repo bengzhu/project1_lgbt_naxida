@@ -1,4 +1,5 @@
 # 项目流程图
+v3.347 Japanese recovery frontier：`lineRefined + reliable pixel-first output -> shared tile coverage frontier -> bounded 18-window tile fallback`；pixel-first 只有通过既有 verticalLine/finite confidence/Japanese density/vertical geometry gate 才能抑制重复 tile，弱/空结果不改变 fallback，预算、方向、翻译 QA、取消和持久化边界不变。
 v3.346 Japanese pixel-first regular crop spatial balance：`pixel-first regions -> compact reserve(<=4) -> regular multi-band round-robin -> bounded 12 crops -> existing Vision orientation/fusion`；仅多 band 超出 regular 剩余名额时均衡，保留 compact/12/4 上限、geometry、质量门、翻译 QA、取消与持久化边界。
 v3.345 Japanese vertical crop spatial balance：`risk-first vertical layout blocks -> multi-band over-budget round-robin -> bounded 16-block crop queue -> existing owner/line/fallback fusion`；仅多 band 超过既有 16 个名额时均衡 block crop，最终恢复原风险顺序，line/pixel/tile、8 次 orientation fallback、质量门、owner/layout、翻译 QA、取消与持久化边界不变。
 v3.344 Japanese weak-block recovery spatial balance：`weak layout blocks -> finite-confidence priority -> multi-band over-budget round-robin -> bounded four-block scoped reread -> measurable replacement`；只有弱候选超过 4 且分布到多个纵向 band 时均衡既有名额，候选不足/单 band 恢复原前缀，保留质量门、失败/取消、布局、翻译 QA 与持久化边界。

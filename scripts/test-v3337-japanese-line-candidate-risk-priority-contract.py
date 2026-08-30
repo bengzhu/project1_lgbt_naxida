@@ -258,13 +258,13 @@ class JapaneseLineCandidateRiskPriorityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.346", "3.346"],
+            ["3.347", "3.347"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3337-japanese-line-candidate-risk-priority-contract.py",
-            "v3.346",
-            "japanese-benchmark-v3.346-",
+            "v3.347",
+            "japanese-benchmark-v3.347-",
         ):
             self.assertIn(marker, combined)
         contract = read(

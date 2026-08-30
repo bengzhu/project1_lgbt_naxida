@@ -113,7 +113,7 @@ class JapaneseOCRMeaningfulTextGateContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.346", "3.346"],
+            ["3.347", "3.347"],
         )
         for marker in (
             "scripts/test-v3317-japanese-ocr-meaningful-text-gate-contract.py",
