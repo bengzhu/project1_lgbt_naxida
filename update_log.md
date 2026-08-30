@@ -1,10 +1,10 @@
-## v3.360：Japanese recovery-frontier block skip（候选验证中）
+## v3.360：Japanese recovery-frontier block skip（已完成）
 
 v3.359 已收紧普通图片日语→简体中文 shared-Han QA；继续审计 OCR recovery 主路径发现，`recognizeJapaneseVerticalCrops` 的 block loop 只用 `lineRefined` 判断完整覆盖。即使 pixel-first 或 tile 已产生一个几何上覆盖该 known TextRegion 全部源行的可靠结果，仍可能再执行一次宽 block crop，造成重复读取并消耗既有 bounded block-crop 机会。
 
 本轮可证伪假设：**若将 line/pixel/tile recovery 结果合成只读 frontier，并仅在 recovery observation 几何唯一匹配一个 temporary TextRegion owner、通过既有有限 confidence/日语质量/竖排 geometry gate，且用 `hasCompleteJapaneseLineCoverage(..., allowsBlockCropResults: true)` 完成严格一对一源行 coverage proof 时跳过 block crop，则可靠 recovery 可避免重复宽读取；弱、部分、ownerless、歧义或 foreign-owner 结果仍走原有 block fallback。line/pixel/tile/block/方向预算、owner/layout、OCR 输出、翻译 QA、标签、取消、持久化、UI/renderer 和非日语路径不变。**
 
-实现与验证正在候选分支 `codex/v3.360-japanese-recovery-frontier-block-skip` 进行：新增 `scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py`，工程版本推进至 `3.360`，workflow 已接入。候选本地安全回归和 exact-SHA cloud full 尚未完成；按约束不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 尚未提供，不合成输入，不以静态合同结果宣称通用 OCR/CER 或翻译质量提升。Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，仅作可选研究/质量证明。
+实现已由 `f245acdb2b548cef973e0010981a0a67a108cfb6` 合入 `smalldata_test`，merge SHA 为 `6e6e58d10dd0a230a56a0bcf14bab20ec4f47f8a`；新增 `scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py`，工程版本推进至 `3.360`，workflow 已接入。新合同 `9/9`；本地 `359` 个安全合同通过、`27` 个进程/编译/runtime 入口合同按约束跳过（`386` 总计），Python AST `406/406`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 加工程文件检查及 `git diff --check` 通过。exact-SHA full [33305439236](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33305439236)、PR [#424](https://github.com/bengzhu/project1_lgbt_naxida/pull/424) checks [33305910849](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33305910849)、合入后 push CI [33305962983](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33305962983) 均成功；exact full 的云端 Xcode build、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 通过。按约束未运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 尚未提供，不合成输入，不以静态合同结果宣称通用 OCR/CER 或翻译质量提升。Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，仅作可选研究/质量证明。
 
 ## v3.359：Japanese shared-Han QA exactness（2026-08-30，已完成）
 

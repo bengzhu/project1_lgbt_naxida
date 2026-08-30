@@ -1,7 +1,7 @@
-### v3.360 Japanese recovery-frontier block-skip contract（候选验证中）
+### v3.360 Japanese recovery-frontier block-skip contract（已完成）
 
 - v3.359 后继续审计普通图片 OCR recovery：block loop 旧 guard 只读取 `lineRefined`，因此唯一归属某个 TextRegion 的 pixel/tile 逐源行完整结果仍可能重复触发宽 block crop。v3.360 将 line/pixel/tile 合成只读 frontier，仅让唯一 owner、可靠日语、竖排 geometry 且通过严格一对一 coverage proof 的 recovery 结果跳过该 crop；弱、部分、ownerless、歧义和 foreign-owner 结果继续保留 fallback，输出替换、请求预算、方向 fallback、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。
-- 新增 `scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py`，工程版本 `3.360`，CI 已接入；本地安全回归、exact-SHA cloud full、PR 和合入证据待候选完成后补记。当前不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 未提供，不合成输入或质量证据。
+- 新增 `scripts/test-v3360-japanese-recovery-frontier-block-skip-contract.py`，工程版本 `3.360`，CI 已接入；新合同 `9/9`，本地 `359` 个安全合同通过、`27` 个进程/编译/runtime 入口合同按约束跳过（`386` 总计），Python AST `406/406`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist `4/4` 加工程文件检查及 `git diff --check` 通过。实现 SHA `f245acdb2b548cef973e0010981a0a67a108cfb6` 的 exact-SHA full [33305439236](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33305439236)、PR [#424](https://github.com/bengzhu/project1_lgbt_naxida/pull/424) checks [33305910849](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33305910849)、merge SHA `6e6e58d10dd0a230a56a0bcf14bab20ec4f47f8a` 与合入后 push CI [33305962983](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33305962983) 均成功；云端 Xcode build、JUnit/manifest 与 `AITRANS CI/full-validation=success` receipt 通过。当前不运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 未提供，不合成输入或质量证据。
 
 ### v3.359 Japanese shared-Han QA exactness contract（已完成）
 
