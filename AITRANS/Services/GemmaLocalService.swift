@@ -297,7 +297,7 @@ struct GemmaLocalService: LocalLanguageModeling {
             你是专业的漫画翻译器。源语言是\(request.sourceLanguage.rawValue)，目标语言是\(request.targetLanguage.rawValue)。
             输入由带编号的文字块组成，例如 [1]、[2]。只翻译每个编号后面的文字。
             必须原样保留每个 [N] 标签，并按输入顺序逐个输出；不要合并、拆分、遗漏或重排文字块。
-            保留角色语气、情绪、关系、强调和拟声词；译文自然、简洁、适合漫画气泡。
+            保留角色语气、情绪、关系、强调和拟声词；对拟声词/状态字块使用简短的中文拟声或动作表达，不补写主语或解释动作；译文自然、简洁、适合漫画气泡。
             不要输出解释、注释、罗马音或额外标题。每个标签单独一行，格式为 [N] 译文。
             用户补充要求：\(instruction)\(contextualInstruction)
             """

@@ -1,3 +1,9 @@
+### v3.357 Japanese kana SFX translation-recall contract（当前研发分支）
+
+- 普通图片日语 OCR 的既有 `.sfx` 推断此前偏向片假名；v3.357 增加高信号的完整假名重复（`ふらふら`）、词尾促音（`ぐっ`）与极短长音/省略号（`ふー`）形状，并保留对话引号拒绝、边界框/长度/日语比例门。较长平假名长音对白不会仅因一个标记升级。
+- 翻译上下文和漫画 batch prompt 只追加拟声词/状态字的简短中文拟声或动作表达提示，不补写主语、解释动作或扩写成完整句子；文字类型仍是 prompt metadata，不改变 OCR、候选/geometry/layout、请求预算、标签/QA、取消、持久化或非日语路径。
+- 新增 `scripts/test-v3357-japanese-sfx-translation-recall-contract.py`，工程版本 `3.357`，CI 接入后待云端 full/PR/merge receipt 验证。本地只做无进程静态合同和语法检查，未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。`test/3.png` 尚未提供，收到真实文件后再纳入同一回归；不以 synthetic fixture 或本合同结果宣称通用 OCR/CER 或翻译质量提升。
+
 ### v3.356 Japanese compact spatial-balance contract（已完成）
 
 - pixel-first 路径为 compact 日语候选预留最多 4 个名额，但旧逻辑按 `y/x` 前缀选择，多个页面 band 的短 SFX/短列可能集中在同一 band。v3.356 仅在 compact pool 超过 4 且存在多个 band 时采用稳定 band round-robin，保留 compact 优先级、under-budget/single-band、12/4 pixel/方向上限及 OCR/layout、翻译 QA、取消、持久化边界不变。新增 `scripts/test-v3356-japanese-compact-spatial-balance-contract.py`，工程版本 `3.356`；新合同 `9/9`，本地安全回归 `355` 个通过、`27` 个进程/编译入口合同按约束跳过（`382` 总计），Python AST `382/382`、JSON `237/237`、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `a3b53349bc28013ba674d0d4a026e7db6e55d62c` 的 exact-SHA full [33299312826](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299312826)、PR [#420](https://github.com/bengzhu/project1_lgbt_naxida/pull/420) checks [33299888372](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299888372)、merge SHA `aa8fc40b9054fd943f8e1ece4db0d31d6dda4ae2` 与合入后 push CI [33299935514](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33299935514) 均成功；未运行本地 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
