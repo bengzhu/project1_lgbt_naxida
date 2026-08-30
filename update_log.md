@@ -1,5 +1,7 @@
 ## v3.348：Japanese pixel recovery eligibility（2026-08-30，已完成）
 
+文档收口 push CI [33290225605](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33290225605) 已成功；该 CI 只验证文档收口后的当前 `smalldata_test` 状态，不新增编译或模型证据。
+
 v3.347 后审计普通图片 OCR→翻译主路径发现，pixel-first vertical recovery 的 `existingVerticalRegions` 只要带有 `.vertical` provenance 或 `.verticalLine` role 就会阻止同几何候选，即使页面级竖排读数为空、低置信、非日文或日文字/脚本文本密度不足。这样弱读数会提前声明“已覆盖”，让真正需要复读的区域失去既有 pixel-first 机会。
 
 可证伪假设：**若保留现有方向 provenance、compact owner 例外与几何覆盖关系，但要求 existing vertical geometry 同时通过非空、有限 `[0,1]` confidence `>=.48`、真实日语文字、日语文字密度与脚本文字密度 `>=.5`，则弱页面读数不会再遮蔽 pixel-first recovery，可靠页面/line 读数仍会抑制重复 crop；最多 12 个 pixel-first crop、4 次 opposite orientation、既有 geometry/dedupe、line/tile frontier、OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
