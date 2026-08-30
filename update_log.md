@@ -1,10 +1,10 @@
-## v3.354：Japanese direction-confidence owner domain（2026-08-30，当前研发分支）
+## v3.354：Japanese direction-confidence owner domain（2026-08-30，已完成）
 
 v3.353 已完成普通图片竖排 block crop 的风险/空间调度；继续审计发现 v3.352 虽已让风险排序使用有限方向置信度域，但中等高度竖排候选筛选、`verticalTextRegionMatchIndices` 与 geometry-only line owner 匹配仍直接比较 `directionConfidence >= .25`。有限越界值或 `+∞` 因而可能被当作有效方向并取得跨块 owner，影响 line fusion 的 owner 边界。
 
 可证伪假设：**若这三处入口都先通过共享 `validJapaneseDirectionConfidence` 的有限闭区间 `[0,1]` 校验，再应用既有 `.25` owner/候选门，则 `NaN/±∞` 与有限越界值不会取得 known owner，合法 `.25`/`.45` 语义、ownerless 兼容及既有 16/8/4/24/12/48 请求上限保持不变；OCR/layout、翻译 QA、取消、持久化和非日语路径不变。**
 
-当前实现位于独立分支 `codex/v3.354-japanese-direction-owner-domain`：新增 `scripts/test-v3354-japanese-direction-owner-domain-contract.py`，工程版本推进至 `3.354`，workflow 已接入；本地安全静态回归与 cloud full 待执行。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
+当前实现已合入 `smalldata_test`：新增 `scripts/test-v3354-japanese-direction-owner-domain-contract.py`，工程版本推进至 `3.354`，workflow 已接入；实现 SHA `86500c81563042abee526b08d43ce8dd9928c4fd` 的 exact-SHA full [33297024649](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297024649)、PR [#418](https://github.com/bengzhu/project1_lgbt_naxida/pull/418) checks [33297508110](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297508110)、merge SHA `885dc9ea2a9eadd5d6d18a9598e75a505fe44d76` 与合入后 push CI [33297547961](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33297547961) 均成功；本地安全静态回归为 353 个安全合同通过，27 个进程／编译／runtime 合同跳过（380 总计）；Python AST `380/380`、JSON `237/237`（排除 2 个已知 JSONC）、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 全部通过。Koharu/GGUF、授权语料和目标设备证据继续独立于普通 OCR 主路径，不作为本轮阻塞，也不把本轮结果外推为通用 OCR/CER 或翻译质量提升。
 
 ## v3.353：Japanese vertical crop risk balance（2026-08-30，已完成）
 
