@@ -1,6 +1,7 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+当前 v3.345 Japanese vertical crop spatial balance：`risk-first vertical layout blocks -> multi-band over-budget round-robin -> bounded 16-block crop queue -> existing owner/line/fallback fusion`；仅在候选超过 16 且存在多个非空纵向 band 时均衡既有 block crop 名额，最终恢复原风险顺序，16/8 请求上限、质量门、owner/layout、翻译 QA、取消和持久化边界不变。
 当前 v3.344 Japanese weak-block recovery spatial balance：`weak layout blocks -> existing finite-confidence priority -> multi-band over-budget round-robin -> bounded four-block scoped reread -> measurable replacement`；只在候选超过 4 且存在多个纵向 band 时均衡既有 recovery 名额，最终恢复原 weak-first 顺序，`.55`/日文质量/改善门、失败取消、OCR/layout、翻译 QA 和持久化边界不变。
 当前 v3.343 Japanese Vision line owner balance：`risk-first line geometry -> owner-balanced perspective/axis queues -> bounded 24-item Vision rereads -> Manga/Vision fusion`；复用显式 owner 的确定性补齐策略，两个 Vision 队列各自仍最多 24 项，只在前缀遗漏 known vertical TextRegion owner 时替换重复 owner，ownerless、12 次 orientation fallback、16M perspective 像素预算、Manga 8/2 名额和下游翻译/取消/持久化边界不变。
 当前 v3.340 Japanese line coverage source boundary：`page/line observations -> exclude block-level detector TextRegion from source-line set -> existing owner/quality/geometry one-to-one proof -> bounded block crop fallback`；块级 detector bbox 不再伪造多行完整覆盖，既有 line/block OCR 预算、阈值、crop/warp、owner/layout、翻译 QA、取消与持久化边界不变。

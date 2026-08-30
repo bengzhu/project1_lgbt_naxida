@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.344 weak-block recovery balance."""
+"""Static and pure-policy contract for v3.345 weak-block recovery balance."""
 
 from dataclasses import dataclass
 import math
@@ -40,7 +40,7 @@ class Candidate:
 def bounded_recovery_candidates(
     candidates: list[Candidate], limit: int
 ) -> list[Candidate]:
-    """Model v3.344 after the existing weak-first sort."""
+    """Model v3.345 after the existing weak-first sort."""
     if limit <= 0 or len(candidates) <= limit:
         return candidates
 
@@ -206,13 +206,13 @@ class JapaneseWeakBlockRecoverySpatialBalanceContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.344", "3.344"],
+            ["3.345", "3.345"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3344-japanese-weak-block-recovery-spatial-balance-contract.py",
-            "v3.344",
-            "japanese-benchmark-v3.344-",
+            "v3.345",
+            "japanese-benchmark-v3.345-",
         ):
             self.assertIn(marker, combined)
         contract = read(

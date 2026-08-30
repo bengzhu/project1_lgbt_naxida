@@ -1,3 +1,8 @@
+### v3.345 Japanese vertical crop spatial balance contract（进行中）
+
+- `recognizeJapaneseVerticalCrops` 保留 v3.336 的风险/有限 confidence 优先排序；当 vertical block 候选超过既有 16 个 crop 名额且分布在多个纵向 band 时，`boundedJapaneseVerticalCropBlocks` 按 band round-robin 选择，再按原风险顺序返回。候选不足或单 band 保留原前缀，16 个 block、8 次 orientation fallback、line/pixel/tile 路径与既有质量/失败/取消/布局/翻译/持久化边界不变。
+- 新合同：`scripts/test-v3345-japanese-vertical-crop-spatial-balance-contract.py`；工程版本推进至 `3.345`，Japanese benchmark route 已接入。验证与云端 receipt 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ### v3.344 Japanese weak-block recovery spatial balance contract（已完成）
 
 - `recoverWeakJapaneseBlocks` 保留原有限 confidence 弱者优先队列；当候选超过既有 4 次 scoped reread 上限且 block bbox 分布在多个纵向 band 时，`boundedJapaneseWeakBlockRecoveryCandidates` 以 band round-robin 选择，并按原排序返回。候选不足或单 band 保留原前缀，最多 4 次请求、既有质量/失败/取消/布局/翻译/持久化边界不变。

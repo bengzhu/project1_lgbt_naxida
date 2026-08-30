@@ -1215,7 +1215,7 @@ struct VisionOCRService: Sendable {
                 provenance: $0.candidateProvenance
             )
         }
-        let verticalBlocks = ImageOCRLayoutEngine.layout(
+        let prioritizedVerticalBlocks = ImageOCRLayoutEngine.layout(
             layoutObservations,
             allowsVerticalText: true,
             prefersMangaReadingOrder: true
@@ -1283,6 +1283,10 @@ struct VisionOCRService: Sendable {
             }
             return lhs.text < rhs.text
         }
+        let verticalBlocks = Self.boundedJapaneseVerticalCropBlocks(
+            prioritizedVerticalBlocks,
+            limit: 16
+        )
         .prefix(16)
         .enumerated()
         .map { index, block in
@@ -1436,6 +1440,58 @@ struct VisionOCRService: Sendable {
         }
 
         return refined
+    }
+
+    /// Preserve the v3.336 risk-first block queue while preventing a long
+    /// page's first 16 risky blocks from all occupying one vertical band.
+    /// Only an over-budget, multi-band queue is reselected; the result returns
+    /// to the original risk order so block ownership and downstream fusion do
+    /// not observe the scheduling pass.
+    private static func boundedJapaneseVerticalCropBlocks(
+        _ blocks: [ImageOCRLayoutBlock],
+        limit: Int
+    ) -> [ImageOCRLayoutBlock] {
+        guard limit > 0, blocks.count > limit else { return blocks }
+
+        let bandCount = min(limit, blocks.count)
+        var bands = Array(repeating: [Int](), count: bandCount)
+        for (offset, block) in blocks.enumerated() {
+            let centerY = block.rect.y + block.rect.height / 2
+            let boundedCenterY = centerY.isFinite
+                ? min(max(centerY, 0), 1)
+                : 0
+            let bandIndex = min(
+                Int(boundedCenterY * Double(bandCount)),
+                bandCount - 1
+            )
+            bands[bandIndex].append(offset)
+        }
+
+        let populatedBands = bands.indices.filter { !bands[$0].isEmpty }
+        guard populatedBands.count > 1 else {
+            return Array(blocks.prefix(limit))
+        }
+
+        var selectedOffsets = Set<Int>()
+        var cursors = Array(repeating: 0, count: bandCount)
+        while selectedOffsets.count < limit {
+            var addedCandidate = false
+            for bandIndex in populatedBands {
+                guard selectedOffsets.count < limit,
+                      cursors[bandIndex] < bands[bandIndex].count else {
+                    continue
+                }
+                let offset = bands[bandIndex][cursors[bandIndex]]
+                cursors[bandIndex] += 1
+                selectedOffsets.insert(offset)
+                addedCandidate = true
+            }
+            guard addedCandidate else { break }
+        }
+
+        return blocks.enumerated()
+            .filter { selectedOffsets.contains($0.offset) }
+            .map(\.element)
     }
 
     private static func recognizeJapaneseMangaOCR(

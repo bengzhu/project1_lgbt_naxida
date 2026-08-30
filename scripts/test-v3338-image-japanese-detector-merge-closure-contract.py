@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.344 detector merge closure."""
+"""Static and pure-policy contract for v3.345 detector merge closure."""
 
 from pathlib import Path
 import re
@@ -70,7 +70,7 @@ def overlaps(lhs: Rect, rhs: Rect) -> bool:
 
 
 def merge_once(rects: list[Rect]) -> list[Rect]:
-    """Model the pre-v3.344 scan, including swap-remove ordering."""
+    """Model the pre-v3.345 scan, including swap-remove ordering."""
     remaining = list(rects)
     merged: list[Rect] = []
     while remaining:
@@ -89,7 +89,7 @@ def merge_once(rects: list[Rect]) -> list[Rect]:
 
 
 def merge_to_closure(rects: list[Rect]) -> list[Rect]:
-    """Model the v3.344 scan, restarting after every envelope expansion."""
+    """Model the v3.345 scan, restarting after every envelope expansion."""
     remaining = list(rects)
     merged: list[Rect] = []
     while remaining:
@@ -187,13 +187,13 @@ class JapaneseDetectorMergeClosureContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.344", "3.344"],
+            ["3.345", "3.345"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3338-image-japanese-detector-merge-closure-contract.py",
-            "v3.344",
-            "japanese-benchmark-v3.344-",
+            "v3.345",
+            "japanese-benchmark-v3.345-",
         ):
             self.assertIn(marker, combined)
 

@@ -1,3 +1,11 @@
+## v3.345：Japanese vertical crop spatial balance（2026-08-30，进行中）
+
+v3.344 已让超预算的 weak-block recovery 在多个纵向 band 间共享既有 4 次 scoped reread；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recognizeJapaneseVerticalCrops` 虽已按风险和有限 confidence 排序，但超过既有 16 个 block crop 名额的长图或多面板仍可能把名额集中在同一纵向区域，使其它区域的既有 block crop 机会被前缀截断。
+
+可证伪假设：**若保留 v3.336 的风险优先全序、最多 16 个 block crop 名额，只在候选超过 16 且存在多个非空纵向 band 时按 band round-robin 选择，并恢复原风险顺序供后续 owner/融合处理，则不同页面区域能共享既有 block crop 预算；候选不足、单 band、line-first、质量门、失败/取消和下游边界保持历史语义。**
+
+当前实现边界：新增 `boundedJapaneseVerticalCropBlocks`，以 block bbox 的有限中心 y 分配最多 16 个 band；仅多 band 超预算时轮询，返回集合仍恢复原风险优先顺序，随后继续进行临时 owner 编号。16 个 block、8 次 opposite orientation fallback、line/pixel/tile reconnaissance、OCR/layout geometry、翻译 QA、取消、持久化、非日语路径及可选 Koharu/GGUF 研究边界不变。新增合同与版本/CI/receipt 待完成；本地不运行 Xcode、Swift、Core ML、Rust/Cargo、GGUF 或 App runtime。
+
 ## v3.344：Japanese weak-block recovery spatial balance（2026-08-30，已完成）
 
 v3.343 已让 Vision perspective/axis line reread 在超预算时避免单一 known owner 饥饿；本轮继续只优化普通图片 OCR→翻译主路径。审计发现 `recoverWeakJapaneseBlocks` 的最多 4 次 scoped crop recovery 仍只按全局 confidence 取前四项，长图或多面板中可能集中在同一纵向 band，导致其它区域的弱 block 没有既有复读机会。

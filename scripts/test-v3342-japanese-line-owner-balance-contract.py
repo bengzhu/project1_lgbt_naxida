@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.344 Japanese line-owner balance."""
+"""Static and pure-policy contract for v3.345 Japanese line-owner balance."""
 
 from pathlib import Path
 import re
@@ -209,14 +209,14 @@ class JapaneseLineOwnerBalanceContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.344", "3.344"],
+            ["3.345", "3.345"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3342-japanese-line-owner-balance-contract.py",
             self.workflow,
         )
-        self.assertIn("japanese-benchmark-v3.344-", self.workflow)
-        self.assertIn("v3.344", self.docs)
+        self.assertIn("japanese-benchmark-v3.345-", self.workflow)
+        self.assertIn("v3.345", self.docs)
         contract = Path(__file__).read_text(encoding="utf-8")
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):
             self.assertNotIn(marker, contract)
