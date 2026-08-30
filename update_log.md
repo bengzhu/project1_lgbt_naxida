@@ -10768,3 +10768,10 @@ detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag
 产品 `TranslationBatchQualityEvaluator` 与 cloud-only `evaluate-japanese-translation-context-qa.py` 同步使用 exact normalized echo + different source 规则；新增 `scripts/test-v3362-japanese-translation-context-echo-contract.py`，覆盖 exact echo、合法嵌入短语、重复 source、短 target 和既有跨 batch fixture。OCR、detector、crop/warp、candidate/geometry/layout、请求预算、模型选择、UI/renderer、非日语路径以及 Koharu/GGUF/授权语料/目标设备边界不变。
 
 工程版本推进至 `3.362`，workflow 已接入；新合同 `6/6`，本地安全回归 `361` 个通过、`27` 个进程/编译/runtime 入口按约束跳过（`388` 总计），Python AST `408/408`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist/project `4/4` 与 `git diff --check` 通过。实现 SHA `90fcf1079d46ae75b11cc677ecdae442453228a7` 的 exact-SHA full [33308856823](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33308856823)、PR [#426](https://github.com/bengzhu/project1_lgbt_naxida/pull/426) checks [33309325698](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33309325698)、merge SHA `b699952bbf5116e70ca7d88f4cb49c43db6b04f5` 与合入后 push CI [33309456645](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33309456645) 均成功，发布 `AITRANS CI/full-validation=success` receipt。本地未运行 Xcode、Swift/Core ML/App runtime、Rust/Cargo/GGUF，不合成缺失的 `test/3.png`，不以合同结果外推通用 OCR/CER 或翻译质量提升。
+## v3.365：Japanese per-kind style prompt scope（候选，待云端验证）
+
+继续提升普通图片日语 OCR→翻译主路径。审计 `test/2.png` 这类混合漫画 batch 后发现，`TranslationPromptContext` 已能携带全局 `[N]` 对应的文字类型，但非 SFX 类型在混合批次中仍只有类型标签，弱本地模型可能把对白、旁白、标题或其它块的表达风格互相串用。
+
+本轮可证伪假设：**若混合 batch 对每个 `batchTextKinds` 项都用 `batchStartIndex + offset + 1` 生成精确全局序号，并只对该序号追加对应的 dialogue/narration/sfx/title/other 风格指导，则类型风格不会污染同批其它编号块；单块提示与 v3.364 的 SFX 作用域保持不变。**
+
+实现只调整 `TranslationTextKind` 的 prompt style metadata 和 `TranslationPromptContext.promptSection()` 的逐块文案，新增 `scripts/test-v3365-japanese-kind-style-scope-contract.py`，工程版本 `3.365`，workflow 已接入。OCR、候选/geometry/layout、`[N]` 标签、最多 8 块/1,800 字符预算、逐块 QA、取消、持久化、UI/renderer 和非日语路径不变；候选实现、云端 full、PR 与合入证据待补。本轮不接入 Koharu/GGUF/授权语料/目标设备证据；`test/3.png` 未提供，不合成样图或把提示合同外推为通用 OCR/CER/翻译质量证据。
