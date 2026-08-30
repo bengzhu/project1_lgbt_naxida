@@ -1,7 +1,7 @@
-### v3.361 Japanese pixel compact-dedupe contract（候选验证中）
+### v3.361 Japanese pixel compact-dedupe contract（已完成）
 
 - 像素首读的旋转 Vision 结果先按既有 geometry 去重；若后到候选与已有框确属同一、面积可比 envelope 且只有后者满足 2–4 字 compact gate，则保留 compact 资格进入既有 compact reserve。面积明显更小或 IoU 不足的 compact 候选不能替换可能覆盖完整竖排的 regular 框。
-- 新增 `scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py`，工程版本 `3.361`，CI 已接入；本地合同已通过，候选 exact-SHA full 尚待完成。12 个 pixel crop、4 次方向 fallback、OCR/layout、翻译 QA、取消、持久化、UI/renderer 和非日语路径不变；`test/3.png` 未提供，不伪造输入或质量证据。
+- 新增 `scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py`，工程版本 `3.361`，CI 已接入；新合同 `8/8`，本地 `360` 个安全合同通过、`27` 个进程/编译/runtime 入口合同按约束跳过（`387` 总计），Python AST `407/407`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist `4/4` 加工程文件检查及 `git diff --check` 通过。实现 SHA `f5819e14149cacecfc56c7db0ce8dcdb5cafd914` 的 exact-SHA full [33306958641](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33306958641)、PR [#425](https://github.com/bengzhu/project1_lgbt_naxida/pull/425) checks [33307449223](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33307449223)、merge SHA `d72283f2ab5df0de54620c53e7ef20ca1c7171d9` 与合入后 push CI [33307511951](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33307511951) 均成功；云端 Xcode `26.6 (17F113)`、JUnit `10/10`（0 failures）、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。12 个 pixel crop、4 次方向 fallback、OCR/layout、翻译 QA、取消、持久化、UI/renderer 和非日语路径不变；`test/3.png` 未提供，不伪造输入或质量证据。
 
 ### v3.360 Japanese recovery-frontier block-skip contract（已完成）
 

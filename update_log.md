@@ -1,10 +1,10 @@
-## v3.361：Japanese pixel compact dedupe（候选验证中）
+## v3.361：Japanese pixel compact dedupe（已完成）
 
 v3.360 已收紧普通图片日语 recovery frontier 的重复 block crop；继续审计发现，pixel-first detector 在两个旋转 Vision 视图上按既有高度/几何顺序去重时，后到的 compact envelope 可能被较高 regular 框抹掉，因而失去进入既有最多 4 个 compact recovery 名额的资格。
 
 本轮可证伪假设：**若仅在两个候选确属同一、面积可比的 envelope（有限正面积比 `>=.50` 且 IoU `>=.45`）时保留 compact 资格，则同一 tight envelope 的 compact 复读不会因旋转视图 metadata 差异而被丢弃；明显更宽的 regular 框、非重复 geometry 与无效数值仍按历史规则。12 个 pixel crop、4 次方向 fallback、OCR/layout、翻译 QA、标签、取消、持久化、UI/renderer 和非日语路径不变。**
 
-实现与验证正在 `codex/v3.361-japanese-pixel-compact-dedupe` 候选分支进行：新增 `scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py`，工程版本推进至 `3.361`，workflow 已接入；本地安全合同已通过，exact-SHA cloud full 尚待完成。按约束未运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 未提供，不合成输入，不以静态合同结果宣称通用 OCR/CER 或翻译质量提升；Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，仅作可选研究/质量证明。
+实现已由 `f5819e14149cacecfc56c7db0ce8dcdb5cafd914` 合入 `smalldata_test`，merge SHA 为 `d72283f2ab5df0de54620c53e7ef20ca1c7171d9`；新增 `scripts/test-v3361-japanese-pixel-compact-dedupe-contract.py`，工程版本推进至 `3.361`，workflow 已接入；新合同 `8/8`，本地 `360` 个安全合同通过、`27` 个进程/编译/runtime 入口合同按约束跳过（`387` 总计），Python AST `407/407`、JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 加工程文件检查及 `git diff --check` 通过。exact-SHA full [33306958641](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33306958641)、PR [#425](https://github.com/bengzhu/project1_lgbt_naxida/pull/425) checks [33307449223](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33307449223)、合入后 push CI [33307511951](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33307511951) 均成功；云端 Xcode `26.6 (17F113)`、JUnit `10/10`（0 failures）、manifest 与 `AITRANS CI/full-validation=success` receipt 通过。OCR benchmark dataset SHA `ccf9e12e3c94994fc0b7592df347d9ad525c6ab7e83d087f18c34b3858cdb28` 与 translation benchmark dataset SHA `afe0e0f750034e5de16a14db003a7813e6bf0f6a536c935f46465358ff3c45c3` 仅对应 schema/fixture evidence，不外推为通用 OCR/CER/翻译质量提升。按约束未运行本地 Xcode/Swift/Core ML/App runtime/Rust/Cargo/GGUF，`test/3.png` 未提供，不合成输入；Koharu/GGUF、授权语料和目标设备证据仍独立于普通 OCR 主路径，仅作可选研究/质量证明。
 
 ## v3.360：Japanese recovery-frontier block skip（已完成）
 
