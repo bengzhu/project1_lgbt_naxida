@@ -167,7 +167,7 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.381", "3.381"])
+        self.assertEqual(versions, ["3.382", "3.382"])
         self.assertIn("v3.286", self.route)
         self.assertIn("v3.286", self.update_log)
         for marker in (

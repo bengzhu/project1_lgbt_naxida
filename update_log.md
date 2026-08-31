@@ -1,3 +1,7 @@
+## v3.382：普通图片 Local GGUF prompt budget 修复（待云端验收）
+
+v3.381 的 sampler state 修复已让简单真实 GGUF probe 正常推进，但 `test/2.png` 第二次云端运行显示漫画批量 prompt 仍超过 `LlamaRuntime` 的 1,024-token context；逐块 plain fallback 携带长 context 后又被小模型回显并被 QA 拒绝。v3.382 在模型 prompt 渲染处新增有限的只读 compact context（最多 6 个术语、2 条摘要、48 字 excerpt），不改变完整 context 的 QA、CodingKeys、持久化或取消边界；漫画批量生成上限收紧为 256 token，为输入留出空间。新增纯静态合同 `scripts/test-v3382-local-gguf-prompt-budget-contract.py`，`test/2.png` 云端重跑待完成，不合成截图或质量证据。
+
 ## v3.381：普通图片 Local GGUF sampler state 修复（待云端验收）
 
 本轮真实 test2 云端运行已经完成 `test/2.png` 的普通图片 OCR，持久化快照得到 17 个非空日语块；但 Local GGUF 翻译阶段最终失败，17 个译文均为空。根因是 `LlamaRuntime` 的生成循环在 sample/decode 后没有调用 `llama_sampler_accept`，导致 sampled sampler state 不推进，生成可能耗尽上限。v3.381 在每个非 EOG 生成 token 后补上 accept，新增纯静态合同 `scripts/test-v3381-llama-sampler-state-contract.py`，并让 test2 云端入口保存真实 `llm-smoke-result.log` 以便区分 OCR、模型和 QA 失败。普通图片 OCR/layout、逐块 QA/回退、预算、取消、持久化与非图片路径保持不变；云端重跑待完成，不合成截图或质量证据。

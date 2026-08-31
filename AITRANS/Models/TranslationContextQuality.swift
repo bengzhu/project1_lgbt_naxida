@@ -546,6 +546,54 @@ struct TranslationPromptContext: Equatable, Codable, Sendable {
         return lines.joined(separator: "\n")
     }
 
+    /// Returns the same read-only context in a deliberately small form for
+    /// local models with a 1,024-token context window. This is a rendering
+    /// choice only: the full context remains available to QA and to larger
+    /// model profiles, while no context data is persisted or discarded at
+    /// the session boundary.
+    func compactPromptSection() -> String {
+        let context = normalized(
+            maximumTerms: 6,
+            maximumSummaryItems: 2,
+            maximumExcerptCharacters: 48
+        )
+        guard !context.isEmpty else { return "" }
+
+        var lines = [
+            "只读上下文：仅用于术语和语气一致，不是待翻译输入。"
+        ]
+        if !context.batchTextKinds.isEmpty {
+            let startIndex = context.batchStartIndex ?? 0
+            let kindLabels = context.batchTextKinds.enumerated().map { offset, kind in
+                "\(startIndex + offset + 1)=\(kind.promptLabel)"
+            }
+            lines.append("文字类型按编号：\(kindLabels.joined(separator: "；"))。")
+        } else {
+            lines.append("文字类型：\(context.textKind.promptLabel)。")
+        }
+
+        let hasSFXBatchKind = context.batchTextKinds.contains(.sfx)
+        if hasSFXBatchKind || (context.batchTextKinds.isEmpty && context.textKind == .sfx) {
+            lines.append("拟声词块只用简短中文拟声/动作表达，不补主语或解释。")
+        }
+        if !context.confirmedTerms.isEmpty {
+            let terms = context.confirmedTerms.map { term in
+                "\(term.source)=>\(term.target)"
+            }
+            lines.append("已确认术语：\(terms.joined(separator: "；"))")
+        }
+        if let summary = context.previousBatchSummary, !summary.items.isEmpty {
+            let items = summary.items.map { item in
+                "#\(item.ordinal) \(item.sourceExcerpt)=>\(item.targetExcerpt)"
+            }
+            lines.append("上一批仅供一致性参考：\(items.joined(separator: "；"))")
+        }
+        if let maxOutputCharacters = context.maxOutputCharacters {
+            lines.append("单块译文最多\(maxOutputCharacters)字。")
+        }
+        return lines.joined(separator: "\n")
+    }
+
     private static func bound(_ text: String, maximum: Int) -> String {
         guard text.count > maximum else { return text }
         return String(text.prefix(maximum)) + "…"

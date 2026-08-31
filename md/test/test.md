@@ -1,7 +1,7 @@
-### v3.381 普通图片 Local GGUF sampler state 修复（待云端验收）
+### v3.382 普通图片 Local GGUF prompt budget 修复（待云端验收）
 
-- `LlamaRuntime` 在每个生成 token 后显式调用 `llama_sampler_accept`，修复真实 GGUF 生成时 sampler 状态不推进的问题；普通图片 OCR→日语翻译路径、逐块 QA/回退、预算、取消、持久化与非图片路径不变。
-- 新增纯静态合同 `scripts/test-v3381-llama-sampler-state-contract.py`，工程版本 `3.381`，CI 已接入；`test/2.png` 云端重跑会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
+- 漫画批量与长上下文日语请求使用有限的只读 compact context（最多 6 个术语、2 条摘要、48 字 excerpt），漫画生成上限为 256 token，给 1,024-token Local GGUF runtime 留出 prompt 空间；sampler state、OCR/layout、逐块 QA/回退、取消、持久化与非图片路径不变。
+- 新增纯静态合同 `scripts/test-v3382-local-gguf-prompt-budget-contract.py`，工程版本 `3.382`，CI 已接入；`test/2.png` 云端重跑会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
 
 ### v3.380 普通日语翻译 shared-Han cloud QA 精确边界（待云端验收）
 
