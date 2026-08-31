@@ -123,7 +123,7 @@ class KoharuOwnedLineGroupingContractTests(unittest.TestCase):
     def test_version_is_3277(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.373", "3.373"],
+            ["3.374", "3.374"],
         )
 
 

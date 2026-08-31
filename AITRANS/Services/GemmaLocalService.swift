@@ -401,6 +401,10 @@ struct GemmaLocalService: LocalLanguageModeling {
             .replacingOccurrences(of: "```text", with: "")
             .replacingOccurrences(of: "```", with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+        // A small local model may prepend a known, standalone translation
+        // label before the first numbered block. Recover that harmless
+        // preamble without accepting arbitrary prose before [N] tags.
+        text = stripLeadingMangaBatchPreamble(from: text)
 
         let expectedIDs = Self.mangaBlockIDs(in: input)
         let inputParts = Self.mangaBlockParts(in: input)
@@ -444,6 +448,65 @@ struct GemmaLocalService: LocalLanguageModeling {
 
     private func matchesFirstTagAtStart(in text: String) -> Bool {
         text.first == "["
+    }
+
+    private func stripLeadingMangaBatchPreamble(from value: String) -> String {
+        let lines = value.components(separatedBy: "\n")
+        var cursor = 0
+        var removedPreamble = false
+
+        while cursor < lines.count {
+            let trimmed = lines[cursor]
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                cursor += 1
+                continue
+            }
+            if trimmed.hasPrefix("[") {
+                break
+            }
+            guard isKnownMangaBatchPreambleLine(trimmed) else {
+                // Do not partially sanitize an unknown prefix. The existing
+                // first-tag guard must still reject arbitrary model prose.
+                return value
+            }
+            removedPreamble = true
+            cursor += 1
+        }
+
+        guard removedPreamble else { return value }
+        return lines.dropFirst(cursor)
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func isKnownMangaBatchPreambleLine(_ line: String) -> Bool {
+        let edgeTrimmed = line.trimmingCharacters(
+            in: .whitespacesAndNewlines.union(.punctuationCharacters)
+        )
+        let knownPreambles = [
+            "以下是翻译",
+            "以下为翻译",
+            "翻译如下",
+            "译文如下",
+            "翻译结果如下",
+            "Translation",
+            "Translations",
+            "Here is the translation",
+            "Here are the translations",
+            "You are a translation engine",
+            "Hard rules",
+            "Translate the following text",
+            "Translate from",
+            "User instruction",
+            "Output only"
+        ]
+        return knownPreambles.contains { known in
+            edgeTrimmed.compare(
+                known,
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+            ) == .orderedSame
+        }
     }
 
     private struct MangaBlockPart {
