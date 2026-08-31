@@ -206,6 +206,13 @@ class JapaneseSharedHanCloudQAContractTests(unittest.TestCase):
             "test2-image-translation-manifest.json",
         ):
             self.assertIn(marker, self.test2_capture)
+        for marker in (
+            "test2_image_translation_ui:",
+            "github.ref == 'refs/heads/smalldata_test'",
+            "inputs.validation_profile == 'fast'",
+            "inputs.ui_evidence_mode == 'full'",
+        ):
+            self.assertIn(marker, self.workflow)
 
     def test_test2_fixture_is_explicitly_unignored_and_bundled(self) -> None:
         ignore = read(".gitignore")
