@@ -206,6 +206,10 @@ final class LlamaRuntime: @unchecked Sendable {
             }
 
             generatedText += decode(token: token)
+            // llama.cpp keeps sampler state outside the model context. Every
+            // sampled token must be accepted before the next sample so
+            // repetition/temperature/top-p samplers advance with generation.
+            llama_sampler_accept(sampler, token)
 
             clear(&currentBatch)
             add(&currentBatch, token, cursor, [0], true)

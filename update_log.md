@@ -1,3 +1,7 @@
+## v3.381：普通图片 Local GGUF sampler state 修复（待云端验收）
+
+本轮真实 test2 云端运行已经完成 `test/2.png` 的普通图片 OCR，持久化快照得到 17 个非空日语块；但 Local GGUF 翻译阶段最终失败，17 个译文均为空。根因是 `LlamaRuntime` 的生成循环在 sample/decode 后没有调用 `llama_sampler_accept`，导致 sampled sampler state 不推进，生成可能耗尽上限。v3.381 在每个非 EOG 生成 token 后补上 accept，新增纯静态合同 `scripts/test-v3381-llama-sampler-state-contract.py`，并让 test2 云端入口保存真实 `llm-smoke-result.log` 以便区分 OCR、模型和 QA 失败。普通图片 OCR/layout、逐块 QA/回退、预算、取消、持久化与非图片路径保持不变；云端重跑待完成，不合成截图或质量证据。
+
 ## v3.380：普通日语翻译 shared-Han cloud QA 精确边界（待云端验收）
 
 继续提升普通图片 OCR→日语翻译能力。审计发现产品的 shared-Han unchanged 例外已经是精确矩阵，但 cloud shadow evaluator 对 shared-Han 输出只按“包含源文”放行，可能把 `日本→日本人`、`日本→日本 東京` 等源文泄漏误判为通过。
