@@ -44,7 +44,7 @@ class KoharuMit48RightColumnQualityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.386", "3.386"],
+            ["3.387", "3.387"],
         )
 
 

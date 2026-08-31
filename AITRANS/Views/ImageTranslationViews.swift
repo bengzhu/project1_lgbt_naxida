@@ -3475,11 +3475,11 @@ private struct ImageTranslationOverlayBlock: View {
 
     @ViewBuilder
     private func overlayContent(for rect: CGRect) -> some View {
-        switch mode {
+        switch diagnosticDisplayMode {
         case .adjacent:
             Button(action: select) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(block.translation.isEmpty ? displayOCRText : block.translation)
+                    Text(primaryOverlayText)
                         .font(.caption.bold())
                         .lineLimit(4)
                     Text(displayOCRText)
@@ -3504,7 +3504,7 @@ private struct ImageTranslationOverlayBlock: View {
             .accessibilityHint(accessibilityHint)
         case .replace:
             Button(action: select) {
-                let text = block.translation.isEmpty ? displayOCRText : block.translation
+                let text = primaryOverlayText
                 Group {
                     if block.prefersVerticalWriting {
                         ImageTranslationVerticalText(text: text)
@@ -3527,6 +3527,25 @@ private struct ImageTranslationOverlayBlock: View {
             .accessibilityValue(accessibilityValue)
             .accessibilityHint(accessibilityHint)
         }
+    }
+
+    private var diagnosticDisplayMode: ImageTranslationOverlayMode {
+        isOCRDiagnosticPreview ? .replace : mode
+    }
+
+    private var primaryOverlayText: String {
+        if isOCRDiagnosticPreview {
+            return displayOCRText
+        }
+        return block.translation.isEmpty ? displayOCRText : block.translation
+    }
+
+    private var isOCRDiagnosticPreview: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.environment["AITRANS_IMAGE_TRANSLATION_UI_FOCUS"] == "ocr"
+#else
+        false
+#endif
     }
 
     @ViewBuilder private var selectionBorder: some View {

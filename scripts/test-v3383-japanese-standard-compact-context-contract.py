@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.386 Japanese standard prompt compaction."""
+"""Static contract for v3.387 Japanese standard prompt compaction."""
 
 from __future__ import annotations
 
@@ -105,17 +105,17 @@ class JapaneseStandardCompactContextContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.386", "3.386"],
+            ["3.387", "3.387"],
         )
         for marker in (
             "scripts/test-v3382-local-gguf-prompt-budget-contract.py",
             "scripts/test-v3383-japanese-standard-compact-context-contract.py",
-            "japanese-benchmark-v3.386-",
+            "japanese-benchmark-v3.387-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
         for marker in (
-            "v3.386",
+            "v3.387",
             "test/2.png",
             "compact context",
             "提示词回显",

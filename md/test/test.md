@@ -1,8 +1,14 @@
-### v3.386 普通图片 Local GGUF 日语中文任务句式 fallback（待云端验收）
+### v3.387 普通图片 Local GGUF 日语裸中文 prompt fallback（待云端验收）
+
+- v3.386 的精确合入 SHA `a20b993cb437ac7efd861fe69dd7fbb817096f8d` 云端运行 [33393722346](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33393722346) 已完成真实 `test/2.png` OCR（17 个非空日语块），中文任务句式已被模型识别但仍返回说明文字和日文原文，翻译完整性为 `0/17`；证据仅作失败诊断。
+- v3.387 保留 v3.386 的所有候选，并追加完全贴合已验证 `把以下翻译成中文：` 模板的无 context 裸 prompt；漫画批译仍要求 `[N]` 标签解析，结果继续经过严格逐块 QA。
+- 新增纯静态合同 `scripts/test-v3387-japanese-bare-prompt-contract.py`，工程版本 `3.387`，CI 已接入；下一次云端运行还会保存基于真实终态会话重开的整图 OCR 原文框截图、坐标清单和逐块 JSON，方便逐块对照 `test/2.png`，不合成质量证据。
+
+### v3.386 普通图片 Local GGUF 日语中文任务句式 fallback（已验证失败，继续前进）
 
 - v3.385 的精确 SHA `2e28617ed47fb1fc2a48d75939f0a17779b9f7f4` 云端运行 [33391703333](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33391703333) 已完成真实 `test/2.png` OCR（17 个非空日语块），但 270M 模型对英文极简候选仍回显原文/说明，翻译完整性为 `0/17`；证据仅作失败诊断。
-- v3.386 在保留上下文感知与英文极简尝试后，追加与已验证英文→中文模板同形的无 context 中文任务句式（日语→简体中文/英文），漫画批译同步保留 `[N]` 标签顺序；结果继续经过严格逐块 QA，下一次云端运行会保存真实逐块译文、LLM trace 和结果列表截图。
-- 新增纯静态合同 `scripts/test-v3386-japanese-chinese-prompt-contract.py`，工程版本 `3.386`，CI 已接入；不合成截图或质量证据。
+- v3.386 在保留上下文感知与英文极简尝试后，追加与已验证英文→中文模板同形的无 context 中文任务句式（日语→简体中文/英文），但精确合入 SHA `a20b993cb437ac7efd861fe69dd7fbb817096f8d` 的云端运行 [33393722346](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33393722346) 仍为 `0/17`，故继续前进。
+- 新增纯静态合同 `scripts/test-v3386-japanese-chinese-prompt-contract.py`，工程版本当时为 `3.386`，CI 已接入；不合成截图或质量证据。
 
 ### v3.385 普通图片 Local GGUF 日语最小 fallback（已验证失败，继续前进）
 
