@@ -140,7 +140,24 @@ def is_placeholder_response(value: str) -> bool:
         "把以下翻译成中文",
         "翻译转换成中文",
     )
-    if len(compact) <= 96 and any(marker in compact for marker in refusal_markers):
+    normalized_refusal_markers = tuple(normalize_text(marker) for marker in refusal_markers)
+    apology_prefixes = tuple(
+        normalize_text(prefix)
+        for prefix in ("抱歉", "很抱歉", "对不起", "sorry", "im sorry")
+    )
+    has_leading_refusal_marker = any(
+        compact.startswith(marker)
+        or any(
+            compact.startswith(prefix)
+            and compact[len(prefix) :].startswith(marker)
+            for prefix in apology_prefixes
+        )
+        for marker in normalized_refusal_markers
+    )
+    # A refusal phrase embedded in translated dialogue is content, not a
+    # model refusal. Keep the fail-closed gate for a response-level refusal or
+    # a finite apology prefix followed immediately by one.
+    if len(compact) <= 96 and has_leading_refusal_marker:
         return True
 
     request_markers = (

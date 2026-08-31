@@ -1,3 +1,7 @@
+### v3.375 translation refusal-marker boundary（进行中）
+
+新增纯静态合同 `scripts/test-v3375-translation-refusal-marker-boundary-contract.py`：验证共享产品/cloud 占位策略只在响应开头或有限道歉前缀后识别“无法翻译/翻译失败”等拒答，合法译文正文中引用这些短语时保留；exact meta、请求型占位、目标语言密度、术语/数字、标签、逐块 QA、OCR、geometry/layout、预算、取消、持久化和非日语路径不变。工程版本 `3.375`，CI 已接入；cloud full/merge receipt 待执行。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ### v3.374 translation batch preamble recovery（已完成）
 
 新增纯静态合同 `scripts/test-v3374-translation-batch-preamble-contract.py`：验证漫画 `[N]` 批译只移除已知、独立成行且位于首个标签前的翻译前导元信息，未知前导文本仍被原有首标签门拒绝；标签顺序、完整性、逐块 QA、OCR、geometry/layout、预算、取消、持久化和非日语路径不变。工程版本 `3.374`，CI 已接入；本地安全合同 `373/373` 通过、27 个进程/编译/runtime 入口跳过（`400` 总计），Python AST `400/400`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist `4/4` 与 diff 检查通过；实现 SHA `16425ddbaab9597958fbe350fd0e361a0553c948` 的 exact full [33355934806](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33355934806)、PR [#438](https://github.com/bengzhu/project1_lgbt_naxida/pull/438) checks、merge SHA `5e54836e22fca7574ba8685cf77f86f743a09394` 与合入后 push [33356807008](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33356807008) 均成功。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。

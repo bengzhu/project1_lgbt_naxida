@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.374 leading prompt recovery."""
+"""Static and pure-policy contract for v3.375 leading prompt recovery."""
 
 from __future__ import annotations
 
@@ -260,13 +260,13 @@ class TranslationLeadingPromptRecoveryContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.374", "3.374"],
+            ["3.375", "3.375"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3371-translation-leading-prompt-recovery-contract.py",
-            "v3.374",
-            "japanese-benchmark-v3.374-",
+            "v3.375",
+            "japanese-benchmark-v3.375-",
         ):
             self.assertIn(marker, combined)
 
