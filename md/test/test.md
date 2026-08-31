@@ -1,6 +1,6 @@
-### v3.376 translation metadata content boundary（进行中）
+### v3.376 translation metadata content boundary（已完成）
 
-新增纯静态合同 `scripts/test-v3376-translation-metadata-content-boundary-contract.py`：验证 `translation engine`、`输出风格` 在合法译文开头带自然 payload 时保留，只有 marker 独立成行或后面紧跟标点才按 prompt metadata 清理；明确指令 marker、表格、标签、逐块 QA、OCR、geometry/layout、预算、取消、持久化和非日语路径不变。工程版本 `3.376`，CI 已接入；exact-SHA full/merge receipt 待执行。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+新增纯静态合同 `scripts/test-v3376-translation-metadata-content-boundary-contract.py`：验证 `translation engine`、`输出风格` 在合法译文开头带自然 payload 时保留，只有 marker 独立成行或后面紧跟标点才按 prompt metadata 清理；明确指令 marker、表格、标签、逐块 QA、OCR、geometry/layout、预算、取消、持久化和非日语路径不变。工程版本 `3.376`，CI 已接入；本地安全合同 `375/375` 通过、27 个进程/编译/runtime 入口跳过（`402` 总计），Python AST `402/402`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过；实现 SHA `418f86e9e502bb57e831c77eb34380ff0f97fd60` 的 exact-SHA full [33359531013](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33359531013)、PR [#440](https://github.com/bengzhu/project1_lgbt_naxida/pull/440) checks [33360556432](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33360556432)、merge SHA `6d5422e0bc223b4a22a3000374be4b0810f647f8` 与合入后 push CI [33360620974](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33360620974) 均成功。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
 
 ### v3.375 translation refusal-marker boundary（已完成）
 
