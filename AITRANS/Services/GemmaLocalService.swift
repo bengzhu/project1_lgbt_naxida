@@ -518,9 +518,10 @@ struct GemmaLocalService: LocalLanguageModeling {
         var text = output.trimmingCharacters(in: .whitespacesAndNewlines)
         // Runtime turn markers are unambiguous control tokens and may appear
         // after a valid translation. Natural-language prompt markers are only
-        // safe to cut at the output start or at an independent line start;
-        // otherwise a legitimate English phrase inside translated prose can
-        // be mistaken for an echoed instruction.
+        // safe to act on at an independent line start; otherwise a legitimate
+        // English phrase inside translated prose can be mistaken for an
+        // echoed instruction. A leading prompt line is removable metadata,
+        // while a prompt after real content remains a hard suffix boundary.
         let terminalControlMarkers = [
             "<end_of_turn>",
             "<start_of_turn>"
@@ -540,10 +541,15 @@ struct GemmaLocalService: LocalLanguageModeling {
             }
         }
 
-        func lineStartPromptMarkerRange(
+        func lineStartPromptMarkerMatch(
             in value: String,
             marker: String
-        ) -> Range<String.Index>? {
+        ) -> (
+            lineStart: String.Index,
+            markerRange: Range<String.Index>,
+            lineEnd: String.Index,
+            marker: String
+        )? {
             var searchStart = value.startIndex
             while searchStart < value.endIndex,
                   let range = value.range(
@@ -558,21 +564,122 @@ struct GemmaLocalService: LocalLanguageModeling {
                 let beforeMarker = String(value[lineStart..<range.lowerBound])
                     .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
                 if beforeMarker.isEmpty {
-                    // Cut the complete metadata line, including any opening
-                    // quote/bracket that was only wrapping the prompt echo.
-                    return lineStart..<range.upperBound
+                    let lineEnd = value[range.upperBound...].firstIndex(of: "\n")
+                        ?? value.endIndex
+                    return (
+                        lineStart: lineStart,
+                        markerRange: range,
+                        lineEnd: lineEnd,
+                        marker: marker
+                    )
                 }
                 searchStart = range.upperBound
             }
             return nil
         }
 
-        for marker in lineStartPromptMarkers {
-            guard let range = lineStartPromptMarkerRange(in: text, marker: marker) else {
-                continue
+        func firstLineStartPromptMarker(
+            in value: String
+        ) -> (
+            lineStart: String.Index,
+            markerRange: Range<String.Index>,
+            lineEnd: String.Index,
+            marker: String
+        )? {
+            var firstMatch: (
+                lineStart: String.Index,
+                markerRange: Range<String.Index>,
+                lineEnd: String.Index,
+                marker: String
+            )?
+            for marker in lineStartPromptMarkers {
+                guard let match = lineStartPromptMarkerMatch(
+                    in: value,
+                    marker: marker
+                ) else {
+                    continue
+                }
+                guard let current = firstMatch else {
+                    firstMatch = match
+                    continue
+                }
+                if match.lineStart < current.lineStart
+                    || (match.lineStart == current.lineStart
+                        && match.markerRange.lowerBound < current.markerRange.lowerBound) {
+                    firstMatch = match
+                }
             }
-            text = String(text[..<range.lowerBound])
+            return firstMatch
+        }
+
+        func leadingPromptPayload(
+            in value: String,
+            match: (
+                lineStart: String.Index,
+                markerRange: Range<String.Index>,
+                lineEnd: String.Index,
+                marker: String
+            )
+        ) -> String? {
+            // Only "Output only:" has an unambiguous inline translation
+            // payload. Other prompt markers may be followed by source text or
+            // instruction details, so their whole leading line is removed.
+            guard match.marker == "Output only" else { return nil }
+            let suffix = String(value[match.markerRange.upperBound..<match.lineEnd])
+            let whitespace = CharacterSet.whitespacesAndNewlines
+            let punctuation = CharacterSet.punctuationCharacters
+            var cursor = suffix.startIndex
+            var sawPunctuation = false
+            while cursor < suffix.endIndex {
+                let character = suffix[cursor]
+                let scalars = character.unicodeScalars
+                guard scalars.allSatisfy({
+                    whitespace.contains($0) || punctuation.contains($0)
+                }) else {
+                    break
+                }
+                sawPunctuation = sawPunctuation
+                    || scalars.contains { punctuation.contains($0) }
+                cursor = suffix.index(after: cursor)
+            }
+            guard sawPunctuation, cursor < suffix.endIndex else { return nil }
+            let payload = String(suffix[cursor...])
                 .trimmingCharacters(in: .whitespacesAndNewlines)
+            return payload.isEmpty ? nil : payload
+        }
+
+        func removeLeadingPromptLine(
+            from value: String,
+            match: (
+                lineStart: String.Index,
+                markerRange: Range<String.Index>,
+                lineEnd: String.Index,
+                marker: String
+            )
+        ) -> String {
+            let suffixStart = match.lineEnd < value.endIndex
+                ? value.index(after: match.lineEnd)
+                : value.endIndex
+            let suffix = String(value[suffixStart..<value.endIndex])
+            let payload = leadingPromptPayload(in: value, match: match)
+            guard let payload else { return suffix }
+            return suffix.isEmpty ? payload : "\(payload)\n\(suffix)"
+        }
+
+        // Prompt echo before the first real translation line is recoverable:
+        // remove only the leading metadata line and keep following output.
+        // Once real content precedes a prompt line, retain the v3.370 cut
+        // boundary so echoed instructions cannot leak into the translation.
+        while let match = firstLineStartPromptMarker(in: text) {
+            let prefix = String(text[..<match.lineStart])
+            let hasPriorContent = !prefix
+                .trimmingCharacters(in: .whitespacesAndNewlines.union(.punctuationCharacters))
+                .isEmpty
+            if hasPriorContent {
+                text = prefix.trimmingCharacters(in: .whitespacesAndNewlines)
+                break
+            }
+            text = removeLeadingPromptLine(from: text, match: match)
         }
 
         var lines = text

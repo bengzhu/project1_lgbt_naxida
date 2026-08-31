@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.370 Japanese kind style scope."""
+"""Static and pure-policy contract for v3.371 Japanese kind style scope."""
 
 from __future__ import annotations
 
@@ -140,13 +140,13 @@ class JapaneseKindStyleScopeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.370", "3.370"],
+            ["3.371", "3.371"],
         )
         for marker in (
             "python3 -B scripts/test-v3365-japanese-kind-style-scope-contract.py",
             "scripts/test-v3365-japanese-kind-style-scope-contract.py",
-            "v3.370",
-            "japanese-benchmark-v3.370-",
+            "v3.371",
+            "japanese-benchmark-v3.371-",
         ):
             self.assertIn(marker, self.workflow + self.docs)
 
