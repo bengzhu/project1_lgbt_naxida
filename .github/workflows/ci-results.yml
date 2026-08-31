@@ -3635,6 +3635,7 @@ jobs:
           python3 -B scripts/test-v3382-local-gguf-prompt-budget-contract.py
           python3 -B scripts/test-v3383-japanese-standard-compact-context-contract.py
           python3 -B scripts/test-v3384-japanese-prompt-shape-contract.py
+          python3 -B scripts/test-v3385-japanese-minimal-fallback-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3879,7 +3880,8 @@ jobs:
           # japanese-benchmark-v3.380-
           # japanese-benchmark-v3.383-
           # japanese-benchmark-v3.384-
-          name: japanese-benchmark-v3.384-${{ github.run_id }}
+          # japanese-benchmark-v3.385-
+          name: japanese-benchmark-v3.385-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json

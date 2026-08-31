@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.385 Japanese standard prompt compaction."""
+"""Static contract for v3.385 Japanese minimal GGUF prompt fallback."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class JapaneseStandardCompactContextContractTests(unittest.TestCase):
+class JapaneseMinimalFallbackContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
@@ -42,8 +42,8 @@ class JapaneseStandardCompactContextContractTests(unittest.TestCase):
         cls.capture = read("scripts/capture-bundled-image-translation-ui.sh")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.docs = "".join(
-            read(path)
-            for path in (
+            read(relative)
+            for relative in (
                 "README.md",
                 "md/flow/flow.md",
                 "md/flow/flowchart.md",
@@ -53,78 +53,85 @@ class JapaneseStandardCompactContextContractTests(unittest.TestCase):
             )
         )
 
-    def test_every_japanese_standard_prompt_can_use_compact_context(self) -> None:
+    def test_minimal_japanese_fallback_is_explicit_and_context_free(self) -> None:
         body = function_body(
             self.gemma,
             "private func translationPromptBodies(for request: ModelGenerationRequest)",
         )
         for marker in (
-            "let defaultTranslationInstruction =",
-            "let userInstructionSection =",
-            "let fullContextSection = request.translationContext.promptSection()",
-            "let compactContextSection = request.translationContext.compactPromptSection()",
-            "} else if request.sourceLanguage == .japanese,",
-            "!compactContextSection.isEmpty",
-            "contextSection = compactContextSection",
+            "let japaneseMinimalInstruction: String",
+            'japaneseMinimalInstruction = "Translate Japanese to Simplified Chinese. Output only the translation."',
+            'japaneseMinimalInstruction = "Translate Japanese to English. Output only the translation."',
+            "\\(japaneseMinimalInstruction)",
+            "Text to translate:",
+            "待翻译文本：",
         ):
             self.assertIn(marker, body)
-        self.assertNotIn("fullContextSection.count > 320", body)
+        minimal_start = body.index("\\(japaneseMinimalInstruction)")
+        minimal = body[minimal_start : body.index("\n                \"\"\"", minimal_start)]
+        self.assertNotIn("contextualInstruction", minimal)
+        self.assertNotIn("compactContextSection", minimal)
 
-    def test_standard_fallback_remains_block_scoped_and_qa_uses_context(self) -> None:
+    def test_manga_batch_has_a_minimal_tagged_fallback(self) -> None:
+        body = function_body(
+            self.gemma,
+            "private func translationPromptBodies(for request: ModelGenerationRequest)",
+        )
         for marker in (
+            "let mangaMinimalInstruction: String",
+            'mangaMinimalInstruction = "Translate Japanese to Simplified Chinese."',
+            "Keep each [N] tag and output only one [N] translation per line.",
+            "translationProfile == .mangaBlocks",
+            "request.inputText",
+        ):
+            self.assertIn(marker, body)
+        self.assertLess(
+            body.index("\(mangaMinimalInstruction) Keep each [N] tag"),
+            body.index("if request.sourceLanguage == .englishUS"),
+        )
+
+    def test_context_and_qa_boundaries_are_unchanged(self) -> None:
+        for marker in (
+            "request.translationContext.promptSection()",
+            "request.translationContext.compactPromptSection()",
             "scopedToSingleBlock(",
             "translateJapaneseImageBlockWithQA(",
             "TranslationBatchQualityEvaluator.singleOutputFailures(",
             "japaneseTranslationQAConfiguration(",
+            "let generationMaxTokens = min(max(request.sampling.maxTokens, 192), 256)",
         ):
-            self.assertIn(marker, self.store)
-        self.assertIn("request.translationContext.promptSection()", self.gemma)
-        self.assertIn("用户指定要求：\\(instruction)", self.gemma)
-        self.assertNotIn("用户补充要求：\\(instruction)", self.gemma)
+            self.assertIn(marker, self.gemma + self.store)
         compact_body = function_body(self.context, "func compactPromptSection() -> String {")
         self.assertNotIn("persist(", compact_body)
-        self.assertNotIn("CodingKeys", compact_body)
+        self.assertNotIn("UserDefaults", compact_body)
 
-    def test_test2_still_uses_real_ordinary_image_translation_and_result_capture(self) -> None:
+    def test_real_test2_route_and_version_are_current(self) -> None:
         for marker in (
             'let filename = "2.png"',
             "sourceLanguage = .japanese",
             "targetLanguage = .simplifiedChinese",
             "selectedEngine = .local",
-            "self.translateImage(from: url)",
-        ):
-            self.assertIn(marker, self.store)
-        for marker in (
-            "test/2.png",
+            "scripts/capture-bundled-image-translation-ui.sh",
             "test2-image-translation-results.png",
             "test2-image-translation-manifest.json",
-            "test2-llm-probe.log",
         ):
-            self.assertIn(marker, self.test2_workflow + self.capture)
-
-    def test_version_workflow_and_docs_are_current(self) -> None:
+            self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
             ["3.385", "3.385"],
         )
         for marker in (
-            "scripts/test-v3382-local-gguf-prompt-budget-contract.py",
-            "scripts/test-v3383-japanese-standard-compact-context-contract.py",
+            "scripts/test-v3384-japanese-prompt-shape-contract.py",
+            "scripts/test-v3385-japanese-minimal-fallback-contract.py",
             "japanese-benchmark-v3.385-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
-        for marker in (
-            "v3.385",
-            "test/2.png",
-            "compact context",
-            "提示词回显",
-            "1,024-token",
-        ):
+        for marker in ("v3.385", "test/2.png", "小模型", "最小", "prompt"):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
     def test_contract_has_no_local_process_or_build_entrypoint(self) -> None:
-        source = read("scripts/test-v3383-japanese-standard-compact-context-contract.py")
+        source = read("scripts/test-v3385-japanese-minimal-fallback-contract.py")
         for forbidden in (
             "subprocess" + ".run(",
             "subprocess" + ".Popen(",

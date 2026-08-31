@@ -321,6 +321,13 @@ struct GemmaLocalService: LocalLanguageModeling {
         let contextualInstruction = contextSection.isEmpty ? "" : "\n\n\(contextSection)"
 
         if request.translationProfile == .mangaBlocks {
+            let mangaMinimalInstruction: String
+            if request.sourceLanguage == .japanese,
+               request.targetLanguage == .simplifiedChinese {
+                mangaMinimalInstruction = "Translate Japanese to Simplified Chinese."
+            } else {
+                mangaMinimalInstruction = "Translate \(request.sourceLanguage.rawValue) to \(request.targetLanguage.rawValue)."
+            }
             let mangaInstruction = """
             Translate each \(request.sourceLanguage.rawValue) text block into \(request.targetLanguage.rawValue).
             请逐个翻译下面的\(request.sourceLanguage.rawValue)文字块。
@@ -339,6 +346,10 @@ struct GemmaLocalService: LocalLanguageModeling {
                 漫画文字块：\(request.sourceLanguage.rawValue)→\(request.targetLanguage.rawValue)。
                 只输出每个[N]标签对应的译文，保留标签和顺序，不解释：\(contextualInstruction)
                 待翻译文字：
+                \(request.inputText)
+                """,
+                """
+                \(mangaMinimalInstruction) Keep each [N] tag and output only one [N] translation per line.
                 \(request.inputText)
                 """
             ]
@@ -383,6 +394,16 @@ struct GemmaLocalService: LocalLanguageModeling {
             japaneseLanguagePairInstruction = nil
         }
 
+        let japaneseMinimalInstruction: String
+        switch (request.sourceLanguage, request.targetLanguage) {
+        case (.japanese, .simplifiedChinese):
+            japaneseMinimalInstruction = "Translate Japanese to Simplified Chinese. Output only the translation."
+        case (.japanese, .englishUS):
+            japaneseMinimalInstruction = "Translate Japanese to English. Output only the translation."
+        default:
+            japaneseMinimalInstruction = "Translate the input into \(request.targetLanguage.rawValue). Output only the translation."
+        }
+
         if let japaneseLanguagePairInstruction {
             return [
                 """
@@ -395,6 +416,10 @@ struct GemmaLocalService: LocalLanguageModeling {
                 \(japaneseLanguagePairInstruction)
                 只输出译文，不输出原文或解释。\(userInstructionSection)\(contextualInstruction)
                 待翻译文本：
+                \(request.inputText)
+                """,
+                """
+                \(japaneseMinimalInstruction)
                 \(request.inputText)
                 """
             ]
