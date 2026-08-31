@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.377 translation metadata filtering."""
+"""Static and pure-policy contract for v3.378 translation metadata filtering."""
 
 from __future__ import annotations
 
@@ -214,13 +214,13 @@ class TranslationMetadataPrefixContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.377", "3.377"],
+            ["3.378", "3.378"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3368-translation-metadata-prefix-contract.py",
-            "v3.377",
-            "japanese-benchmark-v3.377-",
+            "v3.378",
+            "japanese-benchmark-v3.378-",
         ):
             self.assertIn(marker, combined)
 

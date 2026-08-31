@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.377 Japanese standard translation prompts."""
+"""Static and pure-policy contract for v3.378 Japanese standard translation prompts."""
 
 from pathlib import Path
 import re
@@ -132,7 +132,7 @@ class JapaneseStandardTranslationPromptContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.377", "3.377"],
+            ["3.378", "3.378"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3363-japanese-standard-translation-prompt-contract.py",
@@ -140,8 +140,8 @@ class JapaneseStandardTranslationPromptContractTests(unittest.TestCase):
         )
         for marker in (
             "scripts/test-v3363-japanese-standard-translation-prompt-contract.py",
-            "v3.377",
-            "japanese-benchmark-v3.377-",
+            "v3.378",
+            "japanese-benchmark-v3.378-",
         ):
             self.assertIn(marker, self.workflow + self.docs)
 
