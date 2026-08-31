@@ -1,8 +1,8 @@
-## v3.379：普通翻译独立英文标签边界（待云端验收）
+## v3.379：普通翻译独立英文标签边界（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现 v3.378 已恢复同一行的 `Here is the translation: 你好` / `Translation: hello`，但 `Here is the translation`、`Here are the translations` 独立行仍可能进入普通译文，造成显示污染并消耗目标语言/长度 QA 的有效空间。
 
-本轮仅在普通 `cleanTranslationOutput` 的行首标签清理中加入这两个有限英文标签：当整行除边缘空白/标点外没有正文时移除该 metadata 行；带自然语言 payload 的同名句、严格漫画 `[N]` 批译路径、placeholder/source leakage/目标语言/数字/术语/长度 QA、OCR/layout、预算、逐块回退、取消、持久化和非日语路径保持原边界。新增 `scripts/test-v3379-translation-standalone-english-label-contract.py`，工程版本推进至 `3.379`，workflow 已接入；本地安全回归与 exact-SHA full 待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+本轮仅在普通 `cleanTranslationOutput` 的行首标签清理中加入这两个有限英文标签：当整行除边缘空白/标点外没有正文时移除该 metadata 行；带自然语言 payload 的同名句、严格漫画 `[N]` 批译路径、placeholder/source leakage/目标语言/数字/术语/长度 QA、OCR/layout、预算、逐块回退、取消、持久化和非日语路径保持原边界。新增 `scripts/test-v3379-translation-standalone-english-label-contract.py`，工程版本推进至 `3.379`，workflow 已接入；本地安全回归 `378/378` 通过、27 个进程/编译/runtime 入口跳过（405 总计），Python AST `405/405`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `7c6d5cf952e74f641f6ee9c439545fb158982601` 的 exact-SHA full [33367420463](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33367420463)、PR [#443](https://github.com/bengzhu/project1_lgbt_naxida/pull/443) checks [33368408182](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33368408182)、merge SHA `6454b3179a2706287037db57dc092ac20092627e` 与合入后 push CI [33368493788](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33368493788) 均成功，发布 `AITRANS CI/full-validation=success` receipt；候选 Xcode 26.6/JUnit `10/10` 与 Japanese benchmark 通过，UI evidence/probe 按参数跳过。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
 
 ## v3.372：Vision vertical line single-rotation（已完成）
 
