@@ -174,7 +174,7 @@ class JapaneseTranslationContextEchoContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.377", "3.377"],
+            ["3.378", "3.378"],
         )
         combined = self.workflow + self.docs
         self.assertIn(
@@ -184,7 +184,7 @@ class JapaneseTranslationContextEchoContractTests(unittest.TestCase):
         for marker in (
             "scripts/test-v3362-japanese-translation-context-echo-contract.py",
             "v3.362",
-            "japanese-benchmark-v3.377-",
+            "japanese-benchmark-v3.378-",
         ):
             self.assertIn(marker, combined)
         for marker in ("sub" + "process", "Po" + "pen", "os." + "system"):

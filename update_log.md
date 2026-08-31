@@ -10862,6 +10862,12 @@ detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag
 
 实现已修改 `TranslationContextQuality.swift` 与 `scripts/evaluate-japanese-translation-context-qa.py`，新增 `scripts/test-v3373-translation-term-width-qa-contract.py`，工程版本推进至 `3.373`，workflow 已接入；本地安全静态回归 `372/372` 通过、27 个进程/编译/runtime 入口按约束跳过（`399` 总计），Python AST `399/399`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `be7f33ec6892a0b5958d586f920bbf27be3d9e4d` 的 exact-SHA cloud full [33353855302](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33353855302)、PR [#437](https://github.com/bengzhu/project1_lgbt_naxida/pull/437) checks [33354891526](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33354891526)、merge SHA `b69d2995137ac52d7ade3b003114fc080cadaf5e` 与合入后 push CI [33354973808](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33354973808) 均成功，发布 `AITRANS CI/full-validation=success` receipt。按约束不运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 尚未提供，不合成样图或把静态合同外推为通用 OCR/CER/翻译质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
 
+## v3.378：普通翻译首行标签边界（研发中）
+
+继续提升普通图片日语 OCR→翻译的有效输出召回。审计发现 `cleanTranslationOutput` 对独立行标签已有清理，但 `译文：你好`、`Translation: hello` 这类“行首标签 + 同行正文”仍会把标签送入气泡，增加无效字符并可能干扰共享 QA。
+
+本轮仅对有限已知标签启用“明确标点分隔且存在正文”的行首恢复，返回去掉标签后的 payload；无分隔文本、嵌入正文、`翻译是：` 的既有歧义内容和严格漫画 `[N]` 批译路径保持原边界。普通翻译共享 placeholder/source leakage、目标语言、数字/术语/长度 QA，OCR/layout、预算、逐块回退、取消、持久化和非日语路径不变。新增 `scripts/test-v3378-translation-leading-label-boundary-contract.py`，工程版本 `3.378`，workflow 已接入；安全静态回归与 exact-SHA full 待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ## v3.377：translation batch inline preamble（已完成）
 
 继续提升普通图片日语 OCR→翻译的批量有效召回。审计发现漫画批译清洗已能恢复首个 `[N]` 标签之前的已知独立行前导，但 `Translation: [1] ...` / `以下是翻译：[1] ...` 这类同一行前导仍会触发首标签门，造成整批无谓降级为逐块翻译。

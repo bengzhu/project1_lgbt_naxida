@@ -632,6 +632,14 @@ struct GemmaLocalService: LocalLanguageModeling {
             }
         }
 
+        // A plain-text translation may start with a short label and its
+        // payload on the same line (for example `译文：你好` or
+        // `Translation: hello`). Recover only a finite label followed by an
+        // actual delimiter and payload. Embedded prose, label-like words
+        // without a delimiter, and the existing tagged-batch path remain
+        // untouched so a legitimate sentence cannot be silently shortened.
+        text = stripLeadingTranslationLabel(from: text)
+
         func lineStartPromptMarkerMatch(
             in value: String,
             marker: String
@@ -798,7 +806,13 @@ struct GemmaLocalService: LocalLanguageModeling {
             "以下是翻译",
             "翻译如下",
             "翻译是：",
-            "这是翻译"
+            "这是翻译",
+            "翻译结果如下",
+            "译文如下",
+            "翻译结果",
+            "译文",
+            "Translations",
+            "Translation"
         ]
 
         // A prompt marker embedded in translated prose is content; only a
@@ -886,6 +900,58 @@ struct GemmaLocalService: LocalLanguageModeling {
             sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage
         )
+    }
+
+    private func stripLeadingTranslationLabel(from value: String) -> String {
+        let labels = [
+            "翻译结果如下",
+            "译文如下",
+            "Here are the translations",
+            "Here is the translation",
+            "Translations",
+            "Translation",
+            "翻译结果",
+            "译文"
+        ]
+        let whitespace = CharacterSet.whitespacesAndNewlines
+        let punctuation = CharacterSet.punctuationCharacters
+
+        func isOnly(_ character: Character, in set: CharacterSet) -> Bool {
+            character.unicodeScalars.allSatisfy { set.contains($0) }
+        }
+
+        for label in labels.sorted(by: { $0.count > $1.count }) {
+            guard let range = value.range(
+                of: label,
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+            ) else {
+                continue
+            }
+            let before = String(value[..<range.lowerBound])
+                .trimmingCharacters(in: whitespace.union(punctuation))
+            guard before.isEmpty else { continue }
+
+            let suffix = String(value[range.upperBound...])
+            var cursor = suffix.startIndex
+            while cursor < suffix.endIndex, isOnly(suffix[cursor], in: whitespace) {
+                cursor = suffix.index(after: cursor)
+            }
+            let delimiterStart = cursor
+            while cursor < suffix.endIndex, isOnly(suffix[cursor], in: punctuation) {
+                cursor = suffix.index(after: cursor)
+            }
+            guard cursor != delimiterStart else { continue }
+            while cursor < suffix.endIndex, isOnly(suffix[cursor], in: whitespace) {
+                cursor = suffix.index(after: cursor)
+            }
+            guard cursor < suffix.endIndex else { continue }
+
+            let payload = String(suffix[cursor...])
+                .trimmingCharacters(in: whitespace)
+            guard !payload.isEmpty else { continue }
+            return payload
+        }
+        return value
     }
 
     private func stripFormatting(from output: String) -> String {
