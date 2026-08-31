@@ -146,15 +146,28 @@ if [ -f "$translation_probe_path" ]; then
   cp "$translation_probe_path" "$output_dir/test2-llm-probe.log"
 fi
 sleep 2
-xcrun simctl io "$device_id" screenshot "$output_dir/test2-image-translation-results.png"
+results_screenshot_path="$output_dir/test2-image-translation-results.png"
+ocr_screenshot_path="$output_dir/test2-image-translation-ocr.png"
+xcrun simctl io "$device_id" screenshot "$results_screenshot_path"
 
-python3 - "$output_dir/test2-image-translation-state.json" "$output_dir/test2-image-translation-results.png" "$output_dir/test2-image-translation-manifest.json" "$commit_sha" "$fixture_name" "$terminal_state" <<'PY'
+# Reopen the persisted terminal session in a read-only OCR diagnostic view.
+# This keeps the original image and every OCR block visible on the source
+# geometry, without changing the production overlay mode or translation state.
+xcrun simctl spawn "$device_id" launchctl unsetenv AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST || true
+xcrun simctl spawn "$device_id" launchctl unsetenv AITRANS_RUN_LLM_SMOKE || true
+SIMCTL_CHILD_AITRANS_IMAGE_TRANSLATION_UI_FOCUS=ocr \
+  xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id" \
+  -AITRANS_IMAGE_TRANSLATION_UI_FOCUS ocr
+sleep 6
+xcrun simctl io "$device_id" screenshot "$ocr_screenshot_path"
+
+python3 - "$output_dir/test2-image-translation-state.json" "$results_screenshot_path" "$output_dir/test2-image-translation-manifest.json" "$commit_sha" "$fixture_name" "$terminal_state" "$ocr_screenshot_path" <<'PY'
 import json
 import os
 import sys
 from pathlib import Path
 
-state_path, screenshot_path, manifest_path, commit_sha, fixture_name, terminal_state = sys.argv[1:]
+state_path, screenshot_path, manifest_path, commit_sha, fixture_name, terminal_state, ocr_screenshot_path = sys.argv[1:]
 data = json.loads(Path(state_path).read_text(encoding="utf-8"))
 session = data.get("imageTranslationSession") or {}
 blocks = session.get("blocks") or []
@@ -170,6 +183,30 @@ if terminal_state == "translated" and not blocks:
 if any(not (block.get("original") or "").strip() for block in blocks):
     raise SystemExit("image OCR block has empty original text")
 
+ocr_screenshot = Path(ocr_screenshot_path)
+if not ocr_screenshot.is_file():
+    raise SystemExit(f"missing OCR diagnostic screenshot: {ocr_screenshot}")
+
+ocr_text_path = Path(manifest_path).with_name("test2-image-translation-ocr.txt")
+ocr_lines = [
+    f"fixture={fixture_name}",
+    "coordinateSpace=normalized top-left origin; x,y,width,height in [0,1]",
+    f"blockCount={len(blocks)}",
+]
+for index, block in enumerate(blocks, start=1):
+    box = block.get("boundingBox") or {}
+    box_text = ",".join(
+        f"{key}={box.get(key)}"
+        for key in ("x", "y", "width", "height")
+    )
+    direction = block.get("sourceDirection") or "unknown"
+    confidence = block.get("confidence")
+    original = " ".join(str(block.get("original", "")).split())
+    ocr_lines.append(
+        f"[{index}] confidence={confidence} direction={direction} bbox={box_text} original={original}"
+    )
+ocr_text_path.write_text("\n".join(ocr_lines) + "\n", encoding="utf-8")
+
 manifest = {
     "commitSha": commit_sha,
     "fixture": fixture_name,
@@ -180,13 +217,19 @@ manifest = {
     "translatedBlockCount": sum(bool((block.get("translation") or "").strip()) for block in blocks),
     "screenshot": Path(screenshot_path).name,
     "screenshotBytes": os.path.getsize(screenshot_path),
+    "ocrScreenshot": ocr_screenshot.name,
+    "ocrScreenshotBytes": os.path.getsize(ocr_screenshot),
+    "ocrText": ocr_text_path.name,
     "blocks": [
         {
             "index": index + 1,
             "original": block.get("original", ""),
             "translation": block.get("translation", ""),
             "confidence": block.get("confidence"),
+            "boundingBox": block.get("boundingBox"),
+            "automaticBoundingBox": block.get("automaticBoundingBox"),
             "sourceDirection": block.get("sourceDirection"),
+            "textKind": block.get("textKind"),
         }
         for index, block in enumerate(blocks)
     ],
@@ -202,6 +245,8 @@ if manifest["translatedBlockCount"] != manifest["blockCount"]:
     )
 if manifest["screenshotBytes"] < 50_000:
     raise SystemExit("captured image translation screenshot appears blank")
+if manifest["ocrScreenshotBytes"] < 50_000:
+    raise SystemExit("captured OCR diagnostic screenshot appears blank")
 PY
 
 echo "Captured actual image translation UI for $fixture_name at commit $commit_sha"

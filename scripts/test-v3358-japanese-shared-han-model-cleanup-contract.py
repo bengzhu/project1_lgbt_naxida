@@ -190,7 +190,7 @@ class JapaneseSharedHanModelCleanupContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.386", "3.386"],
+            ["3.387", "3.387"],
         )
         combined = self.workflow + self.docs
         for marker in (

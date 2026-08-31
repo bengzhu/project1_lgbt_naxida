@@ -1,6 +1,10 @@
-## v3.386：普通图片 Local GGUF 日语中文任务句式 fallback（待云端验收）
+## v3.387：普通图片 Local GGUF 日语裸中文 prompt fallback（待云端验收）
 
-v3.385 的真实 `test/2.png` 云端运行 [33391703333](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33391703333) 已完成 17 个非空日语 OCR 块，但 270M GGUF 对英文极简日语 prompt 仍回显原文/说明文本，最终 `translatedBlockCount=0/17`；截图和 trace 仅作失败诊断。v3.386 保留上下文感知与英文极简尝试，并追加贴合已验证 `把以下翻译成中文：` 模板的无 context 日语→简体中文/英文 fallback；漫画批译同步保留 `[N]` 标签顺序约束。输出继续经过严格标签、逐块 QA、目标语言/源文泄漏/长度检查，失败仍 fail-closed。OCR、layout、预算、取消、持久化和非图片路径不变。新增纯静态合同 `scripts/test-v3386-japanese-chinese-prompt-contract.py`，工程版本 `3.386`，CI 已接入；下一次真实 `test/2.png` 云端运行待完成，不合成截图或质量证据。
+v3.386 的真实 `test/2.png` 云端运行 [33393722346](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33393722346) 已完成 17 个非空日语 OCR 块；270M GGUF 已识别中文任务句式，但仍返回说明文字和日文原文，最终 `translatedBlockCount=0/17`，截图和 trace 仅作失败诊断。v3.387 保留此前全部候选，并追加完全贴合已验证 `把以下翻译成中文：` 模板的无 context 裸 prompt；漫画批译同步保留 `[N]` 标签顺序约束。输出继续经过严格标签、逐块 QA、目标语言/源文泄漏/长度检查，失败仍 fail-closed。OCR、layout、预算、取消、持久化和非图片路径不变。新增纯静态合同 `scripts/test-v3387-japanese-bare-prompt-contract.py`，工程版本 `3.387`，CI 已接入；下一次真实 `test/2.png` 云端运行待完成，并会额外保存基于真实终态会话重开的整图 OCR 原文框截图、坐标清单和逐块 JSON，不合成截图或质量证据。
+
+## v3.386：普通图片 Local GGUF 日语中文任务句式 fallback（已验证失败，继续前进）
+
+v3.385 的真实 `test/2.png` 云端运行 [33391703333](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33391703333) 已完成 17 个非空日语 OCR 块，但 270M GGUF 对英文极简日语 prompt 仍回显原文/说明文本，最终 `translatedBlockCount=0/17`。v3.386 在保留上下文感知与英文极简尝试后，追加贴合已验证 `把以下翻译成中文：` 模板的无 context 日语→简体中文/英文 fallback；精确合入 SHA `a20b993cb437ac7efd861fe69dd7fbb817096f8d` 的云端运行 [33393722346](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33393722346) 仍为 `0/17`，因此该证据只作失败诊断。漫画批译同步保留 `[N]` 标签顺序约束；OCR、layout、预算、取消、持久化和非图片路径不变。
 
 ## v3.385：普通图片 Local GGUF 日语最小 fallback（已验证失败，继续前进）
 

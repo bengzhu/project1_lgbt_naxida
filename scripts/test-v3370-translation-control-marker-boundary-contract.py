@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.386 translation control markers."""
+"""Static and pure-policy contract for v3.387 translation control markers."""
 
 from __future__ import annotations
 
@@ -202,13 +202,13 @@ class TranslationControlMarkerBoundaryContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.386", "3.386"],
+            ["3.387", "3.387"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3370-translation-control-marker-boundary-contract.py",
-            "v3.386",
-            "japanese-benchmark-v3.386-",
+            "v3.387",
+            "japanese-benchmark-v3.387-",
         ):
             self.assertIn(marker, combined)
 

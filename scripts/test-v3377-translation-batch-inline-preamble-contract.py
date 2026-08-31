@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.386 inline manga batch preambles."""
+"""Static and pure-policy contract for v3.387 inline manga batch preambles."""
 
 from __future__ import annotations
 
@@ -227,7 +227,7 @@ class TranslationBatchInlinePreambleContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_fixture_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.386", "3.386"],
+            ["3.387", "3.387"],
         )
         previous = "python3 -B scripts/test-v3376-translation-metadata-content-boundary-contract.py"
         current = "python3 -B scripts/test-v3377-translation-batch-inline-preamble-contract.py"
@@ -235,7 +235,7 @@ class TranslationBatchInlinePreambleContractTests(unittest.TestCase):
         self.assertIn(current, self.workflow)
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         combined = self.workflow + self.docs
-        for marker in (current, "v3.386", "japanese-benchmark-v3.386-"):
+        for marker in (current, "v3.387", "japanese-benchmark-v3.387-"):
             self.assertIn(marker, combined)
         self.assertFalse((ROOT / "test/3.png").exists())
 

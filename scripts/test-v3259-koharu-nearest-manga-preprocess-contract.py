@@ -95,7 +95,7 @@ class KoharuNearestMangaPreprocessContractTests(unittest.TestCase):
 
     def test_version_is_advanced(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
-        self.assertEqual(versions, ["3.386", "3.386"])
+        self.assertEqual(versions, ["3.387", "3.387"])
 
 
 if __name__ == "__main__":

@@ -48,12 +48,15 @@ struct ContentView: View {
 #if DEBUG
         let launchesBundledImageTranslationTest =
             ProcessInfo.processInfo.environment["AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST"] == "1"
+        let launchesImageOCRDiagnostic =
+            ProcessInfo.processInfo.environment["AITRANS_IMAGE_TRANSLATION_UI_FOCUS"] == "ocr"
 #else
         let launchesBundledImageTranslationTest = false
+        let launchesImageOCRDiagnostic = false
 #endif
         _selectedTab = State(
             initialValue: scenario?.selectedTab
-                ?? (launchesBundledImageTranslationTest ? .image : .text)
+                ?? (launchesBundledImageTranslationTest || launchesImageOCRDiagnostic ? .image : .text)
         )
     }
 

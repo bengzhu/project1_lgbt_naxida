@@ -335,6 +335,13 @@ struct GemmaLocalService: LocalLanguageModeling {
             } else {
                 mangaChineseFallbackInstruction = "Translate \(request.sourceLanguage.rawValue) to \(request.targetLanguage.rawValue)."
             }
+            let mangaBareFallbackInstruction: String
+            if request.sourceLanguage == .japanese,
+               request.targetLanguage == .simplifiedChinese {
+                mangaBareFallbackInstruction = "把以下翻译成中文："
+            } else {
+                mangaBareFallbackInstruction = "Translate the following into \(request.targetLanguage.rawValue):"
+            }
             let mangaInstruction = """
             Translate each \(request.sourceLanguage.rawValue) text block into \(request.targetLanguage.rawValue).
             请逐个翻译下面的\(request.sourceLanguage.rawValue)文字块。
@@ -361,6 +368,10 @@ struct GemmaLocalService: LocalLanguageModeling {
                 """,
                 """
                 \(mangaChineseFallbackInstruction) 保留每个[N]标签和顺序，只输出每个标签一行译文：
+                \(request.inputText)
+                """,
+                """
+                \(mangaBareFallbackInstruction)
                 \(request.inputText)
                 """
             ]
@@ -425,6 +436,15 @@ struct GemmaLocalService: LocalLanguageModeling {
             default:
                 japaneseChineseFallbackInstruction = "把以下内容翻译成\(request.targetLanguage.rawValue)："
             }
+            let japaneseBareFallbackInstruction: String
+            switch (request.sourceLanguage, request.targetLanguage) {
+            case (.japanese, .simplifiedChinese):
+                japaneseBareFallbackInstruction = "把以下翻译成中文："
+            case (.japanese, .englishUS):
+                japaneseBareFallbackInstruction = "Translate the following into English:"
+            default:
+                japaneseBareFallbackInstruction = "Translate the following into \(request.targetLanguage.rawValue):"
+            }
 
             return [
                 """
@@ -445,6 +465,10 @@ struct GemmaLocalService: LocalLanguageModeling {
                 """,
                 """
                 \(japaneseChineseFallbackInstruction)
+                \(request.inputText)
+                """,
+                """
+                \(japaneseBareFallbackInstruction)
                 \(request.inputText)
                 """
             ]
