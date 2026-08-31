@@ -59,6 +59,16 @@ def normalize_text(value: str) -> str:
     )
 
 
+def canonical_term_text(value: str) -> str:
+    """Match the product's case/width/canonical term folding without stripping punctuation."""
+    return unicodedata.normalize("NFKC", value).casefold()
+
+
+def contains_canonical_term(value: str, term: str) -> bool:
+    canonical_term = canonical_term_text(term)
+    return bool(canonical_term) and canonical_term in canonical_term_text(value)
+
+
 def number_tokens(value: str) -> list[str]:
     return NUMBER_RE.findall(unicodedata.normalize("NFKC", value))
 
@@ -323,12 +333,12 @@ def text_failures(
         ):
             failures.append("previousContextLeakage")
     for term in terms:
-        if term["status"] != "confirmed" or term["source"] not in source:
+        if term["status"] != "confirmed" or not contains_canonical_term(source, term["source"]):
             continue
-        if term["target"] not in output:
+        if not contains_canonical_term(output, term["target"]):
             failures.append("confirmedTermMismatch")
     for term in terms:
-        if term["status"] == "revoked" and term["target"] in output:
+        if term["status"] == "revoked" and contains_canonical_term(output, term["target"]):
             failures.append("revokedTermUse")
     if len(output) > max_chars:
         failures.append("outputTooLong")
