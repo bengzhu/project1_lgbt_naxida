@@ -451,7 +451,7 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func stripLeadingMangaBatchPreamble(from value: String) -> String {
-        let lines = value.components(separatedBy: "\n")
+        var lines = value.components(separatedBy: "\n")
         var cursor = 0
         var removedPreamble = false
 
