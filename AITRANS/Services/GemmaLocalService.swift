@@ -465,6 +465,14 @@ struct GemmaLocalService: LocalLanguageModeling {
             if trimmed.hasPrefix("[") {
                 break
             }
+            if let inlineTaggedLine = inlineMangaBatchTaggedLine(from: trimmed) {
+                // Some small models put a harmless known label and the first
+                // tag on one line. Remove only that exact prefix and keep the
+                // tag plus its payload addressable by the existing parser.
+                lines[cursor] = inlineTaggedLine
+                removedPreamble = true
+                break
+            }
             guard isKnownMangaBatchPreambleLine(trimmed) else {
                 // Do not partially sanitize an unknown prefix. The existing
                 // first-tag guard must still reject arbitrary model prose.
@@ -478,6 +486,26 @@ struct GemmaLocalService: LocalLanguageModeling {
         return lines.dropFirst(cursor)
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func inlineMangaBatchTaggedLine(from line: String) -> String? {
+        guard let bracket = line.firstIndex(of: "[") else { return nil }
+        let prefix = String(line[..<bracket])
+        guard isKnownMangaBatchPreambleLine(prefix) else { return nil }
+
+        let taggedPayload = String(line[bracket...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"^\[\d+\]"#),
+              regex.firstMatch(
+                  in: taggedPayload,
+                  range: NSRange(
+                      location: 0,
+                      length: (taggedPayload as NSString).length
+                  )
+              ) != nil else {
+            return nil
+        }
+        return taggedPayload
     }
 
     private func isKnownMangaBatchPreambleLine(_ line: String) -> Bool {
