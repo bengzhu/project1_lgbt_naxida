@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.373 translation placeholder precision."""
+"""Static and pure-policy contract for v3.374 translation placeholder precision."""
 
 from __future__ import annotations
 
@@ -145,13 +145,13 @@ class TranslationPlaceholderPrecisionContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.373", "3.373"],
+            ["3.374", "3.374"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3369-translation-placeholder-precision-contract.py",
-            "v3.373",
-            "japanese-benchmark-v3.373-",
+            "v3.374",
+            "japanese-benchmark-v3.374-",
         ):
             self.assertIn(marker, combined)
 
