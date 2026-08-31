@@ -194,7 +194,7 @@ class TranslationBatchPreambleContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_fixture_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.385", "3.385"],
+            ["3.386", "3.386"],
         )
         previous = "python3 -B scripts/test-v3373-translation-term-width-qa-contract.py"
         current = "python3 -B scripts/test-v3374-translation-batch-preamble-contract.py"
