@@ -1,10 +1,10 @@
-## v3.371：Translation leading-prompt recovery（验证中）
+## v3.371：Translation leading-prompt recovery（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。v3.370 已避免正文内控制样短语被任意截断，但开头独立 prompt 行仍会把其后真实译文一并截掉。
 
 本轮可证伪假设：**只移除首个真实译文之前的连续 prompt 行，并保留 `Output only:` 同行明确 payload；已有译文之后的 prompt 行继续截断后缀，硬 turn token、嵌入正文短语与既有共享 QA 不变。**
 
-实现调整 `GemmaLocalService.cleanTranslationOutput`，新增 `scripts/test-v3371-translation-leading-prompt-recovery-contract.py`，工程版本 `3.371`，CI 已接入；本地安全回归、精确 SHA full、PR、合入与 receipt 待验证。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
+实现调整 `GemmaLocalService.cleanTranslationOutput`，新增 `scripts/test-v3371-translation-leading-prompt-recovery-contract.py`，工程版本 `3.371`，CI 已接入；本地安全回归 `370/370` 通过，27 个进程/编译/runtime 入口按约束跳过（397 总计），Python AST `416/416`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过。实现 SHA `1b28159857ff7a75740ec8a5aecff56b77f4b7e6` 的 exact-SHA full [33346717836](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33346717836)、PR [#435](https://github.com/bengzhu/project1_lgbt_naxida/pull/435) checks [33346679209](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33346679209)、merge SHA `f1f606d36abc8fb12845c08626ff8e9da49c4d1b` 与合入后 push CI [33347337847](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33347337847) 均成功，`AITRANS CI/full-validation=success` receipt 通过；候选云端 Xcode build、JUnit `10/10`（0 failures）、manifest 与 Japanese benchmark 通过，probe/Koharu 按可选边界跳过。按约束不运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 未提供，不合成样图或质量证据；授权语料和目标设备证据继续不阻塞普通路径。
 
 ## v3.370：Translation control-marker boundary（已完成）
 
