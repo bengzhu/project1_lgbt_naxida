@@ -3626,6 +3626,7 @@ jobs:
           python3 -B scripts/test-v3373-translation-term-width-qa-contract.py
           python3 -B scripts/test-v3374-translation-batch-preamble-contract.py
           python3 -B scripts/test-v3375-translation-refusal-marker-boundary-contract.py
+          python3 -B scripts/test-v3376-translation-metadata-content-boundary-contract.py
 
       - name: Score schema-only benchmark fixtures
         shell: bash
@@ -3863,7 +3864,8 @@ jobs:
           # japanese-benchmark-v3.373-
           # japanese-benchmark-v3.374-
           # japanese-benchmark-v3.375-
-          name: japanese-benchmark-v3.375-${{ github.run_id }}
+          # japanese-benchmark-v3.376-
+          name: japanese-benchmark-v3.376-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/aitrans-japanese-benchmark
             ci-results-japanese-ocr-benchmark-report.json
