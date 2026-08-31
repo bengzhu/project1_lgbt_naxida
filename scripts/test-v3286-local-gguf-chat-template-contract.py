@@ -111,9 +111,9 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
 
     def test_gemma_instruction_and_tagged_batch_regressions_remain_in_place(self) -> None:
         for marker in (
-            "你是专业的漫画翻译器",
-            "原样保留每个 [N] 标签",
-            "不要合并、拆分、遗漏或重排",
+            "Translate each \\(request.sourceLanguage.rawValue) text block",
+            "Keep every [N] tag and the input order",
+            "保留每个[N]标签和顺序",
             "<start_of_turn>user",
             "<end_of_turn>",
             "<start_of_turn>model",
@@ -167,7 +167,7 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.383", "3.383"])
+        self.assertEqual(versions, ["3.384", "3.384"])
         self.assertIn("v3.286", self.route)
         self.assertIn("v3.286", self.update_log)
         for marker in (

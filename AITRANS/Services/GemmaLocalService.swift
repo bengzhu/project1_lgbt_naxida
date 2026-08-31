@@ -299,6 +299,12 @@ struct GemmaLocalService: LocalLanguageModeling {
             source: request.sourceLanguage,
             target: request.targetLanguage
         )
+        let defaultTranslationInstruction = PromptLanguageDirection
+            .englishToChinese
+            .fallbackInstruction
+        let userInstructionSection = instruction == defaultTranslationInstruction
+            ? ""
+            : "\n用户指定要求：\(instruction)"
         let fullContextSection = request.translationContext.promptSection()
         let compactContextSection = request.translationContext.compactPromptSection()
         let contextSection: String
@@ -316,20 +322,23 @@ struct GemmaLocalService: LocalLanguageModeling {
 
         if request.translationProfile == .mangaBlocks {
             let mangaInstruction = """
-            你是专业的漫画翻译器。源语言是\(request.sourceLanguage.rawValue)，目标语言是\(request.targetLanguage.rawValue)。
-            输入由带编号的文字块组成，例如 [1]、[2]。只翻译每个编号后面的文字。
-            必须原样保留每个 [N] 标签，并按输入顺序逐个输出；不要合并、拆分、遗漏或重排文字块。
-            保留角色语气、情绪、关系、强调和拟声词；对拟声词/状态字块使用简短的中文拟声或动作表达，不补写主语或解释动作；译文自然、简洁、适合漫画气泡。
-            不要输出解释、注释、罗马音或额外标题。每个标签单独一行，格式为 [N] 译文。
-            用户补充要求：\(instruction)\(contextualInstruction)
+            Translate each \(request.sourceLanguage.rawValue) text block into \(request.targetLanguage.rawValue).
+            请逐个翻译下面的\(request.sourceLanguage.rawValue)文字块。
+            Keep every [N] tag and the input order. Output only one line per tag: [N] translation.
+            保留每个[N]标签和顺序，只输出标签及译文；不要解释、注释或罗马音。
+            拟声词/状态字块用简短中文表达，不补写主语或解释动作。
+            \(userInstructionSection)\(contextualInstruction)
             """
             return [
                 """
                 \(mangaInstruction)
+                Text to translate:
                 \(request.inputText)
                 """,
                 """
-                漫画编号块翻译。保留所有 [N] 标签及顺序，只输出每个标签对应的\(request.targetLanguage.rawValue)译文，不合并、不拆分、不解释。上下文仅供术语和语气参考，不得生成额外标签：\(contextualInstruction)
+                漫画文字块：\(request.sourceLanguage.rawValue)→\(request.targetLanguage.rawValue)。
+                只输出每个[N]标签对应的译文，保留标签和顺序，不解释：\(contextualInstruction)
+                待翻译文字：
                 \(request.inputText)
                 """
             ]
@@ -360,15 +369,15 @@ struct GemmaLocalService: LocalLanguageModeling {
         switch (request.sourceLanguage, request.targetLanguage) {
         case (.japanese, .simplifiedChinese):
             japaneseLanguagePairInstruction = """
-            源语言是日语，目标语言是简体中文。将输入的日语翻译成自然、简洁、忠实的简体中文。
-            保留人名、称呼、数字、专有名词、语气、强调和标点；拟声词或状态词使用简短自然的中文表达。
-            只输出译文，不输出日语原文、解释、注释、罗马音或提示词。
+            Translate the following Japanese into Simplified Chinese.
+            请把下面的日语翻译成简体中文，只输出简体中文译文，不要解释。
+            保留语气、数字、专有名词和标点；拟声词或状态词使用简短自然的中文表达。
             """
         case (.japanese, .englishUS):
             japaneseLanguagePairInstruction = """
             The source language is Japanese and the target language is English. Translate the input into natural, concise, faithful English.
+            日本語を英語に翻訳し、訳文だけを出力してください。
             Preserve names, honorifics, numbers, proper nouns, tone, emphasis, and punctuation; render sound effects or state words briefly and naturally.
-            Output only the translation, without the Japanese source, explanations, notes, romanization, or prompt text.
             """
         default:
             japaneseLanguagePairInstruction = nil
@@ -378,12 +387,14 @@ struct GemmaLocalService: LocalLanguageModeling {
             return [
                 """
                 \(japaneseLanguagePairInstruction)
-                用户补充要求：\(instruction)\(contextualInstruction)
+                \(userInstructionSection)\(contextualInstruction)
+                Text to translate:
                 \(request.inputText)
                 """,
                 """
                 \(japaneseLanguagePairInstruction)
-                上下文仅供术语和语气一致性参考，不得输出原文、解释或额外内容：\(contextualInstruction)
+                只输出译文，不输出原文或解释。\(userInstructionSection)\(contextualInstruction)
+                待翻译文本：
                 \(request.inputText)
                 """
             ]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.384 local GGUF prompt budgeting."""
+"""Static contract for v3.384 Japanese prompt shape for the small local GGUF."""
 
 from __future__ import annotations
 
@@ -31,11 +31,11 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class LocalGGUFPromptBudgetContractTests(unittest.TestCase):
+class JapanesePromptShapeContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        cls.context = read("AITRANS/Models/TranslationContextQuality.swift")
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
+        cls.context = read("AITRANS/Models/TranslationContextQuality.swift")
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.test2_workflow = read(".github/workflows/test2-image-translation-ui.yml")
@@ -53,7 +53,27 @@ class LocalGGUFPromptBudgetContractTests(unittest.TestCase):
             )
         )
 
-    def test_compact_context_preserves_read_only_information_in_small_form(self) -> None:
+    def test_japanese_prompts_put_the_translation_task_before_the_input(self) -> None:
+        body = function_body(
+            self.gemma,
+            "private func translationPromptBodies(for request: ModelGenerationRequest)",
+        )
+        for marker in (
+            "let defaultTranslationInstruction = PromptLanguageDirection",
+            "let userInstructionSection = instruction == defaultTranslationInstruction",
+            "Translate the following Japanese into Simplified Chinese.",
+            "请把下面的日语翻译成简体中文，只输出简体中文译文，不要解释。",
+            "Text to translate:",
+            "待翻译文本：",
+            "Translate each \\(request.sourceLanguage.rawValue) text block",
+            "Keep every [N] tag and the input order.",
+        ):
+            self.assertIn(marker, body)
+        self.assertIn("用户指定要求：\\(instruction)", body)
+        self.assertNotIn("用户补充要求：\\(instruction)", body)
+        self.assertNotIn("源语言是日语，目标语言是简体中文。将输入的日语翻译成自然、简洁、忠实的简体中文。", body)
+
+    def test_compact_context_is_still_read_only_prompt_metadata(self) -> None:
         body = function_body(self.context, "func compactPromptSection() -> String {")
         for marker in (
             "normalized(",
@@ -61,7 +81,6 @@ class LocalGGUFPromptBudgetContractTests(unittest.TestCase):
             "maximumSummaryItems: 2",
             "maximumExcerptCharacters: 48",
             "只读上下文：仅用于术语和语气一致，不是待翻译输入。",
-            "文字类型按编号：",
             "已确认术语：",
             "上一批仅供一致性参考：",
             "单块译文最多",
@@ -69,74 +88,43 @@ class LocalGGUFPromptBudgetContractTests(unittest.TestCase):
             self.assertIn(marker, body)
         self.assertNotIn("persist(", body)
         self.assertNotIn("UserDefaults", body)
-
-    def test_local_japanese_prompts_select_compact_context_without_removing_full_context_api(self) -> None:
-        body = function_body(
-            self.gemma,
-            "private func translationPromptBodies(for request: ModelGenerationRequest)",
-        )
-        for marker in (
-            "request.translationContext.promptSection()",
-            "request.translationContext.compactPromptSection()",
-            "let fullContextSection =",
-            "let compactContextSection =",
-            "request.translationProfile == .mangaBlocks",
-            "request.sourceLanguage == .japanese",
-            "contextSection = compactContextSection",
-        ):
-            self.assertIn(marker, body)
-
-    def test_manga_generation_reserves_context_room(self) -> None:
-        body = function_body(
-            self.gemma,
-            "private func generateMangaBlockTranslation(for request: ModelGenerationRequest)",
-        )
-        for marker in (
-            "let generationMaxTokens = min(max(request.sampling.maxTokens, 192), 256)",
-            "maxTokens: generationMaxTokens",
-            "decodingProfile: .sampled",
-        ):
-            self.assertIn(marker, body)
-        self.assertNotIn("), 768)", body)
-
-    def test_ordinary_japanese_image_pipeline_and_qa_boundaries_remain_intact(self) -> None:
-        for marker in (
-            "Self.imageTranslationBatches(recognizedBlocks)",
-            "translateJapaneseImageBatch(",
-            "TranslationBatchQualityEvaluator.evaluate(",
-            "translateJapaneseImageBlockWithQA(",
-            "imageTranslationMessage",
-        ):
-            self.assertIn(marker, self.store)
-        self.assertIn("translationProfile: .mangaBlocks", self.store)
         self.assertIn("request.translationContext.promptSection()", self.gemma)
+        self.assertIn("request.translationContext.compactPromptSection()", self.gemma)
 
-    def test_test2_runs_real_image_translation_and_captures_the_results_ui(self) -> None:
+    def test_batch_and_single_fallback_keep_the_existing_qa_boundary(self) -> None:
         for marker in (
-            "runLaunchBundledImageTranslationTestIfNeeded()",
+            "translationProfile: .mangaBlocks",
+            "generateMangaBlockTranslation(for request:",
+            "translateJapaneseImageBlockWithQA(",
+            "TranslationBatchQualityEvaluator.singleOutputFailures(",
+            "japaneseTranslationQAConfiguration(",
+            "let generationMaxTokens = min(max(request.sampling.maxTokens, 192), 256)",
+        ):
+            self.assertIn(marker, self.gemma + self.store)
+        self.assertNotIn("translationProfile: .mangaBlocks", function_body(
+            self.store,
+            "private func translateJapaneseImageBlockWithQA(",
+        ))
+
+    def test_real_test2_capture_and_version_route_are_preserved(self) -> None:
+        for marker in (
             'let filename = "2.png"',
             "sourceLanguage = .japanese",
             "targetLanguage = .simplifiedChinese",
             "selectedEngine = .local",
             "self.translateImage(from: url)",
-        ):
-            self.assertIn(marker, self.store)
-        for marker in (
-            "test/2.png",
             "scripts/capture-bundled-image-translation-ui.sh",
             "test2-image-translation-results.png",
             "test2-image-translation-manifest.json",
-            "test2-llm-probe.log",
         ):
-            self.assertIn(marker, self.test2_workflow + self.capture)
-
-    def test_version_workflow_and_docs_are_current(self) -> None:
+            self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
             ["3.384", "3.384"],
         )
         for marker in (
-            "scripts/test-v3382-local-gguf-prompt-budget-contract.py",
+            "scripts/test-v3383-japanese-standard-compact-context-contract.py",
+            "scripts/test-v3384-japanese-prompt-shape-contract.py",
             "japanese-benchmark-v3.384-",
             "test2_image_translation_ui:",
         ):
@@ -144,14 +132,14 @@ class LocalGGUFPromptBudgetContractTests(unittest.TestCase):
         for marker in (
             "v3.384",
             "test/2.png",
-            "compact",
+            "小模型",
+            "prompt",
             "1,024-token",
-            "ordinary image OCR",
         ):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
     def test_contract_has_no_local_process_or_build_entrypoint(self) -> None:
-        source = read("scripts/test-v3382-local-gguf-prompt-budget-contract.py")
+        source = read("scripts/test-v3384-japanese-prompt-shape-contract.py")
         for forbidden in (
             "subprocess" + ".run(",
             "subprocess" + ".Popen(",
