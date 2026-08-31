@@ -192,7 +192,7 @@ class ImageOCRBlockStructureEditorContractTests(unittest.TestCase):
             self.assertIn(marker, self.project + self.workflow + self.route + self.panel)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.382", "3.382"],
+            ["3.383", "3.383"],
         )
 
     def test_contract_has_no_process_entry(self) -> None:
