@@ -1,3 +1,8 @@
+### v3.381 普通图片 Local GGUF sampler state 修复（待云端验收）
+
+- `LlamaRuntime` 在每个生成 token 后显式调用 `llama_sampler_accept`，修复真实 GGUF 生成时 sampler 状态不推进的问题；普通图片 OCR→日语翻译路径、逐块 QA/回退、预算、取消、持久化与非图片路径不变。
+- 新增纯静态合同 `scripts/test-v3381-llama-sampler-state-contract.py`，工程版本 `3.381`，CI 已接入；`test/2.png` 云端重跑会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
+
 ### v3.380 普通日语翻译 shared-Han cloud QA 精确边界（待云端验收）
 
 - 产品与 cloud shadow evaluator 现在使用同一窄例外：仅 `ja→zh-CN`、源文规范化长度大于 1、源文仅含共享汉字且规范化源文与输出完全相等时，才允许 unchanged output；`日本→日本人`、`日本→日本 東京`、`日→日` 与语言不匹配继续判定 `sourceLeakage`。

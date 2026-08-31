@@ -70,6 +70,7 @@ xcrun simctl install "$device_id" "$app_path"
 xcrun simctl ui "$device_id" appearance light
 xcrun simctl spawn "$device_id" launchctl setenv AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST 1
 xcrun simctl spawn "$device_id" launchctl setenv AITRANS_IMAGE_TRANSLATION_UI_FOCUS results
+xcrun simctl spawn "$device_id" launchctl setenv AITRANS_RUN_LLM_SMOKE 1
 
 container="$(xcrun simctl get_app_container "$device_id" "$bundle_id" data)"
 model_dir="$container/Library/Application Support/Models/Gemma-1.5B"
@@ -88,9 +89,11 @@ log_pid="$!"
 echo "Launching ordinary image OCR→translation for $fixture_name"
 SIMCTL_CHILD_AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST=1 \
 SIMCTL_CHILD_AITRANS_IMAGE_TRANSLATION_UI_FOCUS=results \
+SIMCTL_CHILD_AITRANS_RUN_LLM_SMOKE=1 \
   xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id" \
   -AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST 1 \
-  -AITRANS_IMAGE_TRANSLATION_UI_FOCUS results
+  -AITRANS_IMAGE_TRANSLATION_UI_FOCUS results \
+  -AITRANS_RUN_LLM_SMOKE 1
 
 deadline=$((SECONDS + timeout_seconds))
 last_status=""
@@ -138,6 +141,10 @@ test -n "$terminal_state" || {
 }
 
 cp "$state_path" "$output_dir/test2-image-translation-state.json"
+translation_probe_path="$container/Library/Application Support/AITRANS/llm-smoke-result.log"
+if [ -f "$translation_probe_path" ]; then
+  cp "$translation_probe_path" "$output_dir/test2-llm-probe.log"
+fi
 sleep 2
 xcrun simctl io "$device_id" screenshot "$output_dir/test2-image-translation-results.png"
 
