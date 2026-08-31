@@ -1,3 +1,9 @@
+### v3.380 普通日语翻译 shared-Han cloud QA 精确边界（待云端验收）
+
+- 产品与 cloud shadow evaluator 现在使用同一窄例外：仅 `ja→zh-CN`、源文规范化长度大于 1、源文仅含共享汉字且规范化源文与输出完全相等时，才允许 unchanged output；`日本→日本人`、`日本→日本 東京`、`日→日` 与语言不匹配继续判定 `sourceLeakage`。
+- 新增纯静态/纯策略合同 `scripts/test-v3380-japanese-shared-han-cloud-qa-contract.py`，工程版本 `3.380`，CI 已接入；OCR/layout、预算、逐块 QA/回退、取消、持久化与非日语路径不变。
+- `test/2.png` 已纳入当前测试资源；独立云端测试会把它送入真实普通图片 OCR→日语翻译路径，校验持久化逐块结果并保存结果列表界面截图。本轮不合成样图、不把静态合同外推为通用质量证据，Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ### v3.379 普通翻译独立英文标签边界（已完成）
 
 - `GemmaLocalService.cleanTranslationOutput` 现在只把独立成行、除边缘空白/标点外没有正文的 `Here is the translation` 与 `Here are the translations` 视为 metadata 并移除；同一 marker 后带自然语言 payload 的句子保留。

@@ -277,6 +277,7 @@ final class TranslationSessionStore: ObservableObject {
            imageTranslationData != nil {
             rerenderImageTranslationExport()
         }
+        runLaunchBundledImageTranslationTestIfNeeded()
         runLaunchLLMSmokeTestIfNeeded()
         runLaunchMangaOverlayProbeIfNeeded()
         runLaunchSpeechQualityProbeIfNeeded()
@@ -300,6 +301,37 @@ final class TranslationSessionStore: ObservableObject {
         selectedEngine = .local
         Task { @MainActor [weak self] in
             await self?.runLaunchTranslationProbeSuite()
+        }
+#endif
+    }
+
+    /// Cloud-only DEBUG entry point for an actual ordinary image
+    /// OCR→translation run. This deliberately does not use the preview
+    /// scenario or the Koharu diagnostic probe, so the captured UI represents
+    /// the same image path a user reaches from the image importer.
+    private func runLaunchBundledImageTranslationTestIfNeeded() {
+#if DEBUG
+        guard Self.shouldRunBundledImageTranslationTestFromLaunchEnvironment else { return }
+        let filename = "2.png"
+        guard let url = bundledTestFile(named: filename) else {
+            imageTranslationState = .failed
+            imageTranslationMessage = "test/\(filename) 未找到，请确认测试图片已打包"
+            dataTransferMessage = imageTranslationMessage
+            persist()
+            return
+        }
+
+        isProUnlocked = true
+        sourceLanguage = .japanese
+        targetLanguage = .simplifiedChinese
+        selectedEngine = .local
+        imageTranslationMessage = "已准备 test/\(filename)，开始日语 OCR 与简体中文翻译"
+        dataTransferMessage = imageTranslationMessage
+
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await Task.yield()
+            self.translateImage(from: url)
         }
 #endif
     }
@@ -28957,6 +28989,10 @@ final class TranslationSessionStore: ObservableObject {
 
     private static var shouldRunLLMSmokeTestFromLaunchEnvironment: Bool {
         launchFlagEnabled("AITRANS_RUN_LLM_SMOKE")
+    }
+
+    private static var shouldRunBundledImageTranslationTestFromLaunchEnvironment: Bool {
+        launchFlagEnabled("AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST")
     }
 
     private static var shouldRunMangaOverlayProbeFromLaunchEnvironment: Bool {

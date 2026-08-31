@@ -1,3 +1,11 @@
+## v3.380：普通日语翻译 shared-Han cloud QA 精确边界（待云端验收）
+
+继续提升普通图片 OCR→日语翻译能力。审计发现产品的 shared-Han unchanged 例外已经是精确矩阵，但 cloud shadow evaluator 对 shared-Han 输出只按“包含源文”放行，可能把 `日本→日本人`、`日本→日本 東京` 等源文泄漏误判为通过。
+
+本轮同步 cloud evaluator 与产品边界：只有 `ja→zh-CN`、规范化源文长度大于 1、源文仅含共享汉字且规范化源文与输出完全相等时才允许 unchanged output；扩展输出、单字、语言不匹配继续 fail-closed。新增纯静态/纯策略合同 `scripts/test-v3380-japanese-shared-han-cloud-qa-contract.py`，工程版本 `3.380`，CI 已接入；OCR/layout、预算、逐块 QA/回退、取消、持久化与非日语路径不变。
+
+`test/2.png` 已纳入明确 bundle fixture；新增独立云端 workflow `test2-image-translation-ui.yml` 与 DEBUG 启动入口，走真实普通图片 OCR→日语翻译路径，轮询持久化逐块结果并保存结果列表界面截图。尚未把云端截图/译文冒充为已完成证据；本轮本地安全回归与云端验收待完成。不合成样图或把合同结果外推为通用质量证据。Koharu/GGUF、授权语料和目标设备证据只作可选研究/质量证明，不阻塞普通路径。
+
 ## v3.379：普通翻译独立英文标签边界（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现 v3.378 已恢复同一行的 `Here is the translation: 你好` / `Translation: hello`，但 `Here is the translation`、`Here are the translations` 独立行仍可能进入普通译文，造成显示污染并消耗目标语言/长度 QA 的有效空间。

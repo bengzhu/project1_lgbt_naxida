@@ -119,6 +119,28 @@ struct ImageTranslationView: View {
                 .padding(.bottom, 72)
             }
             .background(Color.appCanvas)
+            .onChange(of: store.imageTranslationState) { _, state in
+                guard state == .translated, shouldFocusResultsOnLaunch else { return }
+                focusResults(using: proxy)
+            }
+        }
+    }
+
+    private var shouldFocusResultsOnLaunch: Bool {
+#if DEBUG
+        ProcessInfo.processInfo.environment["AITRANS_IMAGE_TRANSLATION_UI_FOCUS"] == "results"
+#else
+        false
+#endif
+    }
+
+    private func focusResults(using proxy: ScrollViewProxy) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(900))
+            guard !Task.isCancelled else { return }
+            withAnimation(AppTheme.Motion.standard) {
+                proxy.scrollTo(ImageTranslationPanel.inspectorScrollID, anchor: .top)
+            }
         }
     }
 
@@ -182,6 +204,7 @@ struct ImageTranslationPanel: View {
     }
 
     static let previewScrollID = "imageTranslationPreview"
+    static let inspectorScrollID = "imageTranslationInspector"
     private static let reviewCompletionAccessibilityFocusID = "image-review-complete"
     private static let reviewFilterAccessibilityFocusID = "image-review-filter"
     private static let reviewFilterEmptyAccessibilityFocusID = "image-review-filter-empty"
@@ -887,6 +910,7 @@ struct ImageTranslationPanel: View {
             }
         }
         .appSurface()
+        .id(Self.inspectorScrollID)
     }
 
     private var overlayModeBinding: Binding<ImageTranslationOverlayMode> {

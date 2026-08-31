@@ -333,6 +333,7 @@ def text_failures(
         failures.append("placeholderOutput")
     if is_source_leakage(
         source,
+        output,
         source_normalized,
         output_normalized,
         source_language,
@@ -366,13 +367,14 @@ def text_failures(
 
 def is_source_leakage(
     source: str,
+    output: str,
     normalized_source: str,
     normalized_output: str,
     source_language: str,
     target_language: str,
 ) -> bool:
     if (
-        len(normalized_source) <= 1
+        not normalized_source
         or normalized_source.isdigit()
         or normalized_source not in normalized_output
     ):
@@ -382,8 +384,30 @@ def is_source_leakage(
         and target_language == "zh-CN"
         and is_shared_han_only_japanese_source(source)
     ):
-        return False
+        return not allows_unchanged_japanese_han_translation(
+            source,
+            output,
+            source_language,
+            target_language,
+        )
     return True
+
+
+def allows_unchanged_japanese_han_translation(
+    source: str,
+    output: str,
+    source_language: str,
+    target_language: str,
+) -> bool:
+    normalized_source = normalize_text(source)
+    normalized_output = normalize_text(output)
+    return (
+        source_language == "ja"
+        and target_language == "zh-CN"
+        and len(normalized_source) > 1
+        and normalized_source == normalized_output
+        and is_shared_han_only_japanese_source(source)
+    )
 
 
 def is_shared_han_only_japanese_source(value: str) -> bool:
