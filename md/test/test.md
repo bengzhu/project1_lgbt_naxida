@@ -1,6 +1,6 @@
-### v3.372 Vision vertical line single-rotation（验证中）
+### v3.372 Vision vertical line single-rotation（已完成）
 
-新增纯静态合同 `scripts/test-v3372-image-japanese-line-single-rotation-contract.py`：验证 Vision vertical quad 的 direct sampler 返回未旋转 bounded canvas，由 line reader 统一执行一次调用方方向旋转；Core Image fallback 与 direct path 保持相同边界，detector-owned Manga OCR quad 仍保持单次 `rotate270`。8 次 line OCR、2 个 geometry-only 名额、16M perspective budget、owner/quality/layout、取消、持久化和非日语路径不变。工程版本 `3.372`，CI 已接入；本地安全回归 `371/371` 通过、27 个进程/编译/runtime 入口跳过（`398` 总计），Python AST `398/398`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist `4/4` 与 diff 检查通过；exact-SHA full 待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+新增纯静态合同 `scripts/test-v3372-image-japanese-line-single-rotation-contract.py`：验证 Vision vertical quad 的 direct sampler 返回未旋转 bounded canvas，由 line reader 统一执行一次调用方方向旋转；Core Image fallback 与 direct path 保持相同边界，detector-owned Manga OCR quad 仍保持单次 `rotate270`。8 次 line OCR、2 个 geometry-only 名额、16M perspective budget、owner/quality/layout、取消、持久化和非日语路径不变。工程版本 `3.372`，CI 已接入；本地安全回归 `371/371` 通过、27 个进程/编译/runtime 入口跳过（`398` 总计），Python AST `398/398`、JSON `144/144`、YAML `3/3`、shell `32/32`、plist `4/4` 与 diff 检查通过；exact-SHA full [33351843254](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33351843254)、PR checks [33352464164](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33352464164)、merge SHA 4e02d6337f8516c8df1cd20a62ac7cdca049704c、合入后 push [33352543308](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33352543308) 与 AITRANS CI/full-validation=success 均通过。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
 
 ### v3.371 Translation leading-prompt recovery（已完成）
 
