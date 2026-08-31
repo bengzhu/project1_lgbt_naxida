@@ -1,3 +1,11 @@
+## v3.371：Translation leading-prompt recovery（验证中）
+
+继续提升普通图片日语 OCR→翻译主路径。v3.370 已避免正文内控制样短语被任意截断，但开头独立 prompt 行仍会把其后真实译文一并截掉。
+
+本轮可证伪假设：**只移除首个真实译文之前的连续 prompt 行，并保留 `Output only:` 同行明确 payload；已有译文之后的 prompt 行继续截断后缀，硬 turn token、嵌入正文短语与既有共享 QA 不变。**
+
+实现调整 `GemmaLocalService.cleanTranslationOutput`，新增 `scripts/test-v3371-translation-leading-prompt-recovery-contract.py`，工程版本 `3.371`，CI 已接入；本地安全回归、精确 SHA full、PR、合入与 receipt 待验证。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据继续不阻塞普通路径。
+
 ## v3.370：Translation control-marker boundary（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计发现 `GemmaLocalService.cleanTranslationOutput` 对自然语言 prompt 控制词使用任意位置截断，合法译文中嵌入 `Translate the following text`、`Translate from`、`Output only` 等短语时可能被提前截断。
