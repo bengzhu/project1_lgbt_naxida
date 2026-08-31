@@ -244,7 +244,7 @@ class JapaneseVisionRecoveryDensityContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.382", "3.382"],
+            ["3.383", "3.383"],
         )
         combined = (
             self.workflow

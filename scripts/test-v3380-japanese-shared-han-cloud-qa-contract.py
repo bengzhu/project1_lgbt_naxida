@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for the v3.382 cloud shared-Han QA gate."""
+"""Static and pure-policy contract for the v3.383 cloud shared-Han QA gate."""
 
 from __future__ import annotations
 
@@ -226,13 +226,13 @@ class JapaneseSharedHanCloudQAContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_execution_boundary(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.382", "3.382"],
+            ["3.383", "3.383"],
         )
         combined = self.workflow + self.test2_workflow + self.docs
         for marker in (
             "scripts/test-v3380-japanese-shared-han-cloud-qa-contract.py",
-            "v3.382",
-            "japanese-benchmark-v3.382-",
+            "v3.383",
+            "japanese-benchmark-v3.383-",
             "test/2.png",
             "stopUntilArtifactsProvided",
         ):

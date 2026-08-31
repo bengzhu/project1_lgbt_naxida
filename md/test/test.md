@@ -1,7 +1,7 @@
-### v3.382 普通图片 Local GGUF prompt budget 修复（待云端验收）
+### v3.383 普通图片 Local GGUF standard fallback prompt 修复（待云端验收）
 
-- 漫画批量与长上下文日语请求使用有限的只读 compact context（最多 6 个术语、2 条摘要、48 字 excerpt），漫画生成上限为 256 token，给 1,024-token Local GGUF runtime 留出 prompt 空间；sampler state、OCR/layout、逐块 QA/回退、取消、持久化与非图片路径不变。
-- 新增纯静态合同 `scripts/test-v3382-local-gguf-prompt-budget-contract.py`，工程版本 `3.382`，CI 已接入；`test/2.png` 云端重跑会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
+- v3.382 的批量 prompt 已不再超出 context，但 270M 模型回显整批输入；本轮让所有日语 standard 单块回退也使用有限只读 compact context，完整 context 仍只供 QA，漫画批量 256-token 上限、OCR/layout、逐块 QA/回退、取消、持久化与非图片路径不变。
+- 新增纯静态合同 `scripts/test-v3383-japanese-standard-compact-context-contract.py`，工程版本 `3.383`，CI 已接入；`test/2.png` 云端重跑会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
 
 ### v3.380 普通日语翻译 shared-Han cloud QA 精确边界（待云端验收）
 

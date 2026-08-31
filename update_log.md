@@ -1,3 +1,7 @@
+## v3.383：普通图片 Local GGUF standard fallback prompt 修复（待云端验收）
+
+v3.382 的真实云端 test2 trace 已确认漫画批量 prompt 不再发生 context 超限，但 270M 模型返回整批原文/提示词回显；随后 plain fallback 因 `fullContextSection.count` 略低于阈值仍带入长 context，输出提示词回显并被 `outputTooLong` QA 拒绝。v3.383 让所有日语 standard 单块请求使用 compact 只读 context，同时保留完整 context 给 QA，不改变 OCR、逐块 QA/回退、取消、持久化或非图片路径。新增纯静态合同 `scripts/test-v3383-japanese-standard-compact-context-contract.py`，`test/2.png` 云端重跑待完成，不合成截图或质量证据。
+
 ## v3.382：普通图片 Local GGUF prompt budget 修复（待云端验收）
 
 v3.381 的 sampler state 修复已让简单真实 GGUF probe 正常推进，但 `test/2.png` 第二次云端运行显示漫画批量 prompt 仍超过 `LlamaRuntime` 的 1,024-token context；逐块 plain fallback 携带长 context 后又被小模型回显并被 QA 拒绝。v3.382 在模型 prompt 渲染处新增有限的只读 compact context（最多 6 个术语、2 条摘要、48 字 excerpt），不改变完整 context 的 QA、CodingKeys、持久化或取消边界；漫画批量生成上限收紧为 256 token，为输入留出空间。新增纯静态合同 `scripts/test-v3382-local-gguf-prompt-budget-contract.py`，`test/2.png` 云端重跑待完成，不合成截图或质量证据。

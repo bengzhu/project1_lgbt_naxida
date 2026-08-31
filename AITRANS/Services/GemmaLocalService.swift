@@ -307,7 +307,6 @@ struct GemmaLocalService: LocalLanguageModeling {
                 ? fullContextSection
                 : compactContextSection
         } else if request.sourceLanguage == .japanese,
-                  fullContextSection.count > 320,
                   !compactContextSection.isEmpty {
             contextSection = compactContextSection
         } else {

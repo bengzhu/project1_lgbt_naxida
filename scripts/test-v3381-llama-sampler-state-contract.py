@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.382 llama sampler state progression."""
+"""Static contract for v3.383 llama sampler state progression."""
 
 from __future__ import annotations
 
@@ -87,16 +87,16 @@ class LlamaSamplerStateContractTests(unittest.TestCase):
     def test_version_and_ci_registration_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.382", "3.382"],
+            ["3.383", "3.383"],
         )
         for marker in (
             "scripts/test-v3381-llama-sampler-state-contract.py",
-            "japanese-benchmark-v3.382-",
+            "japanese-benchmark-v3.383-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
         for marker in (
-            "v3.382",
+            "v3.383",
             "test/2.png",
             "llama sampler",
             "ordinary image OCR",
