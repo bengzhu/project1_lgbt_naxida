@@ -1,3 +1,9 @@
+## v3.379：普通翻译独立英文标签边界（待云端验收）
+
+继续提升普通图片日语 OCR→翻译主路径。审计发现 v3.378 已恢复同一行的 `Here is the translation: 你好` / `Translation: hello`，但 `Here is the translation`、`Here are the translations` 独立行仍可能进入普通译文，造成显示污染并消耗目标语言/长度 QA 的有效空间。
+
+本轮仅在普通 `cleanTranslationOutput` 的行首标签清理中加入这两个有限英文标签：当整行除边缘空白/标点外没有正文时移除该 metadata 行；带自然语言 payload 的同名句、严格漫画 `[N]` 批译路径、placeholder/source leakage/目标语言/数字/术语/长度 QA、OCR/layout、预算、逐块回退、取消、持久化和非日语路径保持原边界。新增 `scripts/test-v3379-translation-standalone-english-label-contract.py`，工程版本推进至 `3.379`，workflow 已接入；本地安全回归与 exact-SHA full 待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ## v3.372：Vision vertical line single-rotation（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。审计确认 `VisionOCRService` 的 direct vertical quad projection helper 已在返回前 `rotate270`，而 `recognizeJapanesePerspectiveLineCrop` 仍会按 `angle` 再旋转一次，导致 direct path 与 Core Image fallback 方向不一致。本轮可证伪假设：**direct sampler 只返回未旋转 bounded canvas，由 line reader 对 direct/fallback 统一应用一次调用方方向；detector-owned Manga OCR quad 继续保留自己的单次 `rotate270`。**

@@ -2011,6 +2011,10 @@ python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
 - 漫画探针或翻译链路修改后，最终回复必须汇总关键数字。
 - 如果 clean text 仍失败，优先讨论模型质量，不要继续盲目调 OCR 或放宽规则。
 
+### v3.379 translation standalone English label boundary（待云端验收）
+
+新增纯静态合同 `scripts/test-v3379-translation-standalone-english-label-contract.py`：验证普通非 tagged 翻译输出中的 `Here is the translation`、`Here are the translations` 等有限英文标签独立成行且仅带边缘空白/标点时只移除该 metadata 行，保留后续译文；带自然语言正文的同名句、同一行标签恢复、严格漫画 `[N]` 批译清洗与共享 placeholder/source leakage/目标语言/数字/术语/长度 QA、OCR/layout、预算、逐块回退、取消、持久化和非日语路径边界保持不变。工程版本 `3.379`，CI 已接入；本轮本地安全回归与 exact-SHA full 待完成，`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ### v3.378 translation leading label boundary（已完成）
 
 新增纯静态合同 `scripts/test-v3378-translation-leading-label-boundary-contract.py`：验证普通非 tagged 翻译输出在行首出现有限标签并紧跟明确标点和正文时只剥离标签、保留正文；无分隔标签、嵌入正文、既有 `翻译是：` 歧义内容、严格漫画 `[N]` 批译清洗与共享 placeholder/source leakage/目标语言/数字/术语/长度 QA 边界保持不变。工程版本 `3.378`，CI 已接入；本轮本地安全回归 377/377 通过、27 个进程/编译/runtime 入口按约束跳过（404 总计），Python AST 404/404、tracked JSON 144/144、workflow YAML 3/3、shell 32/32、plist 4/4 与 git diff --check 通过；实现 SHA `dc6fd5d1c032983fb692bd288295d27023d4a378` 的 exact-SHA full [33365044114](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33365044114)、PR [#442](https://github.com/bengzhu/project1_lgbt_naxida/pull/442) checks [33366094900](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33366094900)、merge SHA `763b27c1f9d02f1e1358803e92cd297556764f8f` 与合入后 push CI [33366187576](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33366187576) 均成功，发布 `AITRANS CI/full-validation=success` receipt。按约束不运行本地 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF；`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。

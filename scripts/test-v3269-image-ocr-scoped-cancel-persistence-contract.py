@@ -60,7 +60,7 @@ class ScopedCancelPersistenceContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.378", "3.378"],
+            ["3.379", "3.379"],
         )
 
 
