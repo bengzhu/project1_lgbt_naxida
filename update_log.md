@@ -1,3 +1,9 @@
+## v3.372：Vision vertical line single-rotation（验证中）
+
+继续提升普通图片日语 OCR→翻译主路径。审计确认 `VisionOCRService` 的 direct vertical quad projection helper 已在返回前 `rotate270`，而 `recognizeJapanesePerspectiveLineCrop` 仍会按 `angle` 再旋转一次，导致 direct path 与 Core Image fallback 方向不一致。本轮可证伪假设：**direct sampler 只返回未旋转 bounded canvas，由 line reader 对 direct/fallback 统一应用一次调用方方向；detector-owned Manga OCR quad 继续保留自己的单次 `rotate270`。**
+
+实现调整 `VisionOCRService.perspectiveCorrectedLineImage`，新增 `scripts/test-v3372-image-japanese-line-single-rotation-contract.py`，同步 v3.3265 方向 contract，工程版本 `3.372`，workflow 已接入；8 次 line OCR、2 个 geometry-only 名额、16M perspective budget、owner/quality/layout、翻译 QA、取消、持久化和非日语路径不变。本地安全回归 `371/371` 通过、27 个进程/编译/runtime 入口跳过（`398` 总计），Python AST `398/398`、tracked JSON `144/144`、workflow YAML `3/3`、shell `32/32`、plist `4/4` 与 `git diff --check` 通过；exact-SHA full 待完成。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+
 ## v3.371：Translation leading-prompt recovery（已完成）
 
 继续提升普通图片日语 OCR→翻译主路径。v3.370 已避免正文内控制样短语被任意截断，但开头独立 prompt 行仍会把其后真实译文一并截掉。

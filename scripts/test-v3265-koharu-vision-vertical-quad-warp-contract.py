@@ -50,10 +50,18 @@ class KoharuVisionVerticalQuadWarpContractTests(unittest.TestCase):
         self.assertIn(target, self.perspective)
         self.assertIn(direct, self.perspective)
         self.assertIn("sourcePoints: localPoints", self.perspective)
-        self.assertIn("let rotated = try? rotatedImage(bounded, angle: 270)", self.perspective)
+        self.assertIn("return bounded", self.perspective)
+        self.assertNotIn(
+            "let rotated = try? rotatedImage(bounded, angle: 270)",
+            self.perspective,
+        )
         self.assertLess(self.perspective.index(target), self.perspective.index(ci))
         self.assertLess(self.perspective.index(direct), self.perspective.index(ci))
-        self.assertIn("return rotated", self.perspective)
+        self.assertNotIn("return rotated", self.perspective)
+        self.assertIn(
+            "guard let rotated = try? rotatedImage(preparedCrop.image, angle: angle)",
+            self.perspective_reader,
+        )
 
     def test_natural_projection_remains_only_compatibility_fallback(self) -> None:
         ci = 'CIFilter(name: "CIPerspectiveCorrection")'
@@ -66,7 +74,7 @@ class KoharuVisionVerticalQuadWarpContractTests(unittest.TestCase):
         ]:
             self.assertIn(marker, self.perspective)
         self.assertLess(
-            self.perspective.index("return rotated"),
+            self.perspective.index("return bounded"),
             self.perspective.index(ci),
         )
         self.assertIn("compatibility", self.perspective)
@@ -131,7 +139,7 @@ class KoharuVisionVerticalQuadWarpContractTests(unittest.TestCase):
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         self.assertTrue((ROOT / "test/jap.jpg").is_file())
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.371", "3.371"])
+        self.assertEqual(versions, ["3.372", "3.372"])
 
 
 if __name__ == "__main__":

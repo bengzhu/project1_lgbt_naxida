@@ -4247,13 +4247,15 @@ struct VisionOCRService: Sendable {
         }
 
         // Koharu's `warp_line_region` samples the cropped source directly into
-        // a bounded target canvas with bilinear interpolation, then rotates a
-        // vertical line by 270 degrees. Reuse MangaOCRService's shared
-        // image-rs-compatible sampler here so Vision line rereads do not add
-        // a second Core Image projection followed by a `.high` resize. If the
-        // direct path cannot represent malformed or unsupported geometry, the
-        // natural Core Image projection below remains the compatibility
-        // fallback for this isolated line request.
+        // a bounded target canvas with bilinear interpolation. Keep rotation
+        // outside this projection helper: recognizeJapanesePerspectiveLineCrop
+        // applies the caller's single requested orientation (270 for the
+        // primary vertical pass). This keeps the direct sampler and the Core
+        // Image compatibility fallback in the same unrotated contract and
+        // prevents the direct path from being rotated twice by the reader.
+        // If the direct path cannot represent malformed or unsupported
+        // geometry, the natural Core Image projection below remains the
+        // compatibility fallback for this isolated line request.
         if let targetSize = MangaOCRService.koharuVerticalQuadWarpTargetSize(
             localPoints,
             maximumDimension: 4_096,
@@ -4268,9 +4270,8 @@ struct VisionOCRService: Sendable {
                    sourcePoints: localPoints,
                    targetWidth: targetWidth,
                    targetHeight: targetHeight
-               ),
-               let rotated = try? rotatedImage(bounded, angle: 270) {
-                return rotated
+               ) {
+                return bounded
             }
         }
 
