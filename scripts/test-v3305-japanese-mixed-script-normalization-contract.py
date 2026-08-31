@@ -101,7 +101,7 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.379", "3.379"])
+        self.assertEqual(versions, ["3.380", "3.380"])
         self.assertIn(
             "python3 -B scripts/test-v3305-japanese-mixed-script-normalization-contract.py",
             self.workflow,

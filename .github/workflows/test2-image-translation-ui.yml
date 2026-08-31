@@ -1,0 +1,124 @@
+name: AITRANS test2 Image Translation UI
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit_sha:
+        description: 'Exact commit to build and test; required to prevent a moved ref from being tested'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test2-image-translation-ui:
+    name: Test test/2.png through ordinary OCR and translation UI
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      SCHEME: AITRANS
+      DESTINATION: generic/platform=iOS Simulator
+      DERIVED_DATA: .derivedData-test2-image-translation
+      MODEL_CACHE_DIR: .ci-models
+      MODEL_TAG: model-gemma-3-270m-it-qat-q4_0-v1
+      MODEL_ASSET: gemma-3-270m-it-qat-Q4_0.gguf
+      MODEL_SHA256: 3626e245220ca4a1c5911eb4010b3ecb7bdbf5bc53c79403c21355354d1e2dc6
+      IMAGE_TRANSLATION_FIXTURE: 2.png
+      IMAGE_TRANSLATION_TIMEOUT_SECONDS: 900
+
+    steps:
+      - name: Checkout exact requested commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 2
+
+      - name: Verify exact requested commit
+        shell: bash
+        env:
+          EXPECTED_COMMIT_SHA: ${{ inputs.expected_commit_sha }}
+        run: |
+          set -euo pipefail
+          actual_commit_sha="$(git rev-parse HEAD)"
+          expected_commit_sha="$(echo "$EXPECTED_COMMIT_SHA" | tr '[:upper:]' '[:lower:]')"
+          if [[ ! "$expected_commit_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid expected_commit_sha=$expected_commit_sha" >&2
+            exit 1
+          fi
+          if [ "$actual_commit_sha" != "$expected_commit_sha" ]; then
+            echo "SHA mismatch: expected=$expected_commit_sha actual=$actual_commit_sha" >&2
+            exit 1
+          fi
+          echo "Testing exact commit $actual_commit_sha"
+
+      - name: Restore GGUF model cache
+        id: gguf_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.MODEL_CACHE_DIR }}
+          key: gguf-${{ env.MODEL_TAG }}-${{ env.MODEL_SHA256 }}
+
+      - name: Download GGUF from GitHub Release
+        if: steps.gguf_cache.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$MODEL_CACHE_DIR"
+          gh release download "$MODEL_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "$MODEL_ASSET" \
+            --dir "$MODEL_CACHE_DIR"
+
+      - name: Verify GGUF model
+        shell: bash
+        run: |
+          set -euo pipefail
+          model_path="$MODEL_CACHE_DIR/$MODEL_ASSET"
+          test -f "$model_path"
+          echo "$MODEL_SHA256  $model_path" | shasum -a 256 -c -
+          wc -c "$model_path"
+
+      - name: Build Debug simulator app
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project AITRANS.xcodeproj \
+            -scheme "$SCHEME" \
+            -configuration Debug \
+            -destination "$DESTINATION" \
+            -derivedDataPath "$DERIVED_DATA" \
+            -resultBundlePath test2-image-translation.xcresult \
+            -quiet \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            build \
+            2>&1 | tee xcodebuild-test2.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Run test/2.png through ordinary image translation
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path="$(find "$DERIVED_DATA/Build/Products/Debug-iphonesimulator" -maxdepth 2 -name "$SCHEME.app" -type d | head -n 1)"
+          test -n "$app_path"
+          bundle_id="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$app_path/Info.plist")"
+          test -n "$bundle_id"
+          scripts/capture-bundled-image-translation-ui.sh \
+            "$app_path" \
+            "$bundle_id" \
+            test2-results \
+            "$(git rev-parse HEAD)"
+
+      - name: Upload test2 UI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aitrans-test2-image-translation-ui-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            test2-results
+            xcodebuild-test2.log

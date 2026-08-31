@@ -133,10 +133,10 @@ class JapaneseLineSingleRotationContractTests(unittest.TestCase):
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.379", "3.379"],
+            ["3.380", "3.380"],
         )
         for document in self.docs:
-            self.assertIn("v3.379", document)
+            self.assertIn("v3.380", document)
             self.assertIn(contract, document)
             self.assertIn("test/3.png", document)
             self.assertIn("未提供", document)

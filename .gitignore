@@ -11,4 +11,5 @@ third_party/llama.cpp/build-*/
 image.png
 *.png
 !test/1.png
+!test/2.png
 reference

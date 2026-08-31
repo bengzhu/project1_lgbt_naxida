@@ -45,7 +45,16 @@ struct ContentView: View {
         let scenario: AppPreviewScenario? = nil
 #endif
         evidenceScenario = scenario
-        _selectedTab = State(initialValue: scenario?.selectedTab ?? .text)
+#if DEBUG
+        let launchesBundledImageTranslationTest =
+            ProcessInfo.processInfo.environment["AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST"] == "1"
+#else
+        let launchesBundledImageTranslationTest = false
+#endif
+        _selectedTab = State(
+            initialValue: scenario?.selectedTab
+                ?? (launchesBundledImageTranslationTest ? .image : .text)
+        )
     }
 
     var body: some View {
