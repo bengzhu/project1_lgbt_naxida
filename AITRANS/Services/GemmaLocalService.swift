@@ -212,6 +212,10 @@ struct GemmaLocalService: LocalLanguageModeling {
 
     private func generateMangaBlockTranslation(for request: ModelGenerationRequest) throws -> String {
         var lastError: Error?
+        // LlamaRuntime uses a 1,024-token context. The manga prompt carries
+        // up to eight tagged blocks, so keep generation bounded after the
+        // compact context rendering leaves room for the actual translations.
+        let generationMaxTokens = min(max(request.sampling.maxTokens, 192), 256)
         for (index, messages) in translationMessages(for: request).enumerated() {
             let promptForLog = promptForLogging(for: messages)
             do {
@@ -223,7 +227,7 @@ struct GemmaLocalService: LocalLanguageModeling {
                 let output = try Self.runtime.generate(
                     messages: messages,
                     fallbackProfile: promptProfile,
-                    maxTokens: min(max(request.sampling.maxTokens, 192), 768),
+                    maxTokens: generationMaxTokens,
                     decodingProfile: .sampled
                 )
                 Self.writeTranslationProbeLog(
@@ -295,7 +299,20 @@ struct GemmaLocalService: LocalLanguageModeling {
             source: request.sourceLanguage,
             target: request.targetLanguage
         )
-        let contextSection = request.translationContext.promptSection()
+        let fullContextSection = request.translationContext.promptSection()
+        let compactContextSection = request.translationContext.compactPromptSection()
+        let contextSection: String
+        if request.translationProfile == .mangaBlocks {
+            contextSection = compactContextSection.isEmpty
+                ? fullContextSection
+                : compactContextSection
+        } else if request.sourceLanguage == .japanese,
+                  fullContextSection.count > 320,
+                  !compactContextSection.isEmpty {
+            contextSection = compactContextSection
+        } else {
+            contextSection = fullContextSection
+        }
         let contextualInstruction = contextSection.isEmpty ? "" : "\n\n\(contextSection)"
 
         if request.translationProfile == .mangaBlocks {
