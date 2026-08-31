@@ -980,8 +980,8 @@ enum TranslationBatchQualityEvaluator {
             let termSource = term.source.trimmingCharacters(in: .whitespacesAndNewlines)
             let termTarget = term.target.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !termSource.isEmpty, !termTarget.isEmpty,
-                  sourceText.localizedCaseInsensitiveContains(termSource) else { continue }
-            if !translatedText.localizedCaseInsensitiveContains(termTarget) {
+                  containsCanonicalTerm(sourceText, termSource) else { continue }
+            if !containsCanonicalTerm(translatedText, termTarget) {
                 failures.append("confirmedTermMismatch")
             }
         }
@@ -1034,6 +1034,20 @@ enum TranslationBatchQualityEvaluator {
             .folding(options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive], locale: .current)
             .components(separatedBy: CharacterSet.whitespacesAndNewlines.union(.punctuationCharacters))
             .joined()
+    }
+
+    private static func containsCanonicalTerm(_ text: String, _ term: String) -> Bool {
+        let canonicalText = canonicalTermText(text)
+        let canonicalTerm = canonicalTermText(term)
+        guard !canonicalTerm.isEmpty else { return false }
+        return canonicalText.contains(canonicalTerm)
+    }
+
+    private static func canonicalTermText(_ text: String) -> String {
+        text
+            .precomposedStringWithCanonicalMapping
+            .folding(options: [.caseInsensitive, .widthInsensitive], locale: .current)
+            .precomposedStringWithCanonicalMapping
     }
 
     private static func isOnlyDigits(_ text: String) -> Bool {
