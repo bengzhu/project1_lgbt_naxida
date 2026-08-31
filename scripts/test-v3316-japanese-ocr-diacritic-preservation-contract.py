@@ -99,7 +99,7 @@ class JapaneseOCRDiacriticPreservationContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.384", "3.384"],
+            ["3.385", "3.385"],
         )
         for marker in (
             "scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py",

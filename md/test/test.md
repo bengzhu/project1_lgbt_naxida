@@ -1,7 +1,13 @@
-### v3.384 普通图片 Local GGUF 日语 prompt 形状修复（待云端验收）
+### v3.385 普通图片 Local GGUF 日语最小 fallback（待云端验收）
 
-- v3.383 的 compact context 已避免上下文超限，但真实 `test/2.png` trace 显示 270M 模型仍回显较长中文指令，单块 fallback 也产生模板型提示词输出。本轮将日语 standard 与漫画批译缩短为双语任务指令，增加明确的 `Text to translate`/`待翻译文本` 输入标记；内置通用提示不重复注入，用户自定义要求与只读 compact context 仍保留。
-- 新增纯静态合同 `scripts/test-v3384-japanese-prompt-shape-contract.py`，工程版本 `3.384`，CI 已接入；`test/2.png` 云端重跑会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
+- v3.384 的真实 `test/2.png` 运行已完成 OCR，得到 17 个非空日语块，但 270M 模型对带 compact context 的双语 prompt 仍产生提示词回显，翻译完整性为 `0/17`；该 run 只作失败诊断，不作为翻译完成证据。
+- v3.385 保留上下文感知尝试，并为日语 standard 与漫画 `[N]` 批译增加无 context 的最小候选；结果仍必须经过严格标签、逐块 QA、目标语言/源文泄漏/长度检查，失败仍 fail-closed。新增纯静态合同 `scripts/test-v3385-japanese-minimal-fallback-contract.py`，工程版本 `3.385`，CI 已接入；下一次 `test/2.png` 云端运行会保存真实逐块译文、LLM trace 和结果列表截图，尚未把截图/译文冒充为已完成证据。
+
+### v3.384 普通图片 Local GGUF 日语 prompt 形状修复（已验证失败，继续前进）
+
+- v3.383 的 compact context 已避免上下文超限；v3.384 将日语 standard 与漫画批译改成短双语任务指令，明确 `Text to translate`/`待翻译文本` 输入标记，并省略冗余通用提示。
+- 精确 SHA `02e25095d4665beffb1fc4bc841ec233e40bf83e` 的云端 `test/2.png` 运行 [33389855026](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33389855026) 已完成 OCR（17 个非空日语块）并保存界面截图，但翻译完整性仍失败：`translatedBlockCount=0/17`；批量两次分别返回翻译拒答与 context/输入说明回显，单块 fallback 也回显 prompt。因此该截图只作失败诊断，不作为日语翻译完成证据。
+- 新增纯静态合同 `scripts/test-v3384-japanese-prompt-shape-contract.py`，工程版本当时为 `3.384`，CI 已接入；不合成截图或把静态合同外推为通用 OCR/CER/翻译质量证据。
 
 ### v3.383 普通图片 Local GGUF standard fallback prompt 修复（已验证失败，继续前进）
 
