@@ -654,8 +654,29 @@ enum TranslationOutputPolicy {
             "把以下翻译成中文",
             "翻译转换成中文"
         ]
-        if compact.count <= 96,
-           refusalMarkers.contains(where: { compact.contains($0.filter { !$0.isWhitespace && !$0.isPunctuation }) }) {
+        let compactRefusalMarkers = refusalMarkers.map { marker in
+            marker.filter { !$0.isWhitespace && !$0.isPunctuation }
+        }
+        let compactApologyPrefixes = [
+            "抱歉",
+            "很抱歉",
+            "对不起",
+            "sorry",
+            "im sorry"
+        ].map { prefix in
+            prefix.filter { !$0.isWhitespace && !$0.isPunctuation }
+        }
+        let hasLeadingRefusalMarker = compactRefusalMarkers.contains { marker in
+            compact.hasPrefix(marker)
+                || compactApologyPrefixes.contains { prefix in
+                    compact.hasPrefix(prefix)
+                        && compact.dropFirst(prefix.count).hasPrefix(marker)
+                }
+        }
+        // A refusal phrase embedded in translated dialogue is content, not a
+        // model refusal. Keep the fail-closed gate for a response-level
+        // refusal or a finite apology prefix followed immediately by one.
+        if compact.count <= 96, hasLeadingRefusalMarker {
             return true
         }
 
