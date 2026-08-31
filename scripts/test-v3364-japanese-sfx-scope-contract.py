@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.385 scoped Japanese SFX hints."""
+"""Static and pure-policy contract for v3.386 scoped Japanese SFX hints."""
 
 from __future__ import annotations
 
@@ -132,13 +132,13 @@ class JapaneseSFXScopeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.385", "3.385"],
+            ["3.386", "3.386"],
         )
         for marker in (
             "python3 -B scripts/test-v3364-japanese-sfx-scope-contract.py",
             "scripts/test-v3364-japanese-sfx-scope-contract.py",
-            "v3.385",
-            "japanese-benchmark-v3.385-",
+            "v3.386",
+            "japanese-benchmark-v3.386-",
         ):
             self.assertIn(marker, self.workflow + self.docs)
 

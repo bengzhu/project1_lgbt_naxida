@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.386 Japanese minimal GGUF prompt fallback."""
+"""Static contract for v3.386's Chinese-shaped Japanese GGUF fallback."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class JapaneseMinimalFallbackContractTests(unittest.TestCase):
+class JapaneseChinesePromptContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
@@ -53,44 +53,47 @@ class JapaneseMinimalFallbackContractTests(unittest.TestCase):
             )
         )
 
-    def test_minimal_japanese_fallback_is_explicit_and_context_free(self) -> None:
+    def test_direct_chinese_fallback_is_context_free(self) -> None:
         body = function_body(
             self.gemma,
             "private func translationPromptBodies(for request: ModelGenerationRequest)",
         )
         for marker in (
-            "let japaneseMinimalInstruction: String",
-            'japaneseMinimalInstruction = "Translate Japanese to Simplified Chinese. Output only the translation."',
-            'japaneseMinimalInstruction = "Translate Japanese to English. Output only the translation."',
-            "\\(japaneseMinimalInstruction)",
-            "Text to translate:",
-            "待翻译文本：",
+            "let japaneseChineseFallbackInstruction: String",
+            'japaneseChineseFallbackInstruction = "把以下日语翻译成简体中文："',
+            'japaneseChineseFallbackInstruction = "把以下日语翻译成英文："',
+            "\\(japaneseChineseFallbackInstruction)",
+            "\\(request.inputText)",
         ):
             self.assertIn(marker, body)
-        minimal_start = body.index("\\(japaneseMinimalInstruction)")
-        minimal = body[minimal_start : body.index("\n                \"\"\"", minimal_start)]
-        self.assertNotIn("contextualInstruction", minimal)
-        self.assertNotIn("compactContextSection", minimal)
-
-    def test_manga_batch_has_a_minimal_tagged_fallback(self) -> None:
-        body = function_body(
-            self.gemma,
-            "private func translationPromptBodies(for request: ModelGenerationRequest)",
-        )
-        for marker in (
-            "let mangaMinimalInstruction: String",
-            'mangaMinimalInstruction = "Translate Japanese to Simplified Chinese."',
-            "Keep each [N] tag and output only one [N] translation per line.",
-            "translationProfile == .mangaBlocks",
-            "request.inputText",
-        ):
-            self.assertIn(marker, body)
+        fallback_start = body.index("\\(japaneseChineseFallbackInstruction)")
+        fallback = body[fallback_start : body.index("\n                \"\"\"", fallback_start)]
+        self.assertNotIn("contextualInstruction", fallback)
+        self.assertNotIn("compactContextSection", fallback)
         self.assertLess(
-            body.index("\(mangaMinimalInstruction) Keep each [N] tag"),
-            body.index("if request.sourceLanguage == .englishUS"),
+            body.index("\\(japaneseMinimalInstruction)"),
+            fallback_start,
         )
 
-    def test_context_and_qa_boundaries_are_unchanged(self) -> None:
+    def test_manga_fallback_keeps_tag_contract_without_context(self) -> None:
+        body = function_body(
+            self.gemma,
+            "private func translationPromptBodies(for request: ModelGenerationRequest)",
+        )
+        for marker in (
+            "let mangaChineseFallbackInstruction: String",
+            'mangaChineseFallbackInstruction = "把以下日语翻译成简体中文。"',
+            "保留每个[N]标签和顺序，只输出每个标签一行译文：",
+            "\\(mangaChineseFallbackInstruction)",
+            "Keep each [N] tag and output only one [N] translation per line.",
+        ):
+            self.assertIn(marker, body)
+        fallback_start = body.index("\\(mangaChineseFallbackInstruction)")
+        fallback = body[fallback_start : body.index("\n                \"\"\"", fallback_start)]
+        self.assertNotIn("contextualInstruction", fallback)
+        self.assertNotIn("compactContextSection", fallback)
+
+    def test_context_qa_and_scoped_boundaries_remain_intact(self) -> None:
         for marker in (
             "request.translationContext.promptSection()",
             "request.translationContext.compactPromptSection()",
@@ -121,17 +124,17 @@ class JapaneseMinimalFallbackContractTests(unittest.TestCase):
             ["3.386", "3.386"],
         )
         for marker in (
-            "scripts/test-v3384-japanese-prompt-shape-contract.py",
             "scripts/test-v3385-japanese-minimal-fallback-contract.py",
+            "scripts/test-v3386-japanese-chinese-prompt-contract.py",
             "japanese-benchmark-v3.386-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
-        for marker in ("v3.386", "test/2.png", "小模型", "最小", "prompt"):
+        for marker in ("v3.386", "test/2.png", "小模型", "中文", "prompt"):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
     def test_contract_has_no_local_process_or_build_entrypoint(self) -> None:
-        source = read("scripts/test-v3385-japanese-minimal-fallback-contract.py")
+        source = read("scripts/test-v3386-japanese-chinese-prompt-contract.py")
         for forbidden in (
             "subprocess" + ".run(",
             "subprocess" + ".Popen(",
