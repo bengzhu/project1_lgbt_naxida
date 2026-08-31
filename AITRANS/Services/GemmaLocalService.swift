@@ -811,6 +811,8 @@ struct GemmaLocalService: LocalLanguageModeling {
             "译文如下",
             "翻译结果",
             "译文",
+            "Here are the translations",
+            "Here is the translation",
             "Translations",
             "Translation"
         ]
