@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.374 manga batch preamble recovery."""
+"""Static and pure-policy contract for v3.377 inline manga batch preambles."""
 
 from __future__ import annotations
 
@@ -75,6 +75,21 @@ def is_known_preamble_line(value: str) -> bool:
     return any(candidate == folded(marker) for marker in KNOWN_PREAMBLES)
 
 
+def is_tagged_payload(value: str) -> bool:
+    return re.match(r"^\[\d+\]", value) is not None
+
+
+def inline_tagged_line(value: str) -> str | None:
+    try:
+        bracket = value.index("[")
+    except ValueError:
+        return None
+    if not is_known_preamble_line(value[:bracket]):
+        return None
+    payload = value[bracket:].strip()
+    return payload if is_tagged_payload(payload) else None
+
+
 def strip_leading_manga_batch_preamble(value: str) -> str:
     lines = value.split("\n")
     cursor = 0
@@ -86,6 +101,11 @@ def strip_leading_manga_batch_preamble(value: str) -> str:
             continue
         if trimmed.startswith("["):
             break
+        inline = inline_tagged_line(trimmed)
+        if inline is not None:
+            lines[cursor] = inline
+            removed_preamble = True
+            break
         if not is_known_preamble_line(trimmed):
             return value
         removed_preamble = True
@@ -95,7 +115,7 @@ def strip_leading_manga_batch_preamble(value: str) -> str:
     return "\n".join(lines[cursor:]).strip()
 
 
-class TranslationBatchPreambleContractTests(unittest.TestCase):
+class TranslationBatchInlinePreambleContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
@@ -118,62 +138,74 @@ class TranslationBatchPreambleContractTests(unittest.TestCase):
             cls.gemma,
             "private func cleanMangaBlockOutput(\n",
         )
+        cls.inline = function_body(
+            cls.gemma,
+            "private func inlineMangaBatchTaggedLine(from line: String)",
+        )
         cls.preamble = function_body(
             cls.gemma,
             "private func stripLeadingMangaBatchPreamble(from value: String)",
         )
 
-    def test_known_preambles_are_removed_without_touching_tag_payload(self) -> None:
+    def test_known_inline_preambles_preserve_the_first_tag_and_payload(self) -> None:
         cases = {
-            "以下是翻译：\n[1] 你好。\n[2] 世界。": "[1] 你好。\n[2] 世界。",
-            "Translation:\n\n[1] Hello.": "[1] Hello.",
-            "You are a translation engine.\nOutput only\n[1] 你好。": "[1] 你好。",
-            "ＴＲＡＮＳＬＡＴＩＯＮ：\n[1] 你好。": "[1] 你好。",
+            "Translation: [1] 你好。\n[2] 世界。": "[1] 你好。\n[2] 世界。",
+            "以下是翻译：[1] 你好。\n[2] 世界。": "[1] 你好。\n[2] 世界。",
+            "You are a translation engine. [1] 你好。": "[1] 你好。",
+            "ＴＲＡＮＳＬＡＴＩＯＮ： [1] 你好。": "[1] 你好。",
         }
         for raw, expected in cases.items():
             with self.subTest(raw=raw):
                 self.assertEqual(strip_leading_manga_batch_preamble(raw), expected)
 
-    def test_unknown_prefix_is_not_partially_sanitized(self) -> None:
-        unknown = "The answer is:\n[1] 你好。"
-        self.assertEqual(strip_leading_manga_batch_preamble(unknown), unknown)
-        mixed = "Translation:\nThe answer is:\n[1] 你好。"
-        self.assertEqual(strip_leading_manga_batch_preamble(mixed), mixed)
-
-    def test_preamble_after_first_tag_and_tag_order_remain_untouched(self) -> None:
-        tagged = "[1] 翻译如下：\n[2] 你好。"
-        self.assertEqual(strip_leading_manga_batch_preamble(tagged), tagged)
+    def test_known_standalone_and_inline_preambles_can_be_chained(self) -> None:
+        raw = "Translation:\nOutput only: [1] 一\n[2] 二"
         self.assertEqual(
-            strip_leading_manga_batch_preamble("Translation:\n[2] 二\n[1] 一"),
-            "[2] 二\n[1] 一",
+            strip_leading_manga_batch_preamble(raw),
+            "[1] 一\n[2] 二",
         )
 
-    def test_cleaner_sanitizes_only_before_existing_first_tag_guard(self) -> None:
-        preamble_index = self.cleaner.index(
-            "text = stripLeadingMangaBatchPreamble(from: text)"
-        )
+    def test_unknown_inline_prefix_is_not_partially_sanitized(self) -> None:
+        for value in (
+            "The answer is: [1] 你好。",
+            "Translation:\nThe answer is: [1] 你好。",
+            "Translation with extra prose: [1] 你好。",
+        ):
+            with self.subTest(value=value):
+                self.assertEqual(strip_leading_manga_batch_preamble(value), value)
+
+    def test_first_tag_payload_is_never_treated_as_a_preamble(self) -> None:
+        tagged = "[1] Translation: 你好。\n[2] 世界。"
+        self.assertEqual(strip_leading_manga_batch_preamble(tagged), tagged)
+
+    def test_cleaner_keeps_inline_recovery_before_the_existing_first_tag_guard(self) -> None:
         expected_ids_index = self.cleaner.index("let expectedIDs =")
         first_tag_index = self.cleaner.index("matchesFirstTagAtStart(in: text)")
-        self.assertLess(preamble_index, expected_ids_index)
-        self.assertLess(preamble_index, first_tag_index)
+        self.assertIn(
+            "if let inlineTaggedLine = inlineMangaBatchTaggedLine(from: trimmed)",
+            self.preamble,
+        )
+        self.assertIn("text = stripLeadingMangaBatchPreamble(from: text)", self.cleaner)
+        self.assertLess(
+            self.cleaner.index("text = stripLeadingMangaBatchPreamble(from: text)"),
+            expected_ids_index,
+        )
+        self.assertLess(expected_ids_index, first_tag_index)
         for marker in (
-            "private func stripLeadingMangaBatchPreamble(from value: String)",
+            "lines[cursor] = inlineTaggedLine",
+            "private func inlineMangaBatchTaggedLine(from line: String)",
             "private func isKnownMangaBatchPreambleLine(_ line: String)",
-            "guard isKnownMangaBatchPreambleLine(trimmed) else",
-            "return value",
+            "NSRegularExpression(pattern: #\"^\\[\\d+\\]\"#)",
             "text.first == \"[\"",
         ):
             self.assertIn(marker, self.gemma)
 
-    def test_known_preamble_vocabulary_is_narrow_and_marker_cleanup_is_local(self) -> None:
-        for marker in KNOWN_PREAMBLES:
-            self.assertIn(f'"{marker}"', self.gemma)
-        self.assertIn(".punctuationCharacters", self.gemma)
-        self.assertIn(".widthInsensitive", self.gemma)
-        self.assertIn("Do not partially sanitize an unknown prefix", self.preamble)
-        self.assertIn("TranslationBatchQualityEvaluator.evaluate(", self.store)
-        self.assertIn("translateJapaneseImageBlockWithQA(", self.store)
-        self.assertIn("translationProfile: .mangaBlocks", self.store)
+    def test_inline_helper_requires_known_prefix_and_numeric_tag(self) -> None:
+        self.assertIn("let prefix = String(line[..<bracket])", self.inline)
+        self.assertIn("isKnownMangaBatchPreambleLine(prefix)", self.inline)
+        self.assertIn("let taggedPayload = String(line[bracket...])", self.inline)
+        self.assertIn("NSRegularExpression", self.inline)
+        self.assertIn("return taggedPayload", self.inline)
 
     def test_batch_parser_and_qa_boundaries_remain_strict(self) -> None:
         parser = function_body(
@@ -188,26 +220,27 @@ class TranslationBatchPreambleContractTests(unittest.TestCase):
             "throw ImageMangaBatchTranslationError.unexpectedTags",
         ):
             self.assertIn(marker, parser)
-        self.assertIn("recognizedOutputParts.allSatisfy", self.cleaner)
-        self.assertIn("let expectedIDs = blocks.indices.map { startIndex + $0 + 1 }", self.store)
+        self.assertIn("TranslationBatchQualityEvaluator.evaluate(", self.store)
+        self.assertIn("translationProfile: .mangaBlocks", self.store)
+        self.assertIn("targetLanguageDensity", self.context)
 
     def test_version_workflow_docs_and_fixture_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
             ["3.377", "3.377"],
         )
-        previous = "python3 -B scripts/test-v3373-translation-term-width-qa-contract.py"
-        current = "python3 -B scripts/test-v3374-translation-batch-preamble-contract.py"
+        previous = "python3 -B scripts/test-v3376-translation-metadata-content-boundary-contract.py"
+        current = "python3 -B scripts/test-v3377-translation-batch-inline-preamble-contract.py"
         self.assertIn(previous, self.workflow)
         self.assertIn(current, self.workflow)
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         combined = self.workflow + self.docs
-        for marker in (current, "v3.374", "japanese-benchmark-v3.374-"):
+        for marker in (current, "v3.377", "japanese-benchmark-v3.377-"):
             self.assertIn(marker, combined)
         self.assertFalse((ROOT / "test/3.png").exists())
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:
-        contract = read("scripts/test-v3374-translation-batch-preamble-contract.py")
+        contract = read("scripts/test-v3377-translation-batch-inline-preamble-contract.py")
         for source in (self.gemma, self.store, self.context, contract):
             self.assertNotIn("sub" + "process", source)
             self.assertNotIn("xcode" + "build", source)

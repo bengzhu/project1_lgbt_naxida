@@ -2010,3 +2010,7 @@ python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
 - 未经人工明确要求，不因为 Swift 代码变化就在本机默认跑 Xcode build 或完整漫画探针。
 - 漫画探针或翻译链路修改后，最终回复必须汇总关键数字。
 - 如果 clean text 仍失败，优先讨论模型质量，不要继续盲目调 OCR 或放宽规则。
+
+### v3.377 translation batch inline preamble（研发中）
+
+新增纯静态合同 `scripts/test-v3377-translation-batch-inline-preamble-contract.py`：验证已知翻译前导词与首个 `[N]` 标签同一行时只剥离明确前缀并保留标签/正文；独立行前导、未知前缀、标签顺序/完整性、逐块 QA、OCR、geometry/layout、预算、逐块回退、取消、持久化和非日语路径仍保持原边界。工程版本 `3.377`，CI 已接入；候选 full 与合入 receipt 待验证。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。

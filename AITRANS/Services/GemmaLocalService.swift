@@ -451,7 +451,7 @@ struct GemmaLocalService: LocalLanguageModeling {
     }
 
     private func stripLeadingMangaBatchPreamble(from value: String) -> String {
-        let lines = value.components(separatedBy: "\n")
+        var lines = value.components(separatedBy: "\n")
         var cursor = 0
         var removedPreamble = false
 
@@ -463,6 +463,14 @@ struct GemmaLocalService: LocalLanguageModeling {
                 continue
             }
             if trimmed.hasPrefix("[") {
+                break
+            }
+            if let inlineTaggedLine = inlineMangaBatchTaggedLine(from: trimmed) {
+                // Some small models put a harmless known label and the first
+                // tag on one line. Remove only that exact prefix and keep the
+                // tag plus its payload addressable by the existing parser.
+                lines[cursor] = inlineTaggedLine
+                removedPreamble = true
                 break
             }
             guard isKnownMangaBatchPreambleLine(trimmed) else {
@@ -478,6 +486,26 @@ struct GemmaLocalService: LocalLanguageModeling {
         return lines.dropFirst(cursor)
             .joined(separator: "\n")
             .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func inlineMangaBatchTaggedLine(from line: String) -> String? {
+        guard let bracket = line.firstIndex(of: "[") else { return nil }
+        let prefix = String(line[..<bracket])
+        guard isKnownMangaBatchPreambleLine(prefix) else { return nil }
+
+        let taggedPayload = String(line[bracket...])
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let regex = try? NSRegularExpression(pattern: #"^\[\d+\]"#),
+              regex.firstMatch(
+                  in: taggedPayload,
+                  range: NSRange(
+                      location: 0,
+                      length: (taggedPayload as NSString).length
+                  )
+              ) != nil else {
+            return nil
+        }
+        return taggedPayload
     }
 
     private func isKnownMangaBatchPreambleLine(_ line: String) -> Bool {
