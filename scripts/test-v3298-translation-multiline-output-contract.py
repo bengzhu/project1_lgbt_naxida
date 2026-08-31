@@ -153,7 +153,7 @@ class TranslationMultilineOutputContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.375", "3.375"],
+            ["3.376", "3.376"],
         )
 
     def test_contract_and_product_source_have_no_process_entry(self) -> None:

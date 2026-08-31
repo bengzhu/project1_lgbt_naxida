@@ -762,6 +762,10 @@ struct GemmaLocalService: LocalLanguageModeling {
             "预设提示词",
             "输出风格"
         ]
+        let contentSensitiveLineLeakMarkers = [
+            "translation engine",
+            "输出风格"
+        ]
         let translationLabelMarkers = [
             "以下是翻译",
             "翻译如下",
@@ -783,6 +787,36 @@ struct GemmaLocalService: LocalLanguageModeling {
             return before.isEmpty
         }
 
+        // These two phrases can also be the opening words of legitimate
+        // translated prose. Treat them as metadata only when they stand
+        // alone or are followed by punctuation; explicit instruction markers
+        // remain removable even when their line carries an instruction.
+        func isPromptMetadataLine(_ line: String, marker: String) -> Bool {
+            guard isPromptMarkerAtLineStart(line, marker: marker) else {
+                return false
+            }
+            guard contentSensitiveLineLeakMarkers.contains(where: { candidate in
+                candidate.compare(
+                    marker,
+                    options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+                ) == .orderedSame
+            }) else {
+                return true
+            }
+            guard let range = line.range(
+                of: marker,
+                options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+            ) else {
+                return false
+            }
+            let suffix = String(line[range.upperBound...])
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let firstScalar = suffix.unicodeScalars.first else {
+                return true
+            }
+            return CharacterSet.punctuationCharacters.contains(firstScalar)
+        }
+
         lines.removeAll { line in
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             let bulletBody = trimmed.hasPrefix("- ")
@@ -791,7 +825,7 @@ struct GemmaLocalService: LocalLanguageModeling {
             let isMetadataBullet = trimmed.hasPrefix("- ")
                 && (bulletBody.isEmpty
                     || lineLeakMarkers.contains { marker in
-                        isPromptMarkerAtLineStart(bulletBody, marker: marker)
+                        isPromptMetadataLine(bulletBody, marker: marker)
                     })
             let isTranslationLabelOnly = translationLabelMarkers.contains { marker in
                 guard let range = trimmed.range(
@@ -809,7 +843,7 @@ struct GemmaLocalService: LocalLanguageModeling {
             return isMetadataBullet
                 || (trimmed.hasPrefix("|") && trimmed.hasSuffix("|"))
                 || lineLeakMarkers.contains { marker in
-                    isPromptMarkerAtLineStart(trimmed, marker: marker)
+                    isPromptMetadataLine(trimmed, marker: marker)
                 }
                 || isTranslationLabelOnly
         }
