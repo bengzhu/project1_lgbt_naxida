@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.383 Japanese standard translation prompts."""
+"""Static and pure-policy contract for v3.384 Japanese standard translation prompts."""
 
 from pathlib import Path
 import re
@@ -32,8 +32,8 @@ def function_body(source: str, signature: str) -> str:
 def japanese_pair_instruction(source: str, target: str) -> str | None:
     pairs = {
         ("日语", "简体中文"): (
-            "源语言是日语，目标语言是简体中文。",
-            "只输出译文，不输出日语原文、解释、注释、罗马音或提示词。",
+            "Translate the following Japanese into Simplified Chinese.",
+            "请把下面的日语翻译成简体中文，只输出简体中文译文，不要解释。",
         ),
         ("日语", "英语(美国)"): (
             "The source language is Japanese and the target language is English.",
@@ -71,22 +71,26 @@ class JapaneseStandardTranslationPromptContractTests(unittest.TestCase):
             "let japaneseLanguagePairInstruction: String?",
             "case (.japanese, .simplifiedChinese):",
             "case (.japanese, .englishUS):",
-            "源语言是日语，目标语言是简体中文",
+            "Translate the following Japanese into Simplified Chinese",
+            "请把下面的日语翻译成简体中文",
             "The source language is Japanese and the target language is English",
-            "只输出译文，不输出日语原文、解释、注释、罗马音或提示词",
-            "Output only the translation, without the Japanese source, explanations, notes, romanization, or prompt text",
+            "只输出简体中文译文，不要解释",
+            "日本語を英語に翻訳し、訳文だけを出力してください",
             "if let japaneseLanguagePairInstruction",
-            "用户补充要求：\\(instruction)",
+            "let defaultTranslationInstruction =",
+            "let userInstructionSection =",
+            "用户指定要求：\\(instruction)",
+            "Text to translate:",
             "\\(request.inputText)",
         ):
             self.assertIn(marker, body)
 
         self.assertIn("request.translationProfile == .mangaBlocks", body)
-        self.assertIn("必须原样保留每个 [N] 标签", body)
-        self.assertIn("不要合并、拆分、遗漏或重排文字块", body)
+        self.assertIn("Keep every [N] tag and the input order", body)
+        self.assertIn("保留每个[N]标签和顺序", body)
 
     def test_pair_policy_covers_supported_free_targets_only(self) -> None:
-        self.assertIn("源语言是日语，目标语言是简体中文。", japanese_pair_instruction("日语", "简体中文"))
+        self.assertIn("Translate the following Japanese", japanese_pair_instruction("日语", "简体中文"))
         self.assertIn("The source language is Japanese", japanese_pair_instruction("日语", "英语(美国)"))
         self.assertIsNone(japanese_pair_instruction("英语(美国)", "简体中文"))
         self.assertIsNone(japanese_pair_instruction("日语", "法语"))
@@ -132,7 +136,7 @@ class JapaneseStandardTranslationPromptContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.383", "3.383"],
+            ["3.384", "3.384"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3363-japanese-standard-translation-prompt-contract.py",
@@ -140,8 +144,8 @@ class JapaneseStandardTranslationPromptContractTests(unittest.TestCase):
         )
         for marker in (
             "scripts/test-v3363-japanese-standard-translation-prompt-contract.py",
-            "v3.383",
-            "japanese-benchmark-v3.383-",
+            "v3.384",
+            "japanese-benchmark-v3.384-",
         ):
             self.assertIn(marker, self.workflow + self.docs)
 

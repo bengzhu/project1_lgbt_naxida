@@ -105,13 +105,13 @@ class JapaneseKoharuBatchTranslationContractTests(unittest.TestCase):
 
     def test_koharu_prompt_preserves_manga_voice_and_block_boundaries(self) -> None:
         for marker in [
-            "你是专业的漫画翻译器",
-            "只翻译每个编号后面的文字",
-            "原样保留每个 [N] 标签",
-            "不要合并、拆分、遗漏或重排",
-            "角色语气、情绪、关系、强调和拟声词",
-            "不要输出解释、注释、罗马音",
-            "每个标签单独一行",
+            "Translate each \\(request.sourceLanguage.rawValue) text block",
+            "请逐个翻译下面的",
+            "Keep every [N] tag and the input order",
+            "保留每个[N]标签和顺序",
+            "保留语气、数字、专有名词和标点",
+            "不要解释、注释或罗马音",
+            "Text to translate",
             "request.translationProfile == .mangaBlocks",
             "cleanMangaBlockOutput",
         ]:

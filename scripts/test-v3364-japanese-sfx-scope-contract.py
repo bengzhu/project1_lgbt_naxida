@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.383 scoped Japanese SFX hints."""
+"""Static and pure-policy contract for v3.384 scoped Japanese SFX hints."""
 
 from __future__ import annotations
 
@@ -121,7 +121,8 @@ class JapaneseSFXScopeContractTests(unittest.TestCase):
         )
         for marker in (
             "request.translationProfile == .mangaBlocks",
-            "必须原样保留每个 [N] 标签",
+            "Keep every [N] tag and the input order",
+            "保留每个[N]标签和顺序",
             "拟声词/状态字",
             "不补写主语或解释动作",
             "\\(request.inputText)",
@@ -131,13 +132,13 @@ class JapaneseSFXScopeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.383", "3.383"],
+            ["3.384", "3.384"],
         )
         for marker in (
             "python3 -B scripts/test-v3364-japanese-sfx-scope-contract.py",
             "scripts/test-v3364-japanese-sfx-scope-contract.py",
-            "v3.383",
-            "japanese-benchmark-v3.383-",
+            "v3.384",
+            "japanese-benchmark-v3.384-",
         ):
             self.assertIn(marker, self.workflow + self.docs)
 
