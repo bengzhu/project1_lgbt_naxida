@@ -129,8 +129,8 @@ class KoharuLineOwnerBoundaryContractTests(unittest.TestCase):
         )
         self.assertNotIn("verticalTextRegionOwner", translation_block)
         final_mapping = self.vision[
-            self.vision.index("return ImageOCRLayoutEngine.layout(") :
-            self.vision.index("return try await task.value")
+            self.vision.index("let laidOutBlocks = { () -> [ImageTranslationBlock] in") :
+            self.vision.index("let blocks = sourceLanguage == .japanese")
         ]
         self.assertNotIn("verticalTextRegionOwner:", final_mapping)
 

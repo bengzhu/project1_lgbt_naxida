@@ -15,12 +15,14 @@ def read(relative_path: str) -> str:
 
 class V189PasteManualMatrixContractTests(unittest.TestCase):
     def test_manual_matrix_is_documented(self) -> None:
-        test_md = read("md/test/test.md")
-        self.assertIn("### 0.3 v1.89 人工交互与 a11y 矩阵", test_md)
+        update_log = read("md/log/update_log.md")
+        current_test_policy = read("md/test/test.md")
+        self.assertIn("### 0.3 v1.89 人工交互与 a11y 矩阵", update_log)
         for marker in ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "空剪贴板", "换行追加", "VoiceOver", "wide-iPad"]:
             with self.subTest(marker=marker):
-                self.assertIn(marker, test_md)
-        self.assertIn("不得把未勾选项写成已验证", test_md)
+                self.assertIn(marker, update_log)
+        self.assertIn("不得把未勾选项写成已验证", update_log)
+        self.assertNotIn("### 0.3 v1.89 人工交互与 a11y 矩阵", current_test_policy)
 
     def test_debug_paste_inject_is_click_scoped_and_release_safe(self) -> None:
         source = read("AITRANS/Views/TextTranslationView.swift")

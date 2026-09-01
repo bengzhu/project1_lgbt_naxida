@@ -6051,6 +6051,25 @@ post-merge 验收：CI Results run `29229554065` 与 Build IPA run `29229554033`
 - `scripts/capture-ui-evidence.sh` 在 11 张 compact-iPhone 之外新增 1 张 `wide-iPad` 文本空态运行态证据（共 12 张）。
 - 新增 `scripts/test-v189-paste-manual-matrix-contract.py`；CI 对 `codeb/v1.89-*` 开启 UI evidence，JUnit / manifest 增加 v1.89 contract 字段。
 
+### 0.3 v1.89 人工交互与 a11y 矩阵
+
+这份矩阵属于 v1.89 历史验收记录，当前测试制度见 [`md/test/test.md`](../test/test.md)。CI 的 v1.88 home UI contract、v1.89 paste/matrix contract 与 12 张 UI evidence（11 张 compact-iPhone + 1 张 wide-iPad）不能替代本矩阵的 M1–M6；Agent C 不得把未勾选项写成已验证。
+
+| ID | 场景 | 期望 | 人工勾选 |
+|---|---|---|---|
+| M1 | 空剪贴板点「粘贴」 | 已有输入保留，不崩，不自动翻译；不得以 `isEnabled == false` 作为唯一标准 | [ ] |
+| M2 | 空输入 + 有文本剪贴板 | 直接填入，状态仍等待翻译 / 不自动 `submitDraft` | [ ] |
+| M3 | 非空输入再粘贴 | 换行追加，不覆盖已有内容 | [ ] |
+| M4 | keyboard toolbar「完成」 | 一次点击收起键盘 | [ ] |
+| M5 | 点「翻译」 | 先失焦再 `store.submitDraft()` | [ ] |
+| M6 | VoiceOver / 标签 | 粘贴、翻译、交换语言、完成与关键状态可读 | [ ] |
+| M7 | 标准字号 + 键盘关闭 | 首屏完整可见中文「粘贴」与「翻译」，无固定 48pt 外部净空 | [ ] |
+| M8 | XXL / Accessibility 或输入聚焦 | 48pt 外部净空，浮动 Tab 不遮挡输入与主按钮；键盘「完成」可见 | [ ] |
+
+宽屏证据：`scripts/capture-ui-evidence.sh` 必须额外产出 `wide-iPad` / `text-empty-wide-ipad-day.png` 运行态截图；Preview 的 iPad landscape 状态不冒充运行态。
+
+DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 为空，DEBUG 构建可回退 `AITRANS_UI_TEST_PASTE_TEXT` 环境变量或 `-AITRANS_UI_TEST_PASTE_TEXT <text>` launch argument。Release 无注入；禁止 lifecycle / 后台读剪贴板；禁止把系统 `PasteButton` 换成普通 Button。
+
 关键文件：
 
 - `AITRANS/Views/TextTranslationView.swift`
