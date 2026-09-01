@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.388's Japanese raw-completion translation fallback."""
+"""Static contract for v3.389's Japanese raw-completion translation fallback."""
 
 from __future__ import annotations
 
@@ -53,14 +53,14 @@ class JapaneseRawCompletionContractTests(unittest.TestCase):
             )
         )
 
-    def test_raw_completion_precedes_chat_fallback_and_reuses_qa(self) -> None:
+    def test_chat_candidates_precede_raw_fallback_and_reuse_qa(self) -> None:
         body = function_body(
             self.gemma,
             "private func generateTranslation(for request: ModelGenerationRequest)",
         )
-        raw_start = body.index("japaneseRawCompletionPrompt(for: request)")
         chat_start = body.index("translationMessages(for: request)")
-        self.assertLess(raw_start, chat_start)
+        raw_start = body.index("japaneseRawCompletionPrompt(for: request)")
+        self.assertLess(chat_start, raw_start)
         for marker in (
             "Self.runtime.generateRaw(",
             "decodingProfile: .sampled",
@@ -123,17 +123,17 @@ class JapaneseRawCompletionContractTests(unittest.TestCase):
             self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         for marker in (
             "scripts/test-v3387-japanese-bare-prompt-contract.py",
             "scripts/test-v3388-japanese-raw-completion-contract.py",
-            "japanese-benchmark-v3.388-",
+            "japanese-benchmark-v3.389-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
         for marker in (
-            "v3.388",
+            "v3.389",
             "test/2.png",
             "原始补全",
             "raw-completion",

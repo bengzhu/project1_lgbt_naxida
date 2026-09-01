@@ -236,7 +236,7 @@ class JapaneseConfidenceTotalOrderContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         combined = self.workflow + self.flow + self.route + self.test_log + self.update_log
         for marker in (

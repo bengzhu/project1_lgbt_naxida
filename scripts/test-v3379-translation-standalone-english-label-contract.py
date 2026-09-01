@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.388 standalone English labels."""
+"""Static and pure-policy contract for v3.389 standalone English labels."""
 
 from __future__ import annotations
 
@@ -178,7 +178,7 @@ class TranslationStandaloneEnglishLabelContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_missing_fixture_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         previous = "python3 -B scripts/test-v3378-translation-leading-label-boundary-contract.py"
         current = "python3 -B scripts/test-v3379-translation-standalone-english-label-contract.py"
@@ -186,7 +186,7 @@ class TranslationStandaloneEnglishLabelContractTests(unittest.TestCase):
         self.assertIn(current, self.workflow)
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         combined = self.workflow + self.docs
-        for marker in (current, "v3.388", "japanese-benchmark-v3.388-"):
+        for marker in (current, "v3.389", "japanese-benchmark-v3.389-"):
             self.assertIn(marker, combined)
         self.assertFalse((ROOT / "test/3.png").exists())
 

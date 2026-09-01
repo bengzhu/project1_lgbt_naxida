@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.388 Japanese prompt shape for the small local GGUF."""
+"""Static contract for v3.389 Japanese prompt shape for the small local GGUF."""
 
 from __future__ import annotations
 
@@ -120,17 +120,17 @@ class JapanesePromptShapeContractTests(unittest.TestCase):
             self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         for marker in (
             "scripts/test-v3383-japanese-standard-compact-context-contract.py",
             "scripts/test-v3384-japanese-prompt-shape-contract.py",
-            "japanese-benchmark-v3.388-",
+            "japanese-benchmark-v3.389-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
         for marker in (
-            "v3.388",
+            "v3.389",
             "test/2.png",
             "小模型",
             "prompt",

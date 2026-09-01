@@ -210,7 +210,7 @@ class JapaneseLineCoverageSourceBoundaryContractTests(unittest.TestCase):
             self.assertNotIn(marker, contract)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         combined = self.workflow + self.docs
         for marker in (

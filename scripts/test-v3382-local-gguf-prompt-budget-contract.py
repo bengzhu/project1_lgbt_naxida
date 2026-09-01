@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.388 local GGUF prompt budgeting."""
+"""Static contract for v3.389 local GGUF prompt budgeting."""
 
 from __future__ import annotations
 
@@ -133,16 +133,16 @@ class LocalGGUFPromptBudgetContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         for marker in (
             "scripts/test-v3382-local-gguf-prompt-budget-contract.py",
-            "japanese-benchmark-v3.388-",
+            "japanese-benchmark-v3.389-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
         for marker in (
-            "v3.388",
+            "v3.389",
             "test/2.png",
             "compact",
             "1,024-token",

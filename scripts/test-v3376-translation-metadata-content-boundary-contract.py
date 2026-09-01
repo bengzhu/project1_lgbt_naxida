@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.388 translation metadata content boundaries."""
+"""Static and pure-policy contract for v3.389 translation metadata content boundaries."""
 
 from __future__ import annotations
 
@@ -230,13 +230,13 @@ class TranslationMetadataContentBoundaryContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         combined = self.workflow + self.docs
         for marker in (
             "scripts/test-v3376-translation-metadata-content-boundary-contract.py",
-            "v3.388",
-            "japanese-benchmark-v3.388-",
+            "v3.389",
+            "japanese-benchmark-v3.389-",
         ):
             self.assertIn(marker, combined)
 

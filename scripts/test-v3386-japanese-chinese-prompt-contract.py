@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.388's Chinese-shaped Japanese GGUF fallback."""
+"""Static contract for v3.389's Chinese-shaped Japanese GGUF fallback."""
 
 from __future__ import annotations
 
@@ -121,16 +121,16 @@ class JapaneseChinesePromptContractTests(unittest.TestCase):
             self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         for marker in (
             "scripts/test-v3385-japanese-minimal-fallback-contract.py",
             "scripts/test-v3386-japanese-chinese-prompt-contract.py",
-            "japanese-benchmark-v3.388-",
+            "japanese-benchmark-v3.389-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
-        for marker in ("v3.388", "test/2.png", "小模型", "中文", "prompt"):
+        for marker in ("v3.389", "test/2.png", "小模型", "中文", "prompt"):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
     def test_contract_has_no_local_process_or_build_entrypoint(self) -> None:
