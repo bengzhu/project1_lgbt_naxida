@@ -1,3 +1,9 @@
+## CI task-scoped 范围复盘（2026-09-01）
+
+复盘 v3.390 OCR 候选与 test2 运行后确认：有测试范围浪费，但 v1.88/v1.89 不是主要耗时，它们本身约 1 秒。候选 full [33483510941](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33483510941) 共 15m57s，其中 UI interaction 合同 8m33s，串行执行 306 个命令（286 个 Python 合同、20 个 runtime），Xcode build 4m43s，静态检查 1m34s；test2 [33485166409](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33485166409) 共 17m12s，除 test2 自身构建 4m58s、OCR/翻译运行 6m02s 外，聚合 CI 又执行 UI 合同 7m22s、重复 Xcode build 3m22s 和通用 UI 截图 5m，截图还因键盘截图空白失败。
+
+结论是 v1.88/v1.89 只是现有全局回归路由，不是 v3.390 OCR 的功能依赖。测试规范和 CI 索引现明确 `task-scoped`、`runtime-evidence`、`full-regression` 三层；要求每轮记录 `baseline/direct/optional/skipped + reason`，并规定 OCR overlay、普通图片翻译、通用 UI evidence 分开选择。历史合同全量只由显式 full-regression/nightly/release 或失败调查触发；本次只更新 `md/` 文档，未修改 workflow、未等待 CI。
+
 ## 协作流程：人工步进与 Agent X 托管边界（2026-09-01）
 
 - A/B/C 明确为人工步进模式：A 写提示词，B 建候选分支实现并触发 CI，C 独立验收后创建 PR、合并和清理分支。

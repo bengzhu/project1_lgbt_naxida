@@ -29,16 +29,25 @@ docs-only     -> 父 receipt 成功时可传播；否则不能掩盖代码未验
 - `ui_evidence_mode=full`、`probe_mode=ci-fast/full`、Koharu artifact 注入和 test2 workflow 都是显式成本边界；默认 push 不启动探针。
 - 本机默认不跑 `xcodebuild`、`swiftc`/Swift evaluator、Core ML、Rust/Cargo、GGUF 或 App runtime；除非人工明确要求。
 
+## CI 成本护栏
+
+- 候选开发的 `full` 是当前任务的 task-scoped full，不是所有历史 `scripts/test-v*.py` 的 full-regression；历史全量只由显式 release/nightly/兼容性调查触发。
+- v1.88 只服务首页/文本翻译 UI 及其共享边界，v1.89 只服务粘贴/手动输入矩阵及其共享边界；OCR-only 任务默认跳过两者。版本号相近或同属 UI 不能构成依赖。
+- `workflow_changed` 只能触发 workflow/receipt 路由检查和受影响领域直接合同，不能自动打开历史 UI 串、v1.88/v1.89、Speech、Koharu 或通用截图。
+- test2 的 OCR overlay、普通图片翻译和通用 UI evidence 是独立 runtime 目标；`ui_evidence_mode=full` 不能作为 test2/OCR overlay 的代理开关。
+- 同一 SHA 和同一验证意图已有 build receipt 时，不重复跑 Xcode build；聚合入口若无法拆分，必须在 scope receipt 中标记 route gap 和重复成本。
+- 每次 CI/手动 dispatch 都要保留 `baseline/direct/optional/skipped + reason`。聚合 job 被动执行的步骤只能标为非直接证据，不能冒充当前任务的必要测试。
+
 ## 按本次改动选择范围
 
 这里是给 Agent 的 task-scoped 路由，不是对 workflow 的修改。先计算 `git diff --name-only <base>...HEAD`，再生成唯一的 `baseline + direct + optional` 清单：
 
-- 所有变更：`git diff --check`；需要云端路由/版本身份时加 v1.94/v1.97 合同。
+- 所有变更：`git diff --check`；只有确实改变对应路由、版本身份或共享边界时，才增加相应合同。
 - App Swift、Xcode 工程、Info.plist、bundle 资源或构建依赖：基础 simulator `xcodebuild` + 变更所属领域的直接合同。
-- OCR/layout、翻译/context/QA、Speech、UI/Store：只跑对应主题合同和一个最近共享边界合同；共享状态/协议变更才向相邻主题扩展。
+- OCR/layout、翻译/context/QA、Speech、UI/Store：只跑对应主题合同和一个最近共享边界合同；共享状态/协议变更才向相邻主题扩展。v3.390 OCR-only 另行产出 overlay 时，不启动 LLM 翻译或通用 UI 截图。
 - `scripts/`、`benchmarks/`、schema/fixture：只跑本次修改脚本、直接依赖和对应 evaluator/schema smoke；没有 App 接线变化就跳过 Xcode。
 - `md/`、README、AGENTS、update_log、metrics：做链接/路径/必要格式检查；父 full receipt 成功才允许 metadata fast，缺失或失败则不能掩盖代码验证缺口。
-- `test/2.png` OCR/翻译截图、test2 UI、Koharu/GGUF、授权语料和目标设备都是显式 `optional`，不因普通 OCR/翻译代码变更自动开启。
+- `test/2.png` OCR/翻译截图、test2 UI、Koharu/GGUF、授权语料和目标设备都是显式 `optional`，不因普通 OCR/翻译代码变更自动开启；overlay 需要时只选择对应 runtime artifact。
 - 大版本用户视角体验验证是独立的 post-merge gate；它使用 `test/experience/latest/`，不读取旧轮次 artifact，也不把静态合同、旧截图或旧 build 当作体验证据。
 
 候选核心代码仍使用 `full`，但 full 只包含上述必要范围；PR/merge fast 只复用 exact-SHA full receipt。失败后只重跑失败项与修复影响范围，不恢复历史全量合同。
