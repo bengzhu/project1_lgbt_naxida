@@ -45,6 +45,7 @@
 | 术语记忆、跨 batch context、标签、逐块翻译 QA、源文泄漏 | [`翻译 QA/context`](index-translation/index-translation-qa.md) |
 | 音频录音、Apple Speech、取消、CER/WER、corpus | [`语音运行`](index-speech/index-speech-runtime.md)、[`语音质量`](index-speech/index-speech-quality.md) |
 | 合同、评估器、fixture、benchmark、holdout、CI profile | [`合同目录`](index-validation/index-validation-contracts.md)、[`基准`](index-validation/index-validation-benchmarks.md)、[`CI`](index-validation/index-validation-ci.md) |
+| 大版本体验验证、自迭代、首次使用、操作日志 | [`体验验证流程`](../flow/experience-iteration.md)、[`体验状态`](../../experience_state.md) |
 | Core ML 资源、词表、工程版本、target membership、bundle | [`资源与工程`](index-assets/index-assets.md)、[`完整文件图`](index-assets/index-assets-file-map.md) |
 
 ## 当前主数据流
@@ -71,6 +72,8 @@ AITRANSApp
 - [`md/flow/flow.md`](../flow/flow.md)：当前完整架构、跨层流程和时序关系。
 - [`md/flow/flowchart.md`](../flow/flowchart.md)：人工查看的流程图；不替代源码索引。
 - [`md/test/test.md`](../test/test.md)：测试制度、版本合同历史和验证选择依据。
+- [`md/flow/experience-iteration.md`](../flow/experience-iteration.md)：大版本首次使用体验闸门、操作日志和产物边界。
+- [`experience_state.md`](../../experience_state.md)：当前版本、上轮体验结论、未解决问题和下一步；只保留一份精简状态。
 - [`update_log.md`](../../update_log.md)：版本决策、证据和遗留问题；不复制到索引。
 - [`md/prompt/`](../prompt/)：版本化 Agent A 任务 prompt；不作为当前源码结构的权威来源。
 - [`README.md`](../../README.md)：项目使用说明和稳定规则，不承担代码路由。

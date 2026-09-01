@@ -18,6 +18,7 @@
 | benchmark evaluator | [`scripts/evaluate-*.py`](../../../scripts/) | OCR/translation/corpus evaluator |
 | cloud smoke | [`scripts/run-*.sh`](../../../scripts/) | 云端依赖/外部 artifact 路径 |
 | 固定输入 | [`test/`](../../../test/)、[`benchmarks/`](../../../benchmarks/) | 图片、语料、schema、fixture |
+| 大版本用户体验闸门 | [`experience-iteration.md`](../../flow/experience-iteration.md)、[`experience_state.md`](../../../experience_state.md) | 首次使用操作日志、最多 3 张截图、单一 latest build |
 
 ## 验证层级
 

@@ -428,6 +428,8 @@ v3.98 让 Developer Console 的漫画探针 OCR 与翻译筛选、triage 摘要�
 3. `git status --short`
 4. `git log --oneline -5`
 5. `md/index/index.md`
+6. [`md/flow/experience-iteration.md`](md/flow/experience-iteration.md)
+7. [`experience_state.md`](experience_state.md)
 
 按任务再读：
 
@@ -589,6 +591,13 @@ test/1.png
 - `test/2.png` 整图 OCR/翻译界面、逐块截图、漫画探针、Koharu/GGUF、授权语料和目标设备均属于 `optionalEvidence`，只有用户明确要求、任务验收标准要求或失败诊断需要时才单独开启。
 - 测试失败后只重跑失败合同及其修复影响范围；不为“保险”恢复历史全量。任何扩大范围都要写出新增风险或共享依赖。
 - 不得伪造测试结果，不得把旧 artifact 当新结果；`xcodeBuildRequired=false` 的结果包只能证明静态/路由检查，不能写成 iOS 编译或运行证据。
+
+### 7.4 大版本用户视角体验闸门
+
+- 工程大版本在 `smalldata_test` 完成必要 full receipt 后，只触发一次 [`md/flow/experience-iteration.md`](md/flow/experience-iteration.md)；普通提交和文档提交不重复触发。
+- 体验验证以首次使用用户的操作日志为主证据，最多 3 张辅助截图，禁止视频；`100 ms` 反馈、下一步可见性、可读性、热区和一致性是硬门。
+- 产物严格限定在 `test/experience/latest/`，每轮开始前按文档安全清理，只保留一个 latest build；根目录 [`experience_state.md`](experience_state.md) 只覆盖记录当前版本、上轮结论、未解决问题和下一步。
+- `pass` 才能进入下一版本；`fail` 必须修复后重跑同一场景；`blocked` 必须停在当前版本，不得用静态合同、旧截图或旧 build 绕过。
 
 本地轻量命令：
 

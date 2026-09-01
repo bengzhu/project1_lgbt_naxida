@@ -13,6 +13,7 @@
 | 手动 test2 UI | [`.github/workflows/test2-image-translation-ui.yml`](../../../.github/workflows/test2-image-translation-ui.yml) | workflow dispatch inputs |
 | Koharu parity | [`.github/workflows/koharu-mit48-parity.yml`](../../../.github/workflows/koharu-mit48-parity.yml) | artifact/quality smoke |
 | 构建/IPA | [`.github/workflows/build.yml`](../../../.github/workflows/build.yml) | `build`/`package` |
+| 大版本体验闸门 | [`experience-iteration.md`](../../flow/experience-iteration.md)、[`experience_state.md`](../../../experience_state.md) | post-merge 首次使用、操作日志、latest 产物 |
 
 ## 当前验证规则
 
@@ -38,6 +39,7 @@ docs-only     -> 父 receipt 成功时可传播；否则不能掩盖代码未验
 - `scripts/`、`benchmarks/`、schema/fixture：只跑本次修改脚本、直接依赖和对应 evaluator/schema smoke；没有 App 接线变化就跳过 Xcode。
 - `md/`、README、AGENTS、update_log、metrics：做链接/路径/必要格式检查；父 full receipt 成功才允许 metadata fast，缺失或失败则不能掩盖代码验证缺口。
 - `test/2.png` OCR/翻译截图、test2 UI、Koharu/GGUF、授权语料和目标设备都是显式 `optional`，不因普通 OCR/翻译代码变更自动开启。
+- 大版本用户视角体验验证是独立的 post-merge gate；它使用 `test/experience/latest/`，不读取旧轮次 artifact，也不把静态合同、旧截图或旧 build 当作体验证据。
 
 候选核心代码仍使用 `full`，但 full 只包含上述必要范围；PR/merge fast 只复用 exact-SHA full receipt。失败后只重跑失败项与修复影响范围，不恢复历史全量合同。
 

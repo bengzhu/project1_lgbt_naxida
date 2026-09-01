@@ -2028,6 +2028,10 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - generic iOS device build 在 README 当前验证中记录通过。
 - Debug iOS Simulator app bundle 曾确认内嵌 `llama.framework`。
 
+### 2.5 大版本用户视角体验验证
+
+版本完成后的首次使用体验验证是独立的 post-merge 闸门，不替代 task-scoped full，也不随普通提交重复触发。具体场景、`run.jsonl` 操作日志、`100 ms` 反馈底线、最多 3 张截图、`test/experience/latest/` 清理边界、唯一 latest build 和根目录状态记忆统一遵循 [`md/flow/experience-iteration.md`](../flow/experience-iteration.md)。只有 `pass` 才能解锁下一版本；`fail` 必须修复并重跑同一场景，`blocked` 停留在当前版本。
+
 ## 3. 云端结果包要求
 Agent B 的云端结果必须可下载、可追溯、未加密，供 Agent C 验收。最低内容：
 
