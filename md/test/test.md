@@ -1,3 +1,8 @@
+### v3.388 普通图片 Local GGUF 日语原始补全文本 fallback（待云端验收）
+
+- v3.388 在标准日语→简体中文/英文路径最前面增加不经过 chat template 的窄范围原始补全文本；输出仍复用现有清洗与严格逐块 QA，失败继续回到旧候选，漫画批译、OCR、预算、取消和持久化边界不变。
+- 新增纯静态合同 `scripts/test-v3388-japanese-raw-completion-contract.py`，工程版本 `3.388`，CI 已接入；下一次真实 `test/2.png` 云端运行会保存逐块 JSON、LLM trace、结果列表与整图 OCR 原文对照，不合成质量证据。
+
 ### v3.387 普通图片 Local GGUF 日语裸中文 prompt fallback（待云端验收）
 
 - v3.386 的精确合入 SHA `a20b993cb437ac7efd861fe69dd7fbb817096f8d` 云端运行 [33393722346](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33393722346) 已完成真实 `test/2.png` OCR（17 个非空日语块），中文任务句式已被模型识别但仍返回说明文字和日文原文，翻译完整性为 `0/17`；证据仅作失败诊断。

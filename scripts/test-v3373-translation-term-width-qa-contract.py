@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static and pure-policy contract for v3.387 translation term width QA."""
+"""Static and pure-policy contract for v3.388 translation term width QA."""
 
 from pathlib import Path
 import re
@@ -152,14 +152,14 @@ class TranslationTermWidthQAContractTests(unittest.TestCase):
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.387", "3.387"],
+            ["3.388", "3.388"],
         )
         for document in self.documents:
-            self.assertIn("v3.387", document)
+            self.assertIn("v3.388", document)
             self.assertIn(contract, document)
             self.assertIn("test/3.png", document)
             self.assertIn("未提供", document)
-        for marker in ("v3.387", contract, "test/3.png", "未提供"):
+        for marker in ("v3.388", contract, "test/3.png", "未提供"):
             self.assertIn(marker, self.workflow + self.docs)
 
     def test_contract_has_no_process_entry(self) -> None:
