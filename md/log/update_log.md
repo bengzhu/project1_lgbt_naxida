@@ -10,9 +10,15 @@
 - `md/test/test.md` 收口为测试制度并接管语音质量探针说明；`md/flow/` 只保留当前架构、流程图和体验闸门。
 - Markdown 历史、验证和调查结论统一归档到 `md/log/`；活动文档已改用 `md/log/update_log.md` 路径。
 
-## v3.390：独立 OCR 检测工作台（待云端验收）
+## v3.390：独立 OCR 检测工作台（已完成）
 
-新增独立 `OCR 检测` tab，不进入图片翻译或 LLM 状态：上传/相册/拍照/粘贴图片后，复用现有 `VisionOCRService` 输出文字块、归一化 bbox、方向、provenance 和方向复读结果。页面提供原图叠加编号框、点击高亮、语言（自动/日语/中文/英语）、版式（自动/横排/竖排/漫画竖排）、低置信筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出，以及准备图片→检测文字区域→OCR→整理阅读顺序的阶段反馈。诊断默认折叠，保留分辨率、引擎/模型、阶段耗时、块/字符速度、平均模型原始分数、低置信比例和分布；Vision/Manga OCR 分数不横向校准。CI test2 capture 将现有 OCR overlay 同步为 `test2-ocr-full-overlay-v3388.png` 产物别名。新增 `scripts/test-v3390-image-ocr-detection-ui-contract.py`，工程版本 `3.390`；尚未运行本机 Xcode/App/Core ML，待云端基础 build、UI evidence 和静态合同验收。
+新增独立 `OCR 检测` tab，不进入图片翻译或 LLM 状态：上传/相册/拍照/粘贴图片后，复用现有 `VisionOCRService` 输出文字块、归一化 bbox、方向、provenance 和方向复读结果。页面提供原图叠加编号框、点击高亮、语言（自动/日语/中文/英语）、版式（自动/横排/竖排/漫画竖排）、低置信筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出，以及准备图片→检测文字区域→OCR→整理阅读顺序的阶段反馈。诊断默认折叠，保留分辨率、引擎/模型、阶段耗时、块/字符速度、平均模型原始分数、低置信比例和分布；Vision/Manga OCR 分数不横向校准。CI test2 capture 将现有 OCR overlay 同步为 `test2-ocr-full-overlay-v3388.png` 产物别名。新增 `scripts/test-v3390-image-ocr-detection-ui-contract.py`，工程版本 `3.390`；本机未运行 Xcode/App/Core ML，云端候选 Xcode build、UI 合同和静态检查已通过。
+
+- 候选精确 SHA `7f992e9268e0ce8292adcf50a2140234d33f8197` 的 full run [33483510941](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33483510941) 通过：Japanese benchmark、静态检查、UI interaction、v1.88/v1.89 合同和云端 Xcode build 均成功；未加密 artifact `aitrans-ci-v3.390-codeb-v3.390-ocr-detection-ui--7f992e9268e0-run33483510941-attempt1` 的 manifest 与精确 SHA 对齐。
+- PR [#455](https://github.com/bengzhu/project1_lgbt_naxida/pull/455) 已以 merge SHA `bb10a5f72729c5910ec5ee6334f25d53780f595d` 合入 `smalldata_test`，候选远端分支已删除；PR fast run [33485004877](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33485004877) 通过。
+- 合并后 exact SHA 的 test2 run [33485166409](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33485166409) 生成未加密 artifact `aitrans-test2-image-translation-ui-33485166409`，其中 `test2-ocr-full-overlay-v3388.png` 为 750×1334、365403 bytes，SHA-256 `bb187cfeab7bd6bc8574350418f02608f846bb9addaaf2d2d04071982a270aa6`；本地同步路径为 `/private/tmp/aitrans-test2-v3388-display/test2-ocr-full-overlay-v3388.png`。
+- test2 实际保留 17/17 个非空 OCR 原文块并生成 overlay；同一次运行的旧 270M 日语翻译链路为 0/17，导致 test2 运行门禁和聚合 CI 失败。该失败只作既有翻译诊断，不影响本轮 OCR-only 页面、框选接入和产物生成，也不构成 OCR/CER 或翻译质量提升证据。
+- 本地轻量验证：v3.390 UI contract `7/7`、v1.89 contract `4/4`、相关 v3.276 contract `1/1`、AST/YAML/shell 解析和 `git diff --check` 通过；按项目规则未跑本机 Xcode/App/Core ML，云端候选 Xcode build 通过。无人工真实剪贴板/VoiceOver 矩阵、多引擎校准或目标设备质量结论。
 
 ## v3.389：普通图片 Local GGUF 日语 few-shot 翻译 fallback（待云端验收）
 
