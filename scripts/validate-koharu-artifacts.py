@@ -1971,7 +1971,7 @@ def validate(root: Path, allow_missing: bool, image_path: Path) -> dict[str, Any
         "requiredFiles": REQUIRED_ARTIFACT_FILES,
         "activeArtifactPolicy": {
             "activeInputDirectory": str(ACTIVE_ARTIFACT_ROOT),
-            "examplesDirectory": "md/koharu研究/artifact_contract/examples",
+            "examplesDirectory": "md/人工空间/koharu研究/artifact_contract/examples",
             "examplesMayEnableShadowOCR": False,
             "forbiddenActiveSources": [
                 "contract examples",

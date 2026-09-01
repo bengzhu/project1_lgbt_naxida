@@ -6461,20 +6461,26 @@ struct ImageOCRDetectionMetrics: Equatable, Codable, Sendable {
         layoutMilliseconds: 0,
         imageWidth: 0,
         imageHeight: 0,
-        blockCount: 0,
-        characterCount: 0,
-        averageConfidence: nil,
-        lowConfidenceRatio: 0,
-        confidenceDistribution: [
-            "≥ 0.90": 0,
-            "0.60–0.89": 0,
-            "< 0.60": 0
-        ],
-        engine: "—",
-        model: "—",
         language: .automatic,
-        layout: .automatic
+        layout: .automatic,
+        blocks: [],
+        engine: "—",
+        model: "—"
     )
+
+    private static let lowConfidenceThreshold: Float = 0.55
+
+    private static func normalizedConfidence(_ rawConfidence: Float) -> Float {
+        guard rawConfidence.isFinite,
+              (0...1).contains(rawConfidence) else {
+            return 0
+        }
+        return rawConfidence
+    }
+
+    private static func hasLowConfidence(_ block: ImageTranslationBlock) -> Bool {
+        normalizedConfidence(block.confidence) < lowConfidenceThreshold
+    }
 
     init(
         totalMilliseconds: Double,
@@ -6499,19 +6505,19 @@ struct ImageOCRDetectionMetrics: Equatable, Codable, Sendable {
         self.imageHeight = max(imageHeight, 0)
         self.blockCount = blocks.count
         self.characterCount = blocks.reduce(0) { $0 + $1.original.count }
-        let confidences = blocks.map { Double(ImageOCRResultSummary.normalizedConfidence($0.confidence)) }
+        let confidences = blocks.map { Double(Self.normalizedConfidence($0.confidence)) }
         self.averageConfidence = confidences.isEmpty
             ? nil
             : confidences.reduce(0, +) / Double(confidences.count)
-        let lowCount = blocks.count(where: { ImageOCRResultSummary.hasLowConfidence($0) })
+        let lowCount = blocks.count(where: { Self.hasLowConfidence($0) })
         self.lowConfidenceRatio = blocks.isEmpty ? 0 : Double(lowCount) / Double(blocks.count)
         self.confidenceDistribution = [
-            "≥ 0.90": blocks.count(where: { ImageOCRResultSummary.normalizedConfidence($0.confidence) >= 0.90 }),
+            "≥ 0.90": blocks.count(where: { Self.normalizedConfidence($0.confidence) >= 0.90 }),
             "0.60–0.89": blocks.count(where: {
-                let confidence = ImageOCRResultSummary.normalizedConfidence($0.confidence)
+                let confidence = Self.normalizedConfidence($0.confidence)
                 return confidence >= 0.60 && confidence < 0.90
             }),
-            "< 0.60": blocks.count(where: { ImageOCRResultSummary.normalizedConfidence($0.confidence) < 0.60 })
+            "< 0.60": blocks.count(where: { Self.normalizedConfidence($0.confidence) < 0.60 })
         ]
         self.engine = engine
         self.model = model
