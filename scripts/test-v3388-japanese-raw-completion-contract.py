@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.388's exact bare Japanese translation prompt."""
+"""Static contract for v3.388's Japanese raw-completion translation fallback."""
 
 from __future__ import annotations
 
@@ -31,11 +31,10 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class JapaneseBarePromptContractTests(unittest.TestCase):
+class JapaneseRawCompletionContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
-        cls.views = read("AITRANS/Views/ImageTranslationViews.swift")
         cls.context = read("AITRANS/Models/TranslationContextQuality.swift")
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.workflow = read(".github/workflows/ci-results.yml")
@@ -54,58 +53,53 @@ class JapaneseBarePromptContractTests(unittest.TestCase):
             )
         )
 
-    def test_bare_standard_prompt_matches_verified_template(self) -> None:
+    def test_raw_completion_precedes_chat_fallback_and_reuses_qa(self) -> None:
         body = function_body(
             self.gemma,
-            "private func translationPromptBodies(for request: ModelGenerationRequest)",
+            "private func generateTranslation(for request: ModelGenerationRequest)",
         )
+        raw_start = body.index("japaneseRawCompletionPrompt(for: request)")
+        chat_start = body.index("translationMessages(for: request)")
+        self.assertLess(raw_start, chat_start)
         for marker in (
-            "let japaneseBareFallbackInstruction: String",
-            'japaneseBareFallbackInstruction = "把以下翻译成中文："',
-            'japaneseBareFallbackInstruction = "Translate the following into English:"',
-            "\\(japaneseBareFallbackInstruction)",
-            "\\(request.inputText)",
-        ):
-            self.assertIn(marker, body)
-        fallback_start = body.index("\\(japaneseBareFallbackInstruction)")
-        fallback = body[fallback_start : body.index("\n                \"\"\"", fallback_start)]
-        self.assertNotIn("contextualInstruction", fallback)
-        self.assertNotIn("compactContextSection", fallback)
-        self.assertLess(
-            body.index("\\(japaneseChineseFallbackInstruction)"),
-            fallback_start,
-        )
-
-    def test_bare_manga_prompt_remains_tagged_and_context_free(self) -> None:
-        body = function_body(
-            self.gemma,
-            "private func translationPromptBodies(for request: ModelGenerationRequest)",
-        )
-        for marker in (
-            "let mangaBareFallbackInstruction: String",
-            'mangaBareFallbackInstruction = "把以下翻译成中文："',
-            "\\(mangaBareFallbackInstruction)",
-            "\\(request.inputText)",
-            "mangaBlocks",
-        ):
-            self.assertIn(marker, body)
-        fallback_start = body.index("\\(mangaBareFallbackInstruction)")
-        fallback = body[fallback_start : body.index("\n                \"\"\"", fallback_start)]
-        self.assertNotIn("contextualInstruction", fallback)
-        self.assertNotIn("compactContextSection", fallback)
-        self.assertLess(
-            body.index("\\(mangaBareFallbackInstruction)"),
-            body.index("if request.sourceLanguage == .englishUS"),
-        )
-
-    def test_existing_validation_and_boundary_contracts_remain(self) -> None:
-        for marker in (
-            "TranslationOutputPolicy",
+            "Self.runtime.generateRaw(",
+            "decodingProfile: .sampled",
             "cleanTranslationOutput(",
+            "local-raw-attempt-start",
+            "local-raw-attempt-error",
+            "max(1, min(request.sampling.maxTokens, 160))",
+        ):
+            self.assertIn(marker, body)
+        self.assertIn("if request.translationProfile == .mangaBlocks", body)
+        self.assertLess(
+            body.index("if request.translationProfile == .mangaBlocks"),
+            raw_start,
+        )
+
+    def test_raw_prompt_is_narrow_and_language_pair_specific(self) -> None:
+        body = function_body(
+            self.gemma,
+            "private func japaneseRawCompletionPrompt(for request: ModelGenerationRequest)",
+        )
+        for marker in (
+            "switch (request.sourceLanguage, request.targetLanguage)",
+            'return "日语：\\(request.inputText)\\n简体中文："',
+            'return "Japanese: \\(request.inputText)\\nEnglish:"',
+            "default:",
+            "return nil",
+        ):
+            self.assertIn(marker, body)
+        self.assertNotIn("translationContext", body)
+        self.assertNotIn("translationProfile", body)
+
+    def test_existing_manga_batch_and_qa_boundaries_remain(self) -> None:
+        for marker in (
+            "generateMangaBlockTranslation(for request:",
             "cleanMangaBlockOutput(",
             "translateJapaneseImageBlockWithQA(",
             "TranslationBatchQualityEvaluator.singleOutputFailures(",
             "japaneseTranslationQAConfiguration(",
+            "TranslationOutputPolicy",
             "let generationMaxTokens = min(max(request.sampling.maxTokens, 192), 256)",
         ):
             self.assertIn(marker, self.gemma + self.store)
@@ -124,7 +118,6 @@ class JapaneseBarePromptContractTests(unittest.TestCase):
             "test2-image-translation-manifest.json",
             "test2-image-translation-ocr.png",
             "test2-image-translation-ocr.txt",
-            "boundingBox",
             "ocrScreenshot",
         ):
             self.assertIn(marker, self.store + self.test2_workflow + self.capture)
@@ -133,34 +126,23 @@ class JapaneseBarePromptContractTests(unittest.TestCase):
             ["3.388", "3.388"],
         )
         for marker in (
-            "scripts/test-v3386-japanese-chinese-prompt-contract.py",
             "scripts/test-v3387-japanese-bare-prompt-contract.py",
+            "scripts/test-v3388-japanese-raw-completion-contract.py",
             "japanese-benchmark-v3.388-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
-        for marker in ("v3.388", "test/2.png", "小模型", "把以下翻译成中文", "prompt"):
+        for marker in (
+            "v3.388",
+            "test/2.png",
+            "原始补全",
+            "raw-completion",
+            "prompt",
+        ):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
-    def test_ocr_diagnostic_reopens_the_real_session_without_restarting_work(self) -> None:
-        for marker in (
-            'SIMCTL_CHILD_AITRANS_IMAGE_TRANSLATION_UI_FOCUS=ocr',
-            "-AITRANS_IMAGE_TRANSLATION_UI_FOCUS ocr",
-            "launchctl unsetenv AITRANS_RUN_BUNDLED_IMAGE_TRANSLATION_TEST",
-            "launchctl unsetenv AITRANS_RUN_LLM_SMOKE",
-            "isOCRDiagnosticPreview",
-            "diagnosticDisplayMode",
-            "primaryOverlayText",
-        ):
-            self.assertIn(marker, self.capture + self.views)
-        self.assertIn(
-            "launchesImageOCRDiagnostic",
-            read("AITRANS/Views/ContentView.swift"),
-        )
-        self.assertIn("整图 OCR", self.docs)
-
     def test_contract_has_no_local_process_or_build_entrypoint(self) -> None:
-        source = read("scripts/test-v3387-japanese-bare-prompt-contract.py")
+        source = read("scripts/test-v3388-japanese-raw-completion-contract.py")
         for forbidden in (
             "subprocess" + ".run(",
             "subprocess" + ".Popen(",

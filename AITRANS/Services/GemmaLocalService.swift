@@ -172,6 +172,39 @@ struct GemmaLocalService: LocalLanguageModeling {
         }
 
         var lastError: Error?
+        if let rawPrompt = japaneseRawCompletionPrompt(for: request) {
+            do {
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-start " +
+                    "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(rawPrompt))"
+                )
+                let output = try Self.runtime.generateRaw(
+                    prompt: rawPrompt,
+                    maxTokens: max(1, min(request.sampling.maxTokens, 160)),
+                    decodingProfile: .sampled
+                )
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-raw output=\(Self.probeField(output))"
+                )
+                let cleanedOutput = try cleanTranslationOutput(
+                    output,
+                    input: request.inputText,
+                    sourceLanguage: request.sourceLanguage,
+                    targetLanguage: request.targetLanguage
+                )
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-clean output=\(Self.probeField(cleanedOutput))"
+                )
+                return cleanedOutput
+            } catch {
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-error error=\(Self.probeField(error.localizedDescription))"
+                )
+                lastError = error
+            }
+        }
+
         for (index, messages) in translationMessages(for: request).enumerated() {
             let promptForLog = promptForLogging(for: messages)
             do {
@@ -208,6 +241,17 @@ struct GemmaLocalService: LocalLanguageModeling {
         }
 
         throw lastError ?? GemmaLocalServiceError.emptyOutput
+    }
+
+    private func japaneseRawCompletionPrompt(for request: ModelGenerationRequest) -> String? {
+        switch (request.sourceLanguage, request.targetLanguage) {
+        case (.japanese, .simplifiedChinese):
+            return "日语：\(request.inputText)\n简体中文："
+        case (.japanese, .englishUS):
+            return "Japanese: \(request.inputText)\nEnglish:"
+        default:
+            return nil
+        }
     }
 
     private func generateMangaBlockTranslation(for request: ModelGenerationRequest) throws -> String {

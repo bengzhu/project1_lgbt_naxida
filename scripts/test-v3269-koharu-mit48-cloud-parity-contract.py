@@ -139,7 +139,7 @@ class KoharuMit48CloudParityContractTests(unittest.TestCase):
         )
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project),
-            ["3.387", "3.387"],
+            ["3.388", "3.388"],
         )
 
 
