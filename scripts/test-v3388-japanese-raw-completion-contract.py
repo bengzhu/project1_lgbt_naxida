@@ -53,14 +53,14 @@ class JapaneseRawCompletionContractTests(unittest.TestCase):
             )
         )
 
-    def test_raw_completion_precedes_chat_fallback_and_reuses_qa(self) -> None:
+    def test_chat_candidates_precede_raw_fallback_and_reuse_qa(self) -> None:
         body = function_body(
             self.gemma,
             "private func generateTranslation(for request: ModelGenerationRequest)",
         )
-        raw_start = body.index("japaneseRawCompletionPrompt(for: request)")
         chat_start = body.index("translationMessages(for: request)")
-        self.assertLess(raw_start, chat_start)
+        raw_start = body.index("japaneseRawCompletionPrompt(for: request)")
+        self.assertLess(chat_start, raw_start)
         for marker in (
             "Self.runtime.generateRaw(",
             "decodingProfile: .sampled",
