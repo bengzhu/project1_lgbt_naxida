@@ -720,13 +720,18 @@ flowchart TD
 ## 3. Agent 迭代流程图
 这张图描述以后每轮任务如何从人工目标进入 Agent A、Agent B、GitHub Actions 和 Agent C。默认重验证在云端，本机只做轻量检查；`main` 不参与日常开发合并。
 
+范围选择先读取 `git diff --name-only <base>...HEAD`：所有任务保留 diff/路由基线；App 代码、工程或资源再保留基础 iOS simulator build；其余只跑本次命中的直接合同。`test/2.png`、截图、探针、GGUF、授权语料和目标设备属于显式可选证据。
+
 ```mermaid
 flowchart TD
   %% 人工输入：目标和约束
   H["人工提出目标<br/>功能、边界、禁止项、验收标准"] --> A1["Agent A<br/>读入口文档、历史、flow、test 和相关源码"]
 
+  %% 先按 changed-files 选择范围
+  A1 --> S0["读取 diff<br/>baseline + direct + optional"]
+
   %% Agent A 输出版本化提示词
-  A1 --> A2["Agent A 分析<br/>目标、非目标、风险、测试、验收"]
+  S0 --> A2["Agent A 分析<br/>目标、非目标、风险、测试、验收"]
   A2 --> P["md/prompt/vX（阶段）/vX.Y（任务）.md<br/>写给 Agent B 的实现提示词"]
 
   %% Agent B 实现、轻量检查和推送

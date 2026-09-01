@@ -1,6 +1,8 @@
 # 项目核心流程文档
 本文只记录 AITRANS 当前真实架构和运行流程，不写历史流水账。历史看 `update_log.md`。
 
+Agent 日常代码定位以 [`md/index/index.md`](../index/index.md) 及其二级/三级索引为入口；本文保留跨层流程、完整架构和人工查看用的长文档，不要求每轮默认通读全文。
+
 当前 v3.389 Local GGUF Japanese few-shot fallback boundary（待云端验收）：普通图片 `test/2.png` 仍从 ordinary image OCR→日语翻译入口进入；v3.388 真实运行已得到 17 个非空日语 OCR 块，但 270M 模型最终为 `0/17`，并出现短输入对应错误模板输出。v3.389 在标准日语→简体中文/英文路径把 pair-specific few-shot chat candidate 放在既有聊天候选之前，裸 completion 降为最后回退；裸回退只接受单行且拒绝语言标签/元话术，所有输出继续进入同一清洗、源文泄漏/目标语言/数字/术语/长度与逐块 QA。漫画批译 `[N]` 标签、OCR、批量预算、取消、持久化和非图片路径不变；新增 `scripts/test-v3389-japanese-few-shot-translation-contract.py`，工程版本 `3.389`，云端重跑待完成。
 
 当前 v3.388 Local GGUF Japanese raw-completion fallback boundary（已完成失败诊断）：普通图片 `test/2.png` 仍从 ordinary image OCR→日语翻译入口进入；v3.387 真实 trace 已得到 17 个非空日语 OCR 块，但 270M 模型对聊天模板候选反复回显，最终为 `0/17`。v3.388 在标准日语→简体中文/英文路径最前面增加不经过 chat template 的窄范围原始补全文本；真实 run [33457191881](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33457191881) 仍失败，说明裸 completion 会输出语言标签/长说明，且短候选可能被普通清洗误接受。该证据只用于下一轮回退设计，不合成质量结论；OCR、漫画批译 `[N]` 标签、预算、取消、持久化和非图片路径边界不变。
@@ -907,6 +909,23 @@ v3.71 的开发控制台仍消费漫画探针返回的单一 `MangaOverlayExtern
 
 ## 4. 云端协作和验证流
 当前日常开发不再把本机 Xcode build / 模拟器探针作为默认硬要求。默认流程是：
+
+### 4.1 Task-scoped 测试范围
+
+每轮先以候选基线计算 `git diff --name-only <base>...HEAD`，再按文件责任选择 `baseline + direct + optional`：
+
+```text
+所有变更
+  -> git diff --check + 路由/版本身份检查
+  -> changed-files 分类
+     ├─ 文档/索引/metrics：链接、路径、必要 JSON/YAML；父 receipt 可信才 metadata fast
+     ├─ 合同/benchmark/evaluator：只跑本次修改文件及直接依赖
+     ├─ OCR/版面/翻译/Speech：对应领域合同 + 一个共享边界合同
+     └─ App Swift/工程/资源：以上直接合同 + 基础 iOS simulator build
+  -> 可选证据单独判断：test/2.png、UI 截图、探针、GGUF、语料、目标设备
+```
+
+基础 iOS 检查只表示当前 scheme 的云端 simulator build（以及本次确实命中的既有基础 UI smoke）；它不自动扩展为全量历史合同、test2 截图或漫画探针。候选核心代码保持现有 `full` 语义，PR/merge 使用 fast 复用 exact-SHA full receipt；`ui_evidence_mode=skip`、`probe_mode=skip` 默认关闭。失败后只重跑失败项和修复影响范围，除非出现共享依赖或新的验收要求。
 
 ```text
 人工目标

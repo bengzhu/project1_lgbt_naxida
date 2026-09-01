@@ -419,16 +419,22 @@ v3.97 让 Developer Console 的漫画探针布局筛选与 `MangaProbeDiagnostic
 v3.98 让 Developer Console 的漫画探针 OCR 与翻译筛选、triage 摘要共享只读 risk set，合并 diagnostics、model-floor、translation failureCategory 与 OCR 疑似证据，避免 floor 报告存在时丢掉 diagnostics；新增 `scripts/test-v398-koharu-diagnostic-risk-union-contract.py` 并接入 UI/full 路由。该 View-only/report-only 修复不新增 Store／持久化、不运行探针、不改变 OCR、翻译、renderer/export、Koharu active gate、metrics 或 `output`。候选 SHA `7a352a5050c8846765ad4b139e7a6a125dfb4712` 已通过 PR #162 合入，merge SHA `3b953b83d12a092df1995c974cb33522dc02331a`；full `30988262491`、PR fast `30988802078`、merge fast `30988876405` 均通过，full Xcode/JUnit `10/10`，fast 明确复用 full receipt；探针默认 skip，readiness 仍为 `manifestMissing / stopUntilArtifactsProvided`，不声称质量提升。
 
 ## 2. 每轮必读
-每轮开始先读：
+代码定位先读 [`md/index/index.md`](md/index/index.md)，再按任务进入对应二级/三级索引；只有需要跨层关系、历史证据或完整测试制度时，才继续读取长文档。索引与源码不一致时以源码为准，并在同轮修正索引。
+
+每轮默认只读：
 
 1. `README.md`
 2. `AGENTS.md`
 3. `git status --short`
 4. `git log --oneline -5`
-5. `update_log.md`
-6. `md/flow/flow.md`
-7. `md/flow/flowchart.md`
-8. `md/test/test.md`
+5. `md/index/index.md`
+
+按任务再读：
+
+- `update_log.md`：需要历史证据、版本收口或已有 CI receipt 时。
+- `md/flow/flow.md` / `md/flow/flowchart.md`：需要跨层流程、状态时序或流程制度时。
+- `md/test/test.md`：需要选择本地/云端测试范围、解释结果包或验收层级时。
+- 对应二级/三级索引列出的源码、资源和最小合同；不要为定位普通改动通读历史版本合同。
 
 涉及漫画探针、OCR、覆盖绘制、翻译质量或报告模型时，继续读：
 
@@ -503,6 +509,7 @@ test/1.png
 - `main`：外观展示分支。禁止 Agent B / C 把日常开发成果合并到 `main`。
 - `smalldata_test`：本仓库实际工作主分支。若外部提示词写成 `samlldata_test`，以当前远端真实分支 `origin/smalldata_test` 为准。
 - `codeb/vX.Y-短标题`：Agent B 候选实现分支，例如 `codeb/v2.0-cloud-ci-workflow`。
+- 空闲/交接状态的分支不变量是只保留 `main` 与 `smalldata_test`；`codeb/...` 只能在一轮候选开发期间存在，合并或终止后必须清理本地和远端引用。
 - Agent B 每轮从最新 `smalldata_test` 开 `codeb/...` 分支，完成后 push。
 - Agent B push 后默认创建 Pull Request，base 为 `smalldata_test`，head 为 `codeb/...`。
 - Agent C 从 PR / 远端 `codeb/...` 分支验收；通过后优先通过 PR merge 合并到 `smalldata_test`。
@@ -532,12 +539,12 @@ test/1.png
 ### Agent A
 - 默认不改代码。
 - 读取入口文档、历史、流程、测试规范和相关源码。
-- 输出写给 Agent B 的版本化提示词，保存到 `md/prompt/vX（阶段）/vX.Y（任务）.md`。
+- 输出写给 Agent B 的版本化提示词，保存到 `md/prompt/vX（阶段）/vX.Y（任务）.md`；提示词必须列出 changed-files 范围、必要基线、直接合同、是否需要基础 iOS build、可选证据和跳过原因。
 - 提示词必须明确目标、非目标、分支名建议、测试层级、CI 期望、验收标准和禁止项。
 
 ### Agent B
 - 从最新 `smalldata_test` 开 `codeb/vX.Y-短标题` 分支。
-- 按 Agent A 提示词小步实现，不做无关重构。
+- 按 Agent A 提示词小步实现，不做无关重构；没有新的失败、共享依赖或用户要求，不扩大测试清单。
 - 默认本地只跑轻量检查；除非人工明确要求，不跑本机完整 Xcode build 或漫画探针。
 - 完成后集中 push 核心候选 commit，让 GitHub Actions 运行一次 task-scoped full；通过后再创建 PR 到 `smalldata_test`，PR 只跑 fast follow-up。若 C 退回，修复 push 重新跑对应 full。
 - 最终回复必须列出分支名、PR 链接、commit SHA、push 结果、CI 入口或 run 信息、本地已跑检查、未跑测试原因、artifact 名称；若 Actions 尚未完成，必须说明等待云端结果。
@@ -552,12 +559,36 @@ test/1.png
 - 合并完成后删除远端 `codeb/...` 候选分支，或在最终回复说明未删除原因。
 
 ## 7. 测试选择
-- 非 App 构建相关修改至少运行 `git diff --check`，可加 JSON/YAML smoke。
-- 非 App 构建相关变更的云端 CI 可接受 `xcodeBuildRequired=false` 的 build-skip 结果包；Agent C 必须核对 manifest 的 skip reason，不能把它当作 Swift/Xcode 编译证据。
-- Swift 或 Xcode 工程修改默认不在本机跑完整 build；按规则推分支交给 GitHub Actions 快验。
-- Speech 质量算法修改至少运行 `scripts/test-speech-quality-contract.py`、纯 Swift evaluator contract 和 `scripts/validate-speech-corpus.py`；没有真实音频时只能验收算法与接线，不能给出 WER/CER 改善结论。
-- 漫画探针、翻译链路或报告模型修改需要云端探针证据时，手动 `workflow_dispatch` 运行 `ci-fast` 或 `full` 生成报告；若当前云端因模拟器、GGUF、App 容器或外部 artifact 缺失不能稳定运行，必须在最终回复和文档中列明未验证范围、缺失依赖、是否影响验收和需要人工提供什么。
-- 不得伪造测试结果，不得把旧 artifact 当新结果。
+每轮先以候选基线与当前任务的 `git diff --name-only <base>...HEAD` 建立范围；测试清单必须写进 Agent A 提示词或交接摘要，至少包含 `baseline`、`direct`、`iosBuild`、`optionalEvidence` 和 `skipReason`。不得因为版本号、历史合同数量或“之前一直全量”自动扩大范围。
+
+### 7.1 必要基线
+
+- 所有变更：`git diff --check`；涉及云端路由或版本身份时加 `scripts/test-v194-ci-validation-tier-contract.py` 与 `scripts/test-v197-ci-version-identity-contract.py`。
+- `md/`、`README.md`、`AGENTS.md`、`update_log.md`、`metrics/` only：Markdown 链接/路径检查和必要的 JSON/YAML 解析；若父 SHA 已有成功 full receipt，可走 metadata fast；没有可信父 receipt 时必须扩大到当前 diff 的代码验证，不能用文档提交掩盖代码未验证。
+- `AITRANS/**/*.swift`、`AITRANS.xcodeproj/**`、App 资源、Info.plist 或构建依赖：云端必须保留基础 iOS 检查，即当前 scheme 的 simulator `xcodebuild`；若现有 workflow 已配置安装/启动 smoke，则只按命中范围保留该 smoke。它不是 test2 截图、漫画探针或真实设备质量证据。
+- `scripts/`、`benchmarks/`、schema/fixture only：只跑变更脚本、直接读取的合同、对应 evaluator/schema smoke；除非它们改变 App 编译接线或 runtime harness，否则不加 Xcode。
+
+### 7.2 按 changed-files 路由直接测试
+
+| 变更范围 | 必跑直接测试 | 默认不跑 |
+| --- | --- | --- |
+| `VisionOCRService`、图片模型、detector、Manga OCR、OCR/layout 源码 | 文件名/符号对应的最新 OCR、日语、geometry/layout 合同；共享 OCR 边界只补一个相邻合同 | 全部历史 `test-v*.py`、Koharu artifact、test2 UI |
+| `GemmaLocalService`、`LlamaRuntime`、翻译模型、prompt、context、QA | 对应 translation/context/QA 合同；批量标签变化再加 batch 合同 | OCR/探针；GGUF 只在明确需要真实模型证据时开启 |
+| `TranslationSessionStore`、图片/文本 SwiftUI、App 入口 | 对应 state/UI/accessibility 合同 + 基础 iOS 检查 | 全量 UI 截图、test2 workflow |
+| Speech 源码或 Speech 合同 | `test-speech-recognition-contract.py`、`test-speech-quality-contract.py`；质量算法变更再加 evaluator/corpus validator + 基础 iOS 检查 | 真实 WER/CER、截图；没有 corpus/目标设备不得声称质量提升 |
+| `scripts/test-*` 或 evaluator 本身 | 只跑本次修改的合同及其直接依赖；runtime/Swift harness 交云端 | 其余历史合同 |
+| `benchmarks/`、`schema/`、`fixtures/`、`examples/` | 对应 schema/evaluator/fixture smoke | App build、OCR/翻译产品路径 |
+| `.github/workflows/`、工程 target、bundle 资源、构建依赖 | 路由/版本合同 + 基础 iOS 检查；必要时才扩大到受影响领域 | 与改动无关的 probe/Koharu/截图 |
+
+“直接依赖”指被修改文件显式调用、读取或由同一公共协议拥有的合同；不能仅凭相似版本号认定依赖。若边界不确定，只增加一个最近的共享协议/状态合同，并在 `skipReason` 记录判断。
+
+### 7.3 云端 profile 与可选证据
+
+- 候选核心代码 push 使用现有 `validationProfile=full`，但要求 task-scoped：基础 iOS（仅 App 变更）+ 直接合同；`ui_evidence_mode=skip`、`probe_mode=skip` 默认保持关闭。
+- PR/merge fast 只做静态与路由检查并复用已核对的候选 full receipt，不能冒充新编译；候选修复产生新 SHA 后必须重新跑该 SHA 的 full。
+- `test/2.png` 整图 OCR/翻译界面、逐块截图、漫画探针、Koharu/GGUF、授权语料和目标设备均属于 `optionalEvidence`，只有用户明确要求、任务验收标准要求或失败诊断需要时才单独开启。
+- 测试失败后只重跑失败合同及其修复影响范围；不为“保险”恢复历史全量。任何扩大范围都要写出新增风险或共享依赖。
+- 不得伪造测试结果，不得把旧 artifact 当新结果；`xcodeBuildRequired=false` 的结果包只能证明静态/路由检查，不能写成 iOS 编译或运行证据。
 
 本地轻量命令：
 
@@ -581,6 +612,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 
 ## 8. 文档和版本收口
 - `AGENTS.md` 是唯一核心入口文档。
+- `md/index/index.md` 是日常代码定位入口；`md/index/index-*/` 按稳定职责维护二级/三级路由、符号、调用方和最小验证入口，不复制 flow 或版本流水账。
 - `update_log.md` 记录版本历史、关键决策、验证结果和遗留问题。
 - `md/flow/flow.md` 只写当前真实架构和运行流程。
 - `md/flow/flowchart.md` 必须与 `flow.md` 同步。
@@ -588,6 +620,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 - `md/prompt/` 保存 Agent A 的版本化实现提示词。
 - 功能更新或 bug 修复后，按影响同步更新 `update_log.md`、flow/test 文档和 `metrics/version_history.csv`；README 不再写更新记录，只保留项目说明、当前用法和稳定规则。
 - 流程制度变更不伪装成漫画探针质量版本；未重新跑完整探针时不追加 `metrics/version_history.csv` 漫画指标行。
+- 新增或移动源码、测试、资源、workflow、公共状态或模块边界时，同轮更新对应三级索引；只有主数据流、target 或权威 ownership 变化才上提二级/一级。索引维护至少执行 `git diff --check`、Markdown 链接检查和路径存在性检查。
 
 ## 9. 最终回复格式
 最终回复使用中文，至少包含：

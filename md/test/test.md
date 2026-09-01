@@ -1704,8 +1704,28 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 当前仓库没有独立 XCTest 目标作为主要验收入口。日常核心验证由 GitHub Actions 快验产出 build 结果包、日志、manifest 和失败摘要；探针 JSON/PNG artifact 只在手动 `ci-fast` / `full` 运行中要求。本地命令保留为人工要求或紧急排查路径。
 
 ## 2. 测试分层
+### 2.0 Task-scoped 选择算法（默认）
+
+本节命令是测试目录，不是每轮默认全集。Agent B 在提交前先计算 `git diff --name-only <base>...HEAD`，把变更按“源码/工程、合同脚本、benchmark、文档”分类，再生成唯一的 `baseline + direct + optional` 清单；没有失败、共享依赖或人工要求，不得追加历史合同。
+
+| 变更 | 必要基线 | 直接测试 | 默认跳过 |
+| --- | --- | --- | --- |
+| `AITRANS/**/*.swift`、`AITRANS.xcodeproj/**`、App 资源/Info.plist | 云端基础 iOS simulator `xcodebuild` | 与修改符号所属领域对应的最新边界合同 | 全部历史合同、截图、test2/Koharu 探针 |
+| `VisionOCRService`、detector、Manga OCR、image/layout | 同上（若改 App 源码） | `image`/`japanese`/`ocr`/`layout`/`manga` 命名且直接覆盖该路径的合同 | 翻译/Speech/无关旧版本合同 |
+| `GemmaLocalService`、`LlamaRuntime`、translation/context/QA | 同上（若改 App 源码） | `translation`/`context`/`prompt`/`QA` 直接合同 | OCR/Koharu/截图 |
+| `TranslationSessionStore`、SwiftUI、App 入口 | 同上 | 受影响的 state/UI/accessibility 合同；涉及运行入口时加现有基础 UI smoke | 全量 UI evidence、test2 |
+| Speech 源码/合同 | 同上（若改 App 源码） | `test-speech-recognition-contract.py`、`test-speech-quality-contract.py`；算法改动再加 evaluator/corpus validator | 真实 WER/CER、截图、无语料的质量结论 |
+| `scripts/test-*`、`scripts/evaluate-*`、`benchmarks/`、schema/fixture | `git diff --check` + route/version contract | 只跑本次修改文件及其直接依赖 | Xcode（除非 harness/接线改变）、历史全量 |
+| `md/`、`README.md`、`AGENTS.md`、`update_log.md`、`metrics/` | diff + Markdown 链接/路径 + 必要 JSON/YAML smoke | 父 receipt 可信时 metadata fast；否则按当前 diff 重新判定 | Xcode、App runtime、探针 |
+
+所有云端候选都保留现有 `full`/`fast` 语义：候选核心代码用 task-scoped full，App 变更包含基础 iOS build；PR/merge fast 只复用已核对的 full receipt。`ui_evidence_mode=skip`、`probe_mode=skip` 默认关闭。`test/2.png` 整图 OCR/翻译截图、GGUF、授权语料、Koharu 和目标设备只在验收目标或失败诊断明确要求时作为 `optional` 单独开启。
+
+失败时只重跑失败合同和修复影响范围；若共享协议/状态边界被改动，向上扩大一个相邻领域并写明理由。若无法从文件名判断覆盖关系，选择最近的公共边界合同，不恢复历史全量。
+
 ### 2.1 Local Light / Fast
 最快发现主链路断点。
+
+以下命令是可按命中范围选用的目录，不是默认全部执行；带 `xcrun`、runtime、真实模型或外部 artifact 的命令仅在人工明确要求时运行。
 
 触发条件：
 
@@ -1769,6 +1789,8 @@ python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allo
 ### 2.2 Cloud Smoke
 验证主要集成路径，默认在 GitHub Actions 运行。
 
+Cloud Smoke 仍按 2.0 的 changed-files 清单执行：基础 iOS simulator build 只对 App/工程/资源变更保留，合同和 benchmark 只跑直接命中项；“Cloud Smoke”不等于历史合同全量。
+
 触发条件：
 
 - Swift 代码或 Xcode 工程文件改变。
@@ -1807,6 +1829,8 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 
 ### 2.3 Stage Regression
 覆盖当前阶段核心模块。
+
+Stage Regression 只在本次变更跨越一个共享阶段（例如 OCR → layout、Store → UI、prompt → QA）时启用；先跑直接合同，再补一个最近的阶段边界合同。没有新的失败或证据需求，不重复整条历史阶段链。
 
 触发条件：
 
@@ -1966,8 +1990,10 @@ python3 -m json.tool test/1.ground_truth.json
 - `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
 - `likelyRuleFalseFailureBlocks = []`
 
-### 2.4 Full
-全量验证。
+### 2.4 Full（仅在必要时）
+当前提交的完整必要验证。
+
+Full 指当前提交的完整必要证据，不指所有历史 `test-v*.py`。除构建依赖、workflow/target、持久化迁移或明确的发布验收外，仍应按 2.0 运行 task-scoped full；无 App 变更时允许 `xcodeBuildRequired=false`，但必须记录 skip reason。
 
 触发条件：
 

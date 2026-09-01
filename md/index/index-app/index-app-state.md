@@ -1,0 +1,48 @@
+# 应用状态、任务与持久化
+
+> 状态：current。主题是运行时 state ownership 和异步生命周期，不描述每个 View 的布局。
+
+## 快速定位
+
+| 任务/符号 | 文件路径 | 关键入口 |
+| --- | --- | --- |
+| Store 初始化、恢复、启动任务 | [`AITRANS/Services/TranslationSessionStore.swift`](../../../AITRANS/Services/TranslationSessionStore.swift) | `init`、`restoreSnapshot()`、`runLaunch...IfNeeded()` |
+| 文本翻译 | 同上 | `submitDraft()` |
+| 图片会话 | 同上 | `beginImageTranslationTask`、`runImageTranslationPipeline`、`translateImage`、`translateImageData` |
+| 图片单块操作 | 同上 | `retryImageTranslationBlock`、`rerecognizeImageTranslationBlock`、`correctImageTranslationBlock`、`cancelImageTranslationBlockRetry`、`cancelImageTranslationBlockRerecognition` |
+| 图片结构/复查 | 同上 | `splitImageTranslationBlock`、`mergeImageTranslationBlocks`、`moveImageTranslationBlock`、`markImageTranslationBlockReviewed`、`ignoreImageTranslationBlock` |
+| 整图取消/重试/清空 | 同上 | `cancelImageTranslation`、`retryImageTranslation`、`rerunImageRecognition`、`clearImageTranslation` |
+| 会话模型与快照 | [`AITRANS/Models/TranscriptModels.swift`](../../../AITRANS/Models/TranscriptModels.swift) | `ImageTranslationState`、`ImageTranslationBlock`、`ImageTranslationPersistenceSnapshot`、`AppPersistenceSnapshot` |
+
+## 状态流
+
+```text
+用户动作
+  -> Store 生成 task/generation 并更新 @Published 状态
+  -> OCR / model / export service
+  -> Store 检查当前 task、revision、block ID
+  -> 原子提交成功/失败/取消状态
+  -> persist()（只在产品状态边界）
+  -> View 从 Store 投影
+```
+
+图片会话的输入数据、源文件副本、blocks、Vision baseline、review IDs、ignored snapshots、翻译语言和 overlay/export 状态必须保持同一 session/revision。单块修正/重识别成功时只替换该 block 的产品字段并刷新该 block 翻译；失败或取消保留原 block。
+
+## 权威边界与禁止路径
+
+- `TranslationSessionStore` 是唯一的运行时状态和持久化调度中心；View、Preview 和 evaluator 不可直接写 JSON 或模型状态。
+- `ImageOCRLayoutBlock`、`ImageOCRCandidate`、shadow ledger 是 OCR 内部/诊断数据；不要把 ephemeral owner、candidate ledger 或 external artifact 字段写入产品 snapshot。
+- `CancellationError` 必须经过当前 task/content guard；旧回调只能退出，不能回滚到错误 session。
+- 改变 snapshot 字段、清理图片目录、分享/导出生命周期时，检查同一 Store 中的 `persistedLocationDisplay`、文件复制和 orphan cleanup。
+
+## 相关测试与测试路由
+
+- [`test-v328-image-review-session-continuity-contract.py`](../../../scripts/test-v328-image-review-session-continuity-contract.py)：复查 session 连续性。
+- [`test-v3289-image-translation-session-persistence-contract.py`](../../../scripts/test-v3289-image-translation-session-persistence-contract.py)：快照/图片 session 持久化。
+- [`test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py`](../../../scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py)：单块取消不扩大到整图。
+- [`test-v3290-image-translation-render-safety-contract.py`](../../../scripts/test-v3290-image-translation-render-safety-contract.py)：保存前的渲染安全边界。
+- 涉及 Store/Swift 的改动默认只做静态合同和 `git diff --check`；本机 build/runtime 按 [`AGENTS.md`](../../../AGENTS.md) 交给云端。
+
+## 何时必须更新本索引
+
+新增 `@Published` 权威状态、task/generation、snapshot 字段、Store public action、文件清理或取消/恢复语义时更新；只改 View 的焦点或文案转到 [`UI 路由与复查操作`](index-app-ui.md)。

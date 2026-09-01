@@ -1,0 +1,46 @@
+# UI 路由与图片复查操作
+
+> 状态：current。View 是 Store 的展示/动作投影；本页只保留入口和高风险交互路由。
+
+## 快速定位
+
+| 屏幕/主题 | 文件 | 关键符号 |
+| --- | --- | --- |
+| 根路由、tab、Phone/iPad | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `ContentView`、`PhoneRootView`、`TabletRootView`、`AppTabRouter` |
+| 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane` |
+| 图片翻译主屏 | [`AITRANS/Views/ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | `ImageTranslationView`、`ImageTranslationPanel`、`ImageTranslationPreview` |
+| 图片结果行/局部预览/编辑 | 同上 | `ImageTranslationBlockRow`、`ImageTranslationFocusPreview`、`ImageOCRCorrectionSheet` |
+| 图片 overlay/竖排显示 | 同上 | `ImageTranslationOverlayBlock`、`ImageTranslationVerticalText` |
+| 图片结构/几何编辑 | [`ImageOCRBlockStructureEditor.swift`](../../../AITRANS/Views/ImageOCRBlockStructureEditor.swift)、[`ImageOCRGeometryEditor.swift`](../../../AITRANS/Views/ImageOCRGeometryEditor.swift) | editor Views |
+| 音频、历史、设置 | [`AudioTranslationView.swift`](../../../AITRANS/Views/AudioTranslationView.swift)、[`HistoryView.swift`](../../../AITRANS/Views/HistoryView.swift)、[`SettingsView.swift`](../../../AITRANS/Views/SettingsView.swift) | screen Views |
+| Prompt/模型/Developer Console | [`PromptLibraryView.swift`](../../../AITRANS/Views/PromptLibraryView.swift)、[`ModelManagementView.swift`](../../../AITRANS/Views/ModelManagementView.swift)、[`DeveloperConsoleView.swift`](../../../AITRANS/Views/DeveloperConsoleView.swift) | settings destinations |
+| UI evidence fixtures | [`AITRANS/Views/AppPreviewSupport.swift`](../../../AITRANS/Views/AppPreviewSupport.swift) | `AppPreviewScenario` |
+
+## 操作数据流
+
+```text
+View action / accessibility action
+  -> TranslationSessionStore public method
+  -> @Published state + focus generation
+  -> View updates focus/preview/filter
+```
+
+图片复查的入口有结果行、完整 overlay 和局部 focus preview 三类；编辑、恢复 Vision、单块重识别、重译、忽略、review 和前后导航必须回到发起来源或明确的下一结果。焦点 ID、筛选集合和局部预览生命周期属于 View；block 内容、review progress、failure generation 属于 Store。
+
+## 禁止路径与风险
+
+- View 不直接操作 `TranslationSessionStore.persistenceURL`、模型 runtime 或探针报告。
+- “取消重新识别此文字块”只能调用 scoped block cancel；整图取消按钮才调用 `cancelImageTranslation()`。
+- `ImageTranslationOverlayBlock` 的竖排绘制必须保持与 OCR `sourceDirection`/overlay mode 的边界，不把显示方向改成 OCR 方向事实。
+- UI evidence scenario 使用 `MockGemmaService` 和临时 persistence；不要把 preview fixture 当生产 OCR/翻译证据。
+
+## 相关测试
+
+- [`test-v187-ui-interaction-contract.py`](../../../scripts/test-v187-ui-interaction-contract.py)、[`test-v188-home-ui-contract.py`](../../../scripts/test-v188-home-ui-contract.py)：全 App 交互/首页。
+- [`test-v313-image-block-focus-contract.py`](../../../scripts/test-v313-image-block-focus-contract.py)、[`test-v3150-image-focus-restore-action-contract.py`](../../../scripts/test-v3150-image-focus-restore-action-contract.py)：图片焦点和恢复动作。
+- [`test-v3247-image-ocr-rerecognition-review-focus-contract.py`](../../../scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py)、[`test-v3248-image-ocr-rerecognition-failure-focus-contract.py`](../../../scripts/test-v3248-image-ocr-rerecognition-failure-focus-contract.py)：重识别完成/失败焦点。
+- [`test-v3289-image-ocr-block-structure-editor-contract.py`](../../../scripts/test-v3289-image-ocr-block-structure-editor-contract.py)、[`test-v3289-image-ocr-geometry-editor-contract.py`](../../../scripts/test-v3289-image-ocr-geometry-editor-contract.py)：结构/几何编辑。
+
+## 何时必须更新本索引
+
+新增屏幕、导航 destination、accessibility action、focus handoff、UI evidence scenario 或图片复查入口时更新；纯样式改动只需 `git diff --check`，不扩散到根索引。
