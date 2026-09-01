@@ -10,7 +10,6 @@
 - Agent A 最终回复第一行必须写：`我是 Agent A。`
 - Agent B 最终回复第一行必须写：`我是 Agent B。`
 - Agent C 最终回复第一行必须写：`我是 Agent C。`
-- Agent X 最终回复第一行必须写：`我是 Agent X。`
 
 ## 1. 项目核心事实
 v3.109 的普通图片 OCR 筛选焦点只使用 `AccessibilityFocusState`：筛选切换后从 `visibleImageTranslationBlocks` 取第一个 block，并通过既有 revision-scoped focus helper 聚焦其结果行；无结果时继续走 v3.107 空态，隐藏选中项清理和复查状态保持不变。该 View-only 改动不新增 Store／持久化、不改变 Vision OCR、翻译、renderer/export、Koharu active gate、metrics 或 `output`。候选 full `31064198524`、PR #173 fast `31064487760`、merge fast `31064532453` 均通过，不声称质量提升。
