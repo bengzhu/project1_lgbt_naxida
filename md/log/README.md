@@ -5,6 +5,7 @@
 ## 分类
 
 - `update_log.md`：默认更新日志，按版本或主题记录变化、验证证据和遗留风险。
+- `work.md`：Agent X `/goal` 的当前工作台，记录目标拆分、当前状态、证据和下一步；完成后收口，不作为历史流水账。
 - 专项日志：只有单条更新无法清楚表达时才新建，例如 `ocr-investigation.md`、`release-validation.md`；在 `update_log.md` 中留下链接。
 
 ## 写法
