@@ -172,39 +172,6 @@ struct GemmaLocalService: LocalLanguageModeling {
         }
 
         var lastError: Error?
-        if let rawPrompt = japaneseRawCompletionPrompt(for: request) {
-            do {
-                Self.writeTranslationProbeLog(
-                    "local-raw-attempt-start " +
-                    "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
-                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(rawPrompt))"
-                )
-                let output = try Self.runtime.generateRaw(
-                    prompt: rawPrompt,
-                    maxTokens: max(1, min(request.sampling.maxTokens, 160)),
-                    decodingProfile: .sampled
-                )
-                Self.writeTranslationProbeLog(
-                    "local-raw-attempt-raw output=\(Self.probeField(output))"
-                )
-                let cleanedOutput = try cleanTranslationOutput(
-                    output,
-                    input: request.inputText,
-                    sourceLanguage: request.sourceLanguage,
-                    targetLanguage: request.targetLanguage
-                )
-                Self.writeTranslationProbeLog(
-                    "local-raw-attempt-clean output=\(Self.probeField(cleanedOutput))"
-                )
-                return cleanedOutput
-            } catch {
-                Self.writeTranslationProbeLog(
-                    "local-raw-attempt-error error=\(Self.probeField(error.localizedDescription))"
-                )
-                lastError = error
-            }
-        }
-
         for (index, messages) in translationMessages(for: request).enumerated() {
             let promptForLog = promptForLogging(for: messages)
             do {
@@ -240,7 +207,80 @@ struct GemmaLocalService: LocalLanguageModeling {
             }
         }
 
+        // The direct completion path is deliberately last. The real test2
+        // trace showed that an untemplated completion can emit language labels
+        // and a long explanation that the ordinary cleaner cannot distinguish
+        // from a translation. Give the instruction-tuned candidates every
+        // chance first, then keep this as a narrowly guarded final fallback.
+        if let rawPrompt = japaneseRawCompletionPrompt(for: request) {
+            do {
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-start " +
+                    "source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+                    "input=\(Self.probeField(request.inputText)) prompt=\(Self.probeField(rawPrompt))"
+                )
+                let output = try Self.runtime.generateRaw(
+                    prompt: rawPrompt,
+                    maxTokens: max(1, min(request.sampling.maxTokens, 160)),
+                    decodingProfile: .sampled
+                )
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-raw output=\(Self.probeField(output))"
+                )
+                let cleanedOutput = try cleanJapaneseRawCompletionOutput(
+                    output,
+                    input: request.inputText,
+                    sourceLanguage: request.sourceLanguage,
+                    targetLanguage: request.targetLanguage
+                )
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-clean output=\(Self.probeField(cleanedOutput))"
+                )
+                return cleanedOutput
+            } catch {
+                Self.writeTranslationProbeLog(
+                    "local-raw-attempt-error error=\(Self.probeField(error.localizedDescription))"
+                )
+                lastError = error
+            }
+        }
+
         throw lastError ?? GemmaLocalServiceError.emptyOutput
+    }
+
+    private func cleanJapaneseRawCompletionOutput(
+        _ output: String,
+        input: String,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) throws -> String {
+        let raw = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.contains("\n"), !raw.contains("\r") else {
+            throw GemmaLocalServiceError.emptyOutput
+        }
+        let metadataMarkers = [
+            "日本語：",
+            "日语：",
+            "Japanese:",
+            "简体中文：",
+            "繁体中文：",
+            "Simplified Chinese:",
+            "Traditional Chinese:",
+            "English:",
+            "韩语：",
+            "Korean:"
+        ]
+        guard !metadataMarkers.contains(where: { marker in
+            raw.localizedCaseInsensitiveContains(marker)
+        }) else {
+            throw GemmaLocalServiceError.emptyOutput
+        }
+        return try cleanTranslationOutput(
+            raw,
+            input: input,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
     }
 
     private func japaneseRawCompletionPrompt(for request: ModelGenerationRequest) -> String? {
@@ -471,6 +511,31 @@ struct GemmaLocalService: LocalLanguageModeling {
         }
 
         if let japaneseLanguagePairInstruction {
+            let japaneseFewShotFallbackInstruction: String
+            switch (request.sourceLanguage, request.targetLanguage) {
+            case (.japanese, .simplifiedChinese):
+                japaneseFewShotFallbackInstruction = """
+                Translate Japanese to Simplified Chinese. Use the examples only as translation hints.
+                Output only the final Chinese translation; do not output labels, explanations, or the examples.
+                Example Japanese: ありがとう
+                Example Simplified Chinese: 谢谢
+                Example Japanese: つかれた
+                Example Simplified Chinese: 累了
+                Final Japanese:
+                """
+            case (.japanese, .englishUS):
+                japaneseFewShotFallbackInstruction = """
+                Translate Japanese to English. Use the examples only as translation hints.
+                Output only the final English translation; do not output labels, explanations, or the examples.
+                Example Japanese: ありがとう
+                Example English: Thank you.
+                Example Japanese: つかれた
+                Example English: Tired.
+                Final Japanese:
+                """
+            default:
+                japaneseFewShotFallbackInstruction = ""
+            }
             let japaneseChineseFallbackInstruction: String
             switch (request.sourceLanguage, request.targetLanguage) {
             case (.japanese, .simplifiedChinese):
@@ -491,6 +556,11 @@ struct GemmaLocalService: LocalLanguageModeling {
             }
 
             return [
+                """
+                \(japaneseFewShotFallbackInstruction)
+                \(request.inputText)
+                Answer:
+                """,
                 """
                 \(japaneseLanguagePairInstruction)
                 \(userInstructionSection)\(contextualInstruction)

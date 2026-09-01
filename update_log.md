@@ -1,4 +1,8 @@
-## v3.388：普通图片 Local GGUF 日语原始补全文本 fallback（待云端验收）
+## v3.389：普通图片 Local GGUF 日语 few-shot 翻译 fallback（待云端验收）
+
+v3.388 的真实 `test/2.png` 运行已完成 17 个非空日语 OCR 块，但 `translatedBlockCount=0/17`；LLM trace 还显示裸 completion 的语言标签/长说明，以及普通 QA 可能接受的无关短回答。v3.389 将 pair-specific few-shot chat candidate 前置到标准日语→简体中文/英文候选队列，裸 completion 降为最后回退，并新增单行、无语言标签/元话术的严格门；成功输出仍进入现有清洗、源文泄漏、目标语言、数字/术语/长度和逐块 QA。漫画 `[N]` 批译、OCR、预算、取消、持久化和非图片路径不变。新增纯静态合同 `scripts/test-v3389-japanese-few-shot-translation-contract.py`，工程版本 `3.389`，CI 已接入；真实 `test/2.png` 云端重跑待完成，尚不合成质量证据。
+
+## v3.388：普通图片 Local GGUF 日语原始补全文本 fallback（已完成失败诊断）
 
 v3.387 的真实 `test/2.png` 运行已完成 17 个非空日语 OCR 块，但 270M 模型对 chat-template 候选仍回显提示和日文原文，最终 `translatedBlockCount=0/17`。v3.388 在标准日语→简体中文/英文路径最前面增加不经过 chat template 的窄范围原始补全文本（`日语：…\n简体中文：` / `Japanese: …\nEnglish:`），输出继续经过现有清洗、源文泄漏、目标语言、数字/术语/长度与逐块 QA；失败继续回到既有聊天候选，漫画 `[N]` 批译、OCR、预算、取消、持久化和非图片路径不变。新增纯静态合同 `scripts/test-v3388-japanese-raw-completion-contract.py`，工程版本 `3.388`，CI 已接入；真实 `test/2.png` 云端重跑待完成，并继续保存逐块 JSON、LLM trace、结果列表和整图 OCR 对照，不合成截图或质量证据。
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.388's exact bare Japanese translation prompt."""
+"""Static contract for v3.389's exact bare Japanese translation prompt."""
 
 from __future__ import annotations
 
@@ -130,16 +130,16 @@ class JapaneseBarePromptContractTests(unittest.TestCase):
             self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.388", "3.388"],
+            ["3.389", "3.389"],
         )
         for marker in (
             "scripts/test-v3386-japanese-chinese-prompt-contract.py",
             "scripts/test-v3387-japanese-bare-prompt-contract.py",
-            "japanese-benchmark-v3.388-",
+            "japanese-benchmark-v3.389-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
-        for marker in ("v3.388", "test/2.png", "小模型", "把以下翻译成中文", "prompt"):
+        for marker in ("v3.389", "test/2.png", "小模型", "把以下翻译成中文", "prompt"):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
     def test_ocr_diagnostic_reopens_the_real_session_without_restarting_work(self) -> None:

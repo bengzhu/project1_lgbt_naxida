@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Static contract for v3.389 Japanese minimal GGUF prompt fallback."""
+"""Static contract for v3.389's Japanese few-shot translation fallback."""
 
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ def function_body(source: str, signature: str) -> str:
     raise AssertionError(f"unterminated function body: {signature}")
 
 
-class JapaneseMinimalFallbackContractTests(unittest.TestCase):
+class JapaneseFewShotTranslationContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.gemma = read("AITRANS/Services/GemmaLocalService.swift")
@@ -53,51 +53,92 @@ class JapaneseMinimalFallbackContractTests(unittest.TestCase):
             )
         )
 
-    def test_minimal_japanese_fallback_is_explicit_and_context_free(self) -> None:
+    def test_chat_candidates_run_before_raw_fallback(self) -> None:
         body = function_body(
             self.gemma,
-            "private func translationPromptBodies(for request: ModelGenerationRequest)",
+            "private func generateTranslation(for request: ModelGenerationRequest)",
         )
+        chat_start = body.index("translationMessages(for: request)")
+        raw_start = body.index("japaneseRawCompletionPrompt(for: request)")
+        self.assertLess(chat_start, raw_start)
         for marker in (
-            "let japaneseMinimalInstruction: String",
-            'japaneseMinimalInstruction = "Translate Japanese to Simplified Chinese. Output only the translation."',
-            'japaneseMinimalInstruction = "Translate Japanese to English. Output only the translation."',
-            "\\(japaneseMinimalInstruction)",
-            "Text to translate:",
-            "待翻译文本：",
+            "Self.runtime.generate(",
+            "decodingProfile: .sampled",
+            "cleanTranslationOutput(",
+            "local-attempt-start",
+            "local-attempt-error",
+            "Self.runtime.generateRaw(",
+            "cleanJapaneseRawCompletionOutput(",
+            "local-raw-attempt-start",
+            "local-raw-attempt-error",
+            "max(1, min(request.sampling.maxTokens, 160))",
         ):
             self.assertIn(marker, body)
-        minimal_start = body.index("\\(japaneseMinimalInstruction)")
-        minimal = body[minimal_start : body.index("\n                \"\"\"", minimal_start)]
-        self.assertNotIn("contextualInstruction", minimal)
-        self.assertNotIn("compactContextSection", minimal)
-
-    def test_manga_batch_has_a_minimal_tagged_fallback(self) -> None:
-        body = function_body(
-            self.gemma,
-            "private func translationPromptBodies(for request: ModelGenerationRequest)",
-        )
-        for marker in (
-            "let mangaMinimalInstruction: String",
-            'mangaMinimalInstruction = "Translate Japanese to Simplified Chinese."',
-            "Keep each [N] tag and output only one [N] translation per line.",
-            "translationProfile == .mangaBlocks",
-            "request.inputText",
-        ):
-            self.assertIn(marker, body)
+        self.assertIn("if request.translationProfile == .mangaBlocks", body)
         self.assertLess(
-            body.index("\(mangaMinimalInstruction) Keep each [N] tag"),
-            body.index("if request.sourceLanguage == .englishUS"),
+            body.index("if request.translationProfile == .mangaBlocks"),
+            chat_start,
         )
 
-    def test_context_and_qa_boundaries_are_unchanged(self) -> None:
+    def test_raw_completion_is_strictly_single_line_and_metadata_free(self) -> None:
+        body = function_body(
+            self.gemma,
+            "private func cleanJapaneseRawCompletionOutput(",
+        )
         for marker in (
-            "request.translationContext.promptSection()",
-            "request.translationContext.compactPromptSection()",
-            "scopedToSingleBlock(",
+            'raw.contains("\\n")',
+            'raw.contains("\\r")',
+            "metadataMarkers",
+            "日本語：",
+            "日语：",
+            "Japanese:",
+            "简体中文：",
+            "Simplified Chinese:",
+            "English:",
+            "localizedCaseInsensitiveContains",
+            "cleanTranslationOutput(",
+        ):
+            self.assertIn(marker, body)
+
+    def test_few_shot_prompt_is_pair_specific_and_first_chat_candidate(self) -> None:
+        body = function_body(
+            self.gemma,
+            "private func translationPromptBodies(for request: ModelGenerationRequest)",
+        )
+        japanese_branch = body.index("if let japaneseLanguagePairInstruction")
+        japanese_body = body[japanese_branch:]
+        first_return = body.index("return [", japanese_branch)
+        first_candidate = body[first_return :]
+        for marker in (
+            "japaneseFewShotFallbackInstruction",
+            "Answer:",
+        ):
+            self.assertIn(marker, first_candidate)
+        for marker in (
+            "Use the examples only as translation hints.",
+            "Output only the final Chinese translation; do not output labels, explanations, or the examples.",
+            "Example Japanese: ありがとう",
+            "Example Simplified Chinese: 谢谢",
+            "Example Japanese: つかれた",
+            "Example Simplified Chinese: 累了",
+            "Final Japanese:",
+        ):
+            self.assertIn(marker, japanese_body)
+        self.assertIn("Example English: Thank you.", japanese_body)
+        self.assertIn("Example English: Tired.", japanese_body)
+        self.assertLess(
+            first_candidate.index("japaneseFewShotFallbackInstruction)"),
+            first_candidate.index("japaneseLanguagePairInstruction)"),
+        )
+
+    def test_existing_qa_manga_and_context_boundaries_remain(self) -> None:
+        for marker in (
+            "generateMangaBlockTranslation(for request:",
+            "cleanMangaBlockOutput(",
             "translateJapaneseImageBlockWithQA(",
             "TranslationBatchQualityEvaluator.singleOutputFailures(",
             "japaneseTranslationQAConfiguration(",
+            "TranslationOutputPolicy",
             "let generationMaxTokens = min(max(request.sampling.maxTokens, 192), 256)",
         ):
             self.assertIn(marker, self.gemma + self.store)
@@ -114,6 +155,9 @@ class JapaneseMinimalFallbackContractTests(unittest.TestCase):
             "scripts/capture-bundled-image-translation-ui.sh",
             "test2-image-translation-results.png",
             "test2-image-translation-manifest.json",
+            "test2-image-translation-ocr.png",
+            "test2-image-translation-ocr.txt",
+            "ocrScreenshot",
         ):
             self.assertIn(marker, self.store + self.test2_workflow + self.capture)
         self.assertEqual(
@@ -121,17 +165,23 @@ class JapaneseMinimalFallbackContractTests(unittest.TestCase):
             ["3.389", "3.389"],
         )
         for marker in (
-            "scripts/test-v3384-japanese-prompt-shape-contract.py",
-            "scripts/test-v3385-japanese-minimal-fallback-contract.py",
+            "scripts/test-v3388-japanese-raw-completion-contract.py",
+            "scripts/test-v3389-japanese-few-shot-translation-contract.py",
             "japanese-benchmark-v3.389-",
             "test2_image_translation_ui:",
         ):
             self.assertIn(marker, self.workflow)
-        for marker in ("v3.389", "test/2.png", "小模型", "最小", "prompt"):
+        for marker in (
+            "v3.389",
+            "test/2.png",
+            "few-shot",
+            "原始补全",
+            "prompt",
+        ):
             self.assertIn(marker, self.docs + self.test2_workflow)
 
     def test_contract_has_no_local_process_or_build_entrypoint(self) -> None:
-        source = read("scripts/test-v3385-japanese-minimal-fallback-contract.py")
+        source = read("scripts/test-v3389-japanese-few-shot-translation-contract.py")
         for forbidden in (
             "subprocess" + ".run(",
             "subprocess" + ".Popen(",

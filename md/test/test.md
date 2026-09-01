@@ -2069,3 +2069,8 @@ python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
 ### v3.377 translation batch inline preamble（已完成）
 
 新增纯静态合同 `scripts/test-v3377-translation-batch-inline-preamble-contract.py`：验证已知翻译前导词与首个 `[N]` 标签同一行时只剥离明确前缀并保留标签/正文；独立行前导、未知前缀、标签顺序/完整性、逐块 QA、OCR、geometry/layout、预算、逐块回退、取消、持久化和非日语路径仍保持原边界。工程版本 `3.377`，CI 已接入；本地安全回归 `376/376`、Python AST `403/403`、tracked JSON `144/144`、workflow YAML `3/3`、shell `31/31`、plist `4/4` 与 `git diff --check` 通过；最终实现 SHA `9ae1205f3123203fc91c7075b635bcb2c75379f1` 的 exact full [33362823753](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33362823753)、PR [#441](https://github.com/bengzhu/project1_lgbt_naxida/pull/441) checks [33363194227](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33363194227)、merge SHA `8b63ff223b260303e9e3efb24fc779a6fb00d5c6` 与合入后 push CI [33363279607](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33363279607) 均成功，发布 `AITRANS CI/full-validation=success` receipt。`test/3.png` 未提供，不合成样图或质量证据；Koharu/GGUF、授权语料和目标设备证据不阻塞普通路径。
+### v3.389 普通图片 Local GGUF 日语 few-shot 翻译 fallback（待云端验收）
+
+- v3.388 的真实 `test/2.png` 云端运行已完成 17 个非空日语 OCR 块，但翻译仍为 `0/17`，并记录到与短输入无关的模板式输出；该运行只作失败诊断。
+- v3.389 将 pair-specific few-shot chat 候选前置，裸 completion 降为最后回退，并要求裸输出单行且不含语言标签/元话术，再进入既有清洗与严格逐块 QA；漫画批译、OCR、预算、取消和持久化边界不变。
+- 新增纯静态合同 `scripts/test-v3389-japanese-few-shot-translation-contract.py`，工程版本 `3.389`，CI 已接入；下一次真实 `test/2.png` 云端运行会继续保存逐块 JSON、LLM trace、结果列表与整图 OCR 原文对照，不合成质量证据。
