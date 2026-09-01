@@ -1,4 +1,6 @@
 # 项目流程图
+v3.390 OCR detection workspace（待云端验收）：`OCR 检测 tab -> 图片/相册/拍照/粘贴 -> OCR-only Store state -> Vision automatic/explicit language OCR -> normalized bbox + direction + raw confidence -> overlay/review/export`；页面不进入图片翻译或 LLM，提供独立语言/版式、日语竖排方向复读、低置信筛选、单块重识别、手动编辑、复制/TXT/JSON、取消/重试和折叠诊断。test2 capture 继续把真实 OCR overlay 复制为 `test2-ocr-full-overlay-v3388.png`；该 PNG 只作 UI/geometry receipt，不外推通用质量结论。
+
 v3.389 Local GGUF Japanese few-shot fallback boundary（待云端验收）：`pair-specific few-shot chat candidate -> existing chat candidates -> strict single-line raw completion fallback -> shared cleanup/QA`；只对标准日语→简体中文/英文启用，裸回退拒绝语言标签/元话术。普通 `test/2.png` 继续通过真实 ordinary image OCR→日语翻译入口，并保存逐块 JSON、LLM trace、结果界面和整图 OCR 原文框对照；新增合同 `scripts/test-v3389-japanese-few-shot-translation-contract.py`，工程版本 `3.389`，云端重跑待完成。OCR、256-token manga budget、shared-Han QA、逐块取消/持久化和非图片路径边界保持不变；不把截图或静态合同外推为通用 OCR/CER/翻译质量证据。
 
 v3.388 Local GGUF Japanese raw-completion fallback boundary（待云端验收）：`raw Japanese completion -> strict single-output cleaning/QA -> existing chat-template candidates`；只对标准日语→简体中文/英文启用，漫画批译仍走 `[N]` 标签路径。普通 `test/2.png` 继续通过真实 ordinary image OCR→日语翻译入口，并保存逐块 JSON、LLM trace、结果界面和整图 OCR 原文框对照；新增合同 `scripts/test-v3388-japanese-raw-completion-contract.py`，工程版本 `3.388`，云端重跑待完成。OCR、256-token manga budget、shared-Han QA、逐块取消/持久化和非图片路径边界保持不变；不把截图或静态合同外推为通用 OCR/CER/翻译质量证据。

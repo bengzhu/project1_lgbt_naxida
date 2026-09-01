@@ -12,6 +12,7 @@
 | detector-owned Manga OCR | 同上、[`MangaOCRService.swift`](../../../AITRANS/Services/MangaOCRService.swift) | `recognizeJapaneseMangaOCR`、`japaneseMangaOCRRegions` |
 | detector 输入与 slice | [`ComicTextBubbleDetectorService.swift`](../../../AITRANS/Services/ComicTextBubbleDetectorService.swift) | 640×640、tall-image slices、merge |
 | OCR 清洗与 quality gate | [`VisionOCRService.swift`](../../../AITRANS/Services/VisionOCRService.swift)、[`JapaneseOCRTextNormalizer.swift`](../../../AITRANS/Models/JapaneseOCRTextNormalizer.swift) | `postProcessJapaneseOCRText`、`validOCRConfidence`、`japaneseScriptDensity` |
+| OCR-only 检测消费 | [`ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift)、[`TranslationSessionStore.swift`](../../../AITRANS/Services/TranslationSessionStore.swift) | `imageOCRDetection*`、overlay、复查、导出；不进入图片翻译/LLM |
 
 ## 处理策略
 

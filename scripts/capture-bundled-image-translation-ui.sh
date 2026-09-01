@@ -148,6 +148,7 @@ fi
 sleep 2
 results_screenshot_path="$output_dir/test2-image-translation-results.png"
 ocr_screenshot_path="$output_dir/test2-image-translation-ocr.png"
+full_overlay_screenshot_path="$output_dir/test2-ocr-full-overlay-v3388.png"
 xcrun simctl io "$device_id" screenshot "$results_screenshot_path"
 
 # Reopen the persisted terminal session in a read-only OCR diagnostic view.
@@ -160,14 +161,15 @@ SIMCTL_CHILD_AITRANS_IMAGE_TRANSLATION_UI_FOCUS=ocr \
   -AITRANS_IMAGE_TRANSLATION_UI_FOCUS ocr
 sleep 6
 xcrun simctl io "$device_id" screenshot "$ocr_screenshot_path"
+cp "$ocr_screenshot_path" "$full_overlay_screenshot_path"
 
-python3 - "$output_dir/test2-image-translation-state.json" "$results_screenshot_path" "$output_dir/test2-image-translation-manifest.json" "$commit_sha" "$fixture_name" "$terminal_state" "$ocr_screenshot_path" <<'PY'
+python3 - "$output_dir/test2-image-translation-state.json" "$results_screenshot_path" "$output_dir/test2-image-translation-manifest.json" "$commit_sha" "$fixture_name" "$terminal_state" "$ocr_screenshot_path" "$full_overlay_screenshot_path" <<'PY'
 import json
 import os
 import sys
 from pathlib import Path
 
-state_path, screenshot_path, manifest_path, commit_sha, fixture_name, terminal_state, ocr_screenshot_path = sys.argv[1:]
+state_path, screenshot_path, manifest_path, commit_sha, fixture_name, terminal_state, ocr_screenshot_path, full_overlay_screenshot_path = sys.argv[1:]
 data = json.loads(Path(state_path).read_text(encoding="utf-8"))
 session = data.get("imageTranslationSession") or {}
 blocks = session.get("blocks") or []
@@ -186,6 +188,9 @@ if any(not (block.get("original") or "").strip() for block in blocks):
 ocr_screenshot = Path(ocr_screenshot_path)
 if not ocr_screenshot.is_file():
     raise SystemExit(f"missing OCR diagnostic screenshot: {ocr_screenshot}")
+full_overlay_screenshot = Path(full_overlay_screenshot_path)
+if not full_overlay_screenshot.is_file():
+    raise SystemExit(f"missing full OCR overlay screenshot: {full_overlay_screenshot}")
 
 ocr_text_path = Path(manifest_path).with_name("test2-image-translation-ocr.txt")
 ocr_lines = [
@@ -219,6 +224,8 @@ manifest = {
     "screenshotBytes": os.path.getsize(screenshot_path),
     "ocrScreenshot": ocr_screenshot.name,
     "ocrScreenshotBytes": os.path.getsize(ocr_screenshot),
+    "fullOCROverlay": full_overlay_screenshot.name,
+    "fullOCROverlayBytes": os.path.getsize(full_overlay_screenshot),
     "ocrText": ocr_text_path.name,
     "blocks": [
         {
@@ -247,6 +254,8 @@ if manifest["screenshotBytes"] < 50_000:
     raise SystemExit("captured image translation screenshot appears blank")
 if manifest["ocrScreenshotBytes"] < 50_000:
     raise SystemExit("captured OCR diagnostic screenshot appears blank")
+if manifest["fullOCROverlayBytes"] < 50_000:
+    raise SystemExit("captured full OCR overlay screenshot appears blank")
 PY
 
 echo "Captured actual image translation UI for $fixture_name at commit $commit_sha"

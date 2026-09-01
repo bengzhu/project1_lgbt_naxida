@@ -1,3 +1,7 @@
+## v3.390：独立 OCR 检测工作台（待云端验收）
+
+新增独立 `OCR 检测` tab，不进入图片翻译或 LLM 状态：上传/相册/拍照/粘贴图片后，复用现有 `VisionOCRService` 输出文字块、归一化 bbox、方向、provenance 和方向复读结果。页面提供原图叠加编号框、点击高亮、语言（自动/日语/中文/英语）、版式（自动/横排/竖排/漫画竖排）、低置信筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出，以及准备图片→检测文字区域→OCR→整理阅读顺序的阶段反馈。诊断默认折叠，保留分辨率、引擎/模型、阶段耗时、块/字符速度、平均模型原始分数、低置信比例和分布；Vision/Manga OCR 分数不横向校准。CI test2 capture 将现有 OCR overlay 同步为 `test2-ocr-full-overlay-v3388.png` 产物别名。新增 `scripts/test-v3390-image-ocr-detection-ui-contract.py`，工程版本 `3.390`；尚未运行本机 Xcode/App/Core ML，待云端基础 build、UI evidence 和静态合同验收。
+
 ## v3.389：普通图片 Local GGUF 日语 few-shot 翻译 fallback（待云端验收）
 
 v3.388 的真实 `test/2.png` 运行已完成 17 个非空日语 OCR 块，但 `translatedBlockCount=0/17`；LLM trace 还显示裸 completion 的语言标签/长说明，以及普通 QA 可能接受的无关短回答。v3.389 将 pair-specific few-shot chat candidate 前置到标准日语→简体中文/英文候选队列，裸 completion 降为最后回退，并新增单行、无语言标签/元话术的严格门；成功输出仍进入现有清洗、源文泄漏、目标语言、数字/术语/长度和逐块 QA。漫画 `[N]` 批译、OCR、预算、取消、持久化和非图片路径不变。新增纯静态合同 `scripts/test-v3389-japanese-few-shot-translation-contract.py`，工程版本 `3.389`，CI 已接入；真实 `test/2.png` 云端重跑待完成，尚不合成质量证据。

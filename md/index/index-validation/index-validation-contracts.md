@@ -6,7 +6,7 @@
 
 | 合同/入口 | 路径 | 覆盖对象 |
 | --- | --- | --- |
-| 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 415 个当前 tracked 合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
+| 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 416 个当前 tracked 合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
 | 非版本 Speech 合同 | [`scripts/test-speech-*.py`](../../../scripts/) | Speech 接线、质量 evaluator |
 | Python evaluator | [`scripts/evaluate-*.py`](../../../scripts/) | benchmark/corpus/report schema 语义 |
 | Swift harness/evaluator | [`scripts/fixtures/`](../../../scripts/fixtures/) 与 `scripts/*evaluator.swift` | 需要编译/运行的 runtime evidence；默认云端 |
@@ -17,6 +17,7 @@
 ## 按模块路由合同
 
 - 图片 UI/Store：`test-v3*image-*`、`test-v31*image-*`、`test-v32*image-*`、`test-v39*image-*`。
+- 独立 OCR 检测页：`scripts/test-v3390-image-ocr-detection-ui-contract.py`，覆盖 tab/输入/语言版式/overlay/复查/导出/诊断以及 test2 v3388 overlay 别名。
 - 日语 OCR/geometry：`test-v3156*`–`test-v3279*`、`test-v3295*`、`test-v3305*`–`test-v361*` 中的 `japanese`/`ocr`/`layout`。
 - 翻译/context/QA：`test-v3286*`–`test-v3299*`、`test-v3300*`–`test-v380*` 中的 `translation`/`context`/`gguf`。
 - Koharu/artifact/探针：`test-v32*`、`test-v19*`、`test-v20*` 及 `koharu`/`manga`/`artifact` 命名合同；真实外部 artifact 只走 cloud-only gate。

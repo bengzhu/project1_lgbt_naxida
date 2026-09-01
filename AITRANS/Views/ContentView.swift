@@ -3,6 +3,7 @@ import SwiftUI
 enum AppTab: Hashable, CaseIterable, Identifiable {
     case text
     case image
+    case ocr
     case audio
     case history
     case settings
@@ -13,6 +14,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .text: "文本"
         case .image: "图片"
+        case .ocr: "OCR 检测"
         case .audio: "音频"
         case .history: "历史"
         case .settings: "设置"
@@ -23,6 +25,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .text: "text.bubble.fill"
         case .image: "photo.on.rectangle"
+        case .ocr: "text.viewfinder"
         case .audio: "waveform.and.mic"
         case .history: "clock.arrow.circlepath"
         case .settings: "gearshape.fill"
@@ -172,6 +175,8 @@ private struct AppTabRouter: View {
             TextTranslationView(selectedTab: $selectedTab)
         case .image:
             ImageTranslationView()
+        case .ocr:
+            ImageOCRDetectionView()
         case .audio:
             AudioTranslationView()
         case .history:

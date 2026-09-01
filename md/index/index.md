@@ -1,6 +1,6 @@
 # AITRANS 代码索引
 
-> 状态：current。最后按 `smalldata_test` 当前头部（工程版本 `3.389`，merge `7b7345a7`）盘点。这里是 Agent 的日常代码定位入口；完整流程、版本历史和测试制度仍由原文档负责。
+> 状态：current。按当前 v3.390 OCR 检测候选盘点；代码分支尚未完成云端验收。这里是 Agent 的日常代码定位入口；完整流程、版本历史和测试制度仍由原文档负责。
 
 ## 使用顺序
 
@@ -54,6 +54,10 @@
 AITRANSApp
   -> ContentView / AppTabRouter
   -> TranslationSessionStore（唯一运行时状态与调度边界）
+     -> OCR 检测：ImageOCRDetectionView
+        -> 图片/相册/拍照/粘贴 -> VisionOCRService
+        -> ImageTranslationBlock（OCR-only，不进入翻译/LLM）
+        -> 原图 bbox overlay -> 复查/编辑/复制/TXT/JSON
      -> 普通图片：VisionOCRService
         -> 日语时的 detector / bundled MangaOCR 补充
         -> ImageOCRLayoutEngine

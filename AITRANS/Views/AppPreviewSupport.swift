@@ -8,6 +8,8 @@ enum AppPreviewScenario: String {
     case textKeyboard
     case imageEmpty
     case imageSuccess
+    case ocrEmpty
+    case ocrSuccess
     case audioRecognizing
     case audioTranslating
     case audioFailure
@@ -23,6 +25,7 @@ enum AppPreviewScenario: String {
         switch self {
         case .empty, .textSuccess, .textFailure, .textKeyboard: .text
         case .imageEmpty, .imageSuccess: .image
+        case .ocrEmpty, .ocrSuccess: .ocr
         case .audioRecognizing, .audioTranslating, .audioFailure: .audio
         case .history: .history
         case .promptLibrary, .proLocked, .proUnlocked, .developerConsole, .localMissing, .localReady: .settings
@@ -93,6 +96,53 @@ enum AppPreviewScenario: String {
                     sourceDirection: .unknown
                 )
             ]
+        case .ocrEmpty:
+            store.imageOCRDetectionState = .idle
+            store.imageOCRDetectionData = nil
+        case .ocrSuccess:
+            if let url = Bundle.main.url(forResource: "2", withExtension: "png", subdirectory: "test") {
+                store.imageOCRDetectionData = try? Data(contentsOf: url)
+            }
+            store.imageOCRDetectionFilename = "2.png"
+            store.imageOCRDetectionLanguage = .japanese
+            store.imageOCRDetectionLayout = .mangaVertical
+            store.imageOCRDetectionBlocks = [
+                ImageTranslationBlock(
+                    original: "今度こそ",
+                    confidence: 0.999,
+                    boundingBox: NormalizedImageRect(x: 0.29, y: 0.10, width: 0.08, height: 0.20),
+                    sourceDirection: .vertical
+                ),
+                ImageTranslationBlock(
+                    original: "ニコッ",
+                    confidence: 0.591,
+                    boundingBox: NormalizedImageRect(x: 0.72, y: 0.48, width: 0.08, height: 0.15),
+                    sourceDirection: .vertical
+                ),
+                ImageTranslationBlock(
+                    original: "持ち帰る！",
+                    confidence: 0.88,
+                    boundingBox: NormalizedImageRect(x: 0.54, y: 0.65, width: 0.07, height: 0.18),
+                    sourceDirection: .vertical
+                )
+            ]
+            store.imageOCRDetectionRevision += 1
+            store.imageOCRDetectionState = .completed
+            store.imageOCRDetectionMessage = "已识别 3 个文字块，可逐块复查或导出"
+            store.imageOCRDetectionMetrics = ImageOCRDetectionMetrics(
+                totalMilliseconds: 1_248,
+                preprocessingMilliseconds: 24,
+                detectionMilliseconds: 310,
+                ocrMilliseconds: 792,
+                layoutMilliseconds: 122,
+                imageWidth: 1_280,
+                imageHeight: 1_808,
+                language: .japanese,
+                layout: .mangaVertical,
+                blocks: store.imageOCRDetectionBlocks,
+                engine: "Vision + bundled Manga OCR",
+                model: "Vision .accurate / bundled Manga OCR"
+            )
         case .audioRecognizing:
             store.isProUnlocked = true
             store.isCapturingProSpeech = true
