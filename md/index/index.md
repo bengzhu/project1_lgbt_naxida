@@ -1,6 +1,6 @@
 # AITRANS 代码索引
 
-> 状态：current。最后按 `smalldata_test` 当前头部（工程版本 `3.389`，merge `7b7345a7`）盘点。这里是 Agent 的日常代码定位入口；完整流程、版本历史和测试制度仍由原文档负责。
+> 状态：current。这里是 Agent 的日常代码定位入口；完整流程、版本历史和测试制度由各自权威文档负责。
 
 ## 使用顺序
 
@@ -54,6 +54,10 @@
 AITRANSApp
   -> ContentView / AppTabRouter
   -> TranslationSessionStore（唯一运行时状态与调度边界）
+     -> OCR 检测：ImageOCRDetectionView
+        -> 图片/相册/拍照/粘贴 -> VisionOCRService
+        -> ImageTranslationBlock（OCR-only，不进入翻译/LLM）
+        -> 原图 bbox overlay -> 复查/编辑/复制/TXT/JSON
      -> 普通图片：VisionOCRService
         -> 日语时的 detector / bundled MangaOCR 补充
         -> ImageOCRLayoutEngine
@@ -71,19 +75,19 @@ AITRANSApp
 - 本索引：短路由、源码符号、调用关系、权威状态和最小验证入口。
 - [`md/flow/flow.md`](../flow/flow.md)：当前完整架构、跨层流程和时序关系。
 - [`md/flow/flowchart.md`](../flow/flowchart.md)：人工查看的流程图；不替代源码索引。
-- [`md/test/test.md`](../test/test.md)：测试制度、版本合同历史和验证选择依据。
-- [`md/flow/experience-iteration.md`](../flow/experience-iteration.md)：大版本首次使用体验闸门、操作日志和产物边界。
+- [`md/test/test.md`](../test/test.md)：测试制度、探针边界和验证选择依据。
+- [`md/flow/experience-iteration.md`](../flow/experience-iteration.md)：大版本首次使用体验闸门和证据边界。
 - [`experience_state.md`](../../experience_state.md)：当前版本、上轮体验结论、未解决问题和下一步；只保留一份精简状态。
-- [`update_log.md`](../../update_log.md)：版本决策、证据和遗留问题；不复制到索引。
+- [`md/log/update_log.md`](../log/update_log.md)：版本决策、证据和遗留问题；不复制到索引。
 - [`md/prompt/`](../prompt/)：版本化 Agent A 任务 prompt；不作为当前源码结构的权威来源。
-- [`README.md`](../../README.md)：项目使用说明和稳定规则，不承担代码路由。
+- [`README.md`](../../README.md)：简明项目介绍、架构、模型和上手说明，不承担代码路由。
 
 ## 长期维护规则
 
 - 新增稳定职责模块先建二级目录，再建至少一个三级主题索引。
 - 新增 Swift 源码、测试入口、资源或 workflow 必须能在本索引或对应三级“完整文件图/合同目录”中检索到。
 - 局部变化只更新相关三级索引；只有权威状态、主数据流、target 或模块边界变化才上提二级/一级。
-- 索引不记录版本流水账；历史证据放 `update_log.md`，真实源码和实际验证结果优先于旧文档。
+- 索引不记录版本流水账；历史证据放 `md/log/`，真实源码和实际验证结果优先于旧文档。
 - 维护时排除 ignored、第三方、缓存、生成物和外部 reference；若 tracked 依赖有入口，标明“依赖”而不是“业务源码”。
 - 结构变化后至少执行：`git diff --check`、索引 Markdown 链接检查、源码/测试路径存在性检查；涉及工程/配置时再执行对应 JSON/YAML/plist 解析。
 

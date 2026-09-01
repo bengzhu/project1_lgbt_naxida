@@ -32,6 +32,8 @@ image Data
   -> [ImageTranslationBlock] -> TranslationSessionStore
 ```
 
+独立 OCR 检测页仍消费同一最终 `[ImageTranslationBlock]`，但使用 `ImageOCRDetectionLanguage` 的 automatic/日语/中文/英语选择和独立的版式偏好；automatic 传给 Vision 自动语言集合，显式日语才启用 bundled Manga OCR，日语竖排才启用 90°/270° 方向复读。页面只做框选、质量复查和导出，不生成翻译。
+
 Apple Vision 是普通文字识别的基础；Core ML detector 负责漫画文字区域几何，bundled Manga OCR 负责受控 crop/line recognition。外部 Koharu/MIT48 只在云端 reference parity/诊断中使用，不进入产品主路径。
 
 ## 高风险边界

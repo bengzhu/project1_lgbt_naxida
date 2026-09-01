@@ -133,8 +133,8 @@ class TranslationLeadingLabelBoundaryContractTests(unittest.TestCase):
                 "md/flow/flow.md",
                 "md/flow/flowchart.md",
                 "md/test/test.md",
-                "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md",
-                "update_log.md",
+                "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md",
+                "md/log/update_log.md",
             )
         )
         cls.cleaner = function_body(
@@ -248,7 +248,7 @@ class TranslationLeadingLabelBoundaryContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_missing_fixture_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         previous = "python3 -B scripts/test-v3377-translation-batch-inline-preamble-contract.py"
         current = "python3 -B scripts/test-v3378-translation-leading-label-boundary-contract.py"

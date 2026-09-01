@@ -78,7 +78,7 @@ class KoharuLinePolygonWarpContractTests(unittest.TestCase):
                 "-B",
                 "scripts/validate-koharu-artifacts.py",
                 "--root",
-                "md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported",
+                "md/人工空间/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported",
             ],
             cwd=ROOT,
             check=True,

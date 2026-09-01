@@ -36,7 +36,7 @@ class ImageTranslationSessionPersistenceContractTests(unittest.TestCase):
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
 
     def test_snapshot_is_versioned_and_carries_review_state(self) -> None:
         start = self.models.index("struct ImageTranslationPersistenceSnapshot:")
@@ -194,7 +194,7 @@ class ImageTranslationSessionPersistenceContractTests(unittest.TestCase):
             self.assertIn(marker, self.workflow + self.route + self.store)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         contract = read("scripts/test-v3289-image-translation-session-persistence-contract.py")
         for source in (contract,):

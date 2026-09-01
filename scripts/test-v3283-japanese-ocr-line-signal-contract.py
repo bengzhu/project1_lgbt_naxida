@@ -50,7 +50,7 @@ class JapaneseOCRLineSignalContractTests(unittest.TestCase):
         cls.protocol_readme = read("benchmarks/japanese_ocr/line_signal/README.md")
         cls.shell = read("scripts/run-japanese-ocr-line-signal-cloud-smoke.sh")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
 
     def evaluate(self, payload: dict | None = None, manifest: dict | None = None) -> dict:
@@ -210,7 +210,7 @@ class JapaneseOCRLineSignalContractTests(unittest.TestCase):
         self.assertIn("v3.283", self.route)
         self.assertIn("TextRegion/line", self.route)
         self.assertIn("shadow", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.389", "3.389"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.390", "3.390"])
 
 
 if __name__ == "__main__":

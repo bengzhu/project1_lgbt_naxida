@@ -8,9 +8,9 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-VALID = ROOT / "md/koharu研究/artifact_contract/examples/valid_v2_mask_topology"
-INVALID = ROOT / "md/koharu研究/artifact_contract/examples/invalid/v2_mask_topology_cross_assignment"
-LEGACY = ROOT / "md/koharu研究/artifact_contract/examples/valid"
+VALID = ROOT / "md/人工空间/koharu研究/artifact_contract/examples/valid_v2_mask_topology"
+INVALID = ROOT / "md/人工空间/koharu研究/artifact_contract/examples/invalid/v2_mask_topology_cross_assignment"
+LEGACY = ROOT / "md/人工空间/koharu研究/artifact_contract/examples/valid"
 
 
 def validate(path: Path) -> dict:

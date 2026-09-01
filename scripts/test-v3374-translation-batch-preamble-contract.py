@@ -110,8 +110,8 @@ class TranslationBatchPreambleContractTests(unittest.TestCase):
                 "md/flow/flow.md",
                 "md/flow/flowchart.md",
                 "md/test/test.md",
-                "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md",
-                "update_log.md",
+                "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md",
+                "md/log/update_log.md",
             )
         )
         cls.cleaner = function_body(
@@ -194,7 +194,7 @@ class TranslationBatchPreambleContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_fixture_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         previous = "python3 -B scripts/test-v3373-translation-term-width-qa-contract.py"
         current = "python3 -B scripts/test-v3374-translation-batch-preamble-contract.py"

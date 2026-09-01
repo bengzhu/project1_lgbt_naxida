@@ -4,14 +4,15 @@
 
 ## 边界
 
-本模块负责 App 启动、五个工作区、`TranslationSessionStore` 的状态/任务生命周期、历史与图片复查操作，以及持久化快照的产品投影。OCR、模型推理和 Speech 算法由相邻模块拥有；View 只能通过 Store 的公开方法触发变化。
+本模块负责 App 启动、六个工作区、`TranslationSessionStore` 的状态/任务生命周期、历史与图片复查操作，以及持久化快照的产品投影。OCR、模型推理和 Speech 算法由相邻模块拥有；View 只能通过 Store 的公开方法触发变化。
 
 ## 快速定位
 
 | 任务/符号 | 文件 | 入口 |
 | --- | --- | --- |
 | App 入口与 Store 注入 | [`AITRANS/App/AITRANSApp.swift`](../../../AITRANS/App/AITRANSApp.swift) | `AITRANSApp` |
-| 五个 tab、Phone/iPad 路由 | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `AppTab`、`ContentView`、`AppTabRouter` |
+| 六个 tab、Phone/iPad 路由 | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `AppTab`、`ContentView`、`AppTabRouter` |
+| 独立 OCR 检测工作台 | [`AITRANS/Views/ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift) | `ImageOCRDetectionView`、输入/overlay/结果/诊断/导出 |
 | 统一运行时状态/任务调度 | [`AITRANS/Services/TranslationSessionStore.swift`](../../../AITRANS/Services/TranslationSessionStore.swift) | `TranslationSessionStore` |
 | 会话、图片 block、持久化模型 | [`AITRANS/Models/TranscriptModels.swift`](../../../AITRANS/Models/TranscriptModels.swift) | `TranscriptLine`、`ImageTranslationBlock`、`ImageTranslationPersistenceSnapshot`、`TranslationSessionRecord` |
 | OCR 复查摘要与筛选 | [`AITRANS/Models/ImageOCRResultSummary.swift`](../../../AITRANS/Models/ImageOCRResultSummary.swift)、[`ImageOCRReviewFilter.swift`](../../../AITRANS/Models/ImageOCRReviewFilter.swift) | `ImageOCRResultSummary`、`ImageOCRReviewFilter` |
@@ -23,11 +24,14 @@
 AITRANSApp
   -> ContentView / AppTabRouter
   -> TranslationSessionStore
+     -> OCR-only detection state/task -> ImageOCRDetectionView
      -> OCR / translation / Speech services
-  -> TextTranslationView / ImageTranslationViews / AudioTranslationView / ...
+  -> TextTranslationView / ImageTranslationViews / ImageOCRDetectionView / AudioTranslationView / ...
 ```
 
 `TranslationSessionStore` 拥有当前 transcript、history、model 状态、图片 task、图片 blocks、翻译/复查进度、取消 generation、导出状态和持久化入口。View 的 `@State` 只保存导航、筛选、焦点、sheet 等展示状态；`ImageTranslationBlock` 是产品层 block，OCR 的 candidate/provenance/owner ledger 不应直接写入其中。
+
+OCR 检测工作台使用独立的 `imageOCRDetection*` 状态和 task，不调用图片翻译/LLM；它只把已整理的 OCR `ImageTranslationBlock` 投影到原图框选、结果复查和导出。
 
 ## 高风险边界
 

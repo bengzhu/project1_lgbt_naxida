@@ -15,8 +15,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 VALIDATOR = ROOT / "scripts/validate-koharu-artifacts.py"
-VALID_FIXTURE = ROOT / "md/koharu研究/artifact_contract/examples/valid_v2_mask_payload"
-INVALID_FIXTURE = ROOT / "md/koharu研究/artifact_contract/examples/invalid/v2_mask_payload_mismatch"
+VALID_FIXTURE = ROOT / "md/人工空间/koharu研究/artifact_contract/examples/valid_v2_mask_payload"
+INVALID_FIXTURE = ROOT / "md/人工空间/koharu研究/artifact_contract/examples/invalid/v2_mask_payload_mismatch"
 
 
 def load_validator():
@@ -41,7 +41,7 @@ class KoharuMaskPayloadContractTests(unittest.TestCase):
 
     def test_v1_remains_accepted_without_a_ready_payload_gate(self) -> None:
         report = self.validator.validate(
-            ROOT / "md/koharu研究/artifact_contract/examples/valid",
+            ROOT / "md/人工空间/koharu研究/artifact_contract/examples/valid",
             False,
             ROOT / "test/1.png",
         )

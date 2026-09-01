@@ -7,6 +7,31 @@ import Vision
 struct ImageOCRRecognitionOutput: Sendable {
     var blocks: [ImageTranslationBlock]
     var shadowLedger: ImageOCRShadowLedger
+    var timings: ImageOCRRecognitionTimings = .zero
+}
+
+/// Stage timings for the OCR-only workspace. Detection and layout are
+/// measured where this service has explicit boundaries; for non-Japanese
+/// Vision-only recognition the platform keeps detector work inside the OCR
+/// request, so the separate detection value can legitimately be zero.
+struct ImageOCRRecognitionTimings: Equatable, Sendable {
+    var totalMilliseconds: Double
+    var preprocessingMilliseconds: Double
+    var detectionMilliseconds: Double
+    var ocrMilliseconds: Double
+    var layoutMilliseconds: Double
+    var imageWidth: Int
+    var imageHeight: Int
+
+    static let zero = Self(
+        totalMilliseconds: 0,
+        preprocessingMilliseconds: 0,
+        detectionMilliseconds: 0,
+        ocrMilliseconds: 0,
+        layoutMilliseconds: 0,
+        imageWidth: 0,
+        imageHeight: 0
+    )
 }
 
 enum VisionOCRServiceError: LocalizedError {
@@ -144,11 +169,19 @@ struct VisionOCRService: Sendable {
     /// continues to call `recognizeTextBlocks`, which discards this ledger.
     func recognizeTextBlocksWithShadowLedger(
         in imageData: Data,
-        sourceLanguage: SupportedLanguage
+        sourceLanguage: SupportedLanguage?,
+        japaneseDirectionReread: Bool = true,
+        layoutPreference: ImageOCRDetectionLayout = .automatic
     ) async throws -> ImageOCRRecognitionOutput {
         let task = Task.detached(priority: .userInitiated) {
+            let totalStartedAt = DispatchTime.now().uptimeNanoseconds
+            let preprocessingStartedAt = DispatchTime.now().uptimeNanoseconds
             let ocrImage = try Self.makeOCRImage(from: imageData)
-            let preferredLanguages = sourceLanguage.visionRecognitionLanguageIdentifiers
+            let preprocessingMilliseconds = Self.elapsedMilliseconds(since: preprocessingStartedAt)
+            let preferredLanguages = sourceLanguage?.visionRecognitionLanguageIdentifiers ?? [
+                "ja-JP", "ja", "zh-Hans", "zh-CN", "zh", "en-US", "en"
+            ]
+            let pageOCRStartedAt = DispatchTime.now().uptimeNanoseconds
             var observations = try Self.recognizeObservations(
                 in: ocrImage,
                 recognitionLanguages: preferredLanguages,
@@ -157,6 +190,8 @@ struct VisionOCRService: Sendable {
                 rotationApplied: 0,
                 postProcessJapaneseText: sourceLanguage == .japanese
             )
+            var ocrMilliseconds = Self.elapsedMilliseconds(since: pageOCRStartedAt)
+            var detectionMilliseconds = 0.0
 
             var detectorMangaOCRObservations: [VisionOCRObservation] = []
             if sourceLanguage == .japanese {
@@ -173,28 +208,30 @@ struct VisionOCRService: Sendable {
                 // constrain vertical line/block/tile rereads to Japanese so a
                 // nearby Latin candidate cannot win a narrow column.
                 let japaneseVerticalRecognitionLanguages = ["ja-JP", "ja"]
-                for angle in [90, 270] {
-                    guard let rotatedOCRImage = try? Self.rotatedImage(ocrImage, angle: angle),
-                          let rotatedObservations = try? Self.recognizeObservations(
-                              in: rotatedOCRImage,
-                              recognitionLanguages: japaneseOrientationLanguages,
-                              minimumTextHeight: 0.006,
-                              automaticallyDetectsLanguage: false,
-                              rotationApplied: angle,
-                              postProcessJapaneseText: true
-                          ).map({
-                              Self.mapRotatedObservation(
-                                  $0,
-                                  rotatedImage: rotatedOCRImage,
-                                  originalImage: ocrImage,
-                                  angle: angle
-                              )
-                          }) else {
-                        // Keep the original page pass usable when one rotated
-                        // reconnaissance render or Vision request fails.
-                        continue
+                if japaneseDirectionReread {
+                    for angle in [90, 270] {
+                        guard let rotatedOCRImage = try? Self.rotatedImage(ocrImage, angle: angle),
+                              let rotatedObservations = try? Self.recognizeObservations(
+                                  in: rotatedOCRImage,
+                                  recognitionLanguages: japaneseOrientationLanguages,
+                                  minimumTextHeight: 0.006,
+                                  automaticallyDetectsLanguage: false,
+                                  rotationApplied: angle,
+                                  postProcessJapaneseText: true
+                              ).map({
+                                  Self.mapRotatedObservation(
+                                      $0,
+                                      rotatedImage: rotatedOCRImage,
+                                      originalImage: ocrImage,
+                                      angle: angle
+                                  )
+                              }) else {
+                            // Keep the original page pass usable when one rotated
+                            // reconnaissance render or Vision request fails.
+                            continue
+                        }
+                        observations.append(contentsOf: rotatedObservations)
                     }
-                    observations.append(contentsOf: rotatedObservations)
                 }
 
                 // Koharu recognizes each detector TextRegion with its dedicated
@@ -202,15 +239,18 @@ struct VisionOCRService: Sendable {
                 // pixel-first regions before Vision crop rereads; if the model
                 // cannot load or infer, an empty result leaves every historical
                 // Vision fallback available.
+                let detectorStartedAt = DispatchTime.now().uptimeNanoseconds
                 detectorMangaOCRObservations = try await Self.recognizeJapaneseMangaOCR(
                     image: ocrImage
                 )
+                detectionMilliseconds = Self.elapsedMilliseconds(since: detectorStartedAt)
                 observations.append(contentsOf: detectorMangaOCRObservations)
 
                 // Koharu crops each detected text node before handing it to the OCR
                 // engine. Keep the bounded Vision crop reread after bundled Manga OCR
                 // as a recovery path for regions the pixel detector or model misses:
                 // crop existing vertical layout nodes, map boxes back, then dedupe.
+                let cropOCRStartedAt = DispatchTime.now().uptimeNanoseconds
                 let cropRefinedObservations = try await Self.recognizeJapaneseVerticalCrops(
                     in: ocrImage,
                     observations: observations,
@@ -224,8 +264,10 @@ struct VisionOCRService: Sendable {
                 observations = Self.promoteCompactJapaneseHorizontalObservations(
                     observations
                 )
+                ocrMilliseconds += Self.elapsedMilliseconds(since: cropOCRStartedAt)
             }
 
+            let layoutStartedAt = DispatchTime.now().uptimeNanoseconds
             let finalObservations = sourceLanguage == .japanese
                 ? Self.deduplicateJapaneseObservations(
                     Self.suppressJapaneseDetectorOwnedPageSupplements(
@@ -245,13 +287,32 @@ struct VisionOCRService: Sendable {
                     provenance: $0.candidateProvenance
                 )
             }
-            let allowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
+            let languageAllowsVerticalText = sourceLanguage == .japanese || sourceLanguage == .simplifiedChinese
+            let allowsVerticalText: Bool
+            switch layoutPreference {
+            case .horizontal:
+                allowsVerticalText = false
+            case .vertical, .mangaVertical:
+                allowsVerticalText = true
+            case .automatic:
+                allowsVerticalText = sourceLanguage == nil || languageAllowsVerticalText
+            }
             let laidOutBlocks = { () -> [ImageTranslationBlock] in
-                return ImageOCRLayoutEngine.layout(
-                    layoutObservations,
-                    allowsVerticalText: allowsVerticalText,
-                    prefersMangaReadingOrder: sourceLanguage == .japanese
-                ).map { block in
+                let layoutBlocks: [ImageOCRLayoutBlock]
+                if layoutPreference == .automatic {
+                    layoutBlocks = ImageOCRLayoutEngine.layout(
+                        layoutObservations,
+                        allowsVerticalText: allowsVerticalText,
+                        prefersMangaReadingOrder: sourceLanguage == .japanese
+                    )
+                } else {
+                    layoutBlocks = ImageOCRLayoutEngine.layout(
+                        layoutObservations,
+                        allowsVerticalText: allowsVerticalText,
+                        prefersMangaReadingOrder: layoutPreference == .mangaVertical
+                    )
+                }
+                return layoutBlocks.map { block in
                     var imageBlock = ImageTranslationBlock(
                         original: block.text,
                         confidence: block.confidence,
@@ -283,16 +344,31 @@ struct VisionOCRService: Sendable {
                     blocks: laidOutBlocks
                 )
                 : laidOutBlocks
+            let layoutMilliseconds = Self.elapsedMilliseconds(since: layoutStartedAt)
+            let totalMilliseconds = Self.elapsedMilliseconds(since: totalStartedAt)
             return ImageOCRRecognitionOutput(
                 blocks: blocks,
                 shadowLedger: Self.makeShadowLedger(
                     observations: observations,
                     selectedObservations: finalObservations
+                ),
+                timings: ImageOCRRecognitionTimings(
+                    totalMilliseconds: totalMilliseconds,
+                    preprocessingMilliseconds: preprocessingMilliseconds,
+                    detectionMilliseconds: detectionMilliseconds,
+                    ocrMilliseconds: ocrMilliseconds,
+                    layoutMilliseconds: layoutMilliseconds,
+                    imageWidth: ocrImage.width,
+                    imageHeight: ocrImage.height
                 )
             )
         }
 
         return try await task.value
+    }
+
+    private static func elapsedMilliseconds(since start: UInt64) -> Double {
+        Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
     }
 
     /// Re-read one existing text node without rerunning page detection, layout,
@@ -301,7 +377,7 @@ struct VisionOCRService: Sendable {
     /// Vision crop; other languages use one bounded Vision crop.
     func recognizeTextBlock(
         in imageData: Data,
-        sourceLanguage: SupportedLanguage,
+        sourceLanguage: SupportedLanguage?,
         block: ImageTranslationBlock
     ) async throws -> ImageTranslationBlock? {
         let task = Task.detached(priority: .userInitiated) {
@@ -317,7 +393,7 @@ struct VisionOCRService: Sendable {
 
     private static func recognizeTextBlockDetached(
         imageData: Data,
-        sourceLanguage: SupportedLanguage,
+        sourceLanguage: SupportedLanguage?,
         block: ImageTranslationBlock
     ) async throws -> ImageTranslationBlock? {
         let image = try Self.makeOCRImage(from: imageData)
@@ -330,7 +406,7 @@ struct VisionOCRService: Sendable {
 
     private static func recognizeTextBlockDetached(
         image: CGImage,
-        sourceLanguage: SupportedLanguage,
+        sourceLanguage: SupportedLanguage?,
         block: ImageTranslationBlock,
         selectionReason: ImageOCRSelectionReason = .scopedRerecognition
     ) async throws -> ImageTranslationBlock? {
@@ -347,6 +423,7 @@ struct VisionOCRService: Sendable {
         // detector crop. The block's layout rect remains the ownership
         // geometry; padding only makes this scoped reread see the glyphs at
         // the edge of a detector bbox.
+        let japanese = sourceLanguage == .japanese
         let blockCropRect = sourceLanguage == .japanese
             ? Self.expandedVerticalCropRect(
                 rect,
@@ -355,7 +432,6 @@ struct VisionOCRService: Sendable {
             )
             : rect
 
-        let japanese = sourceLanguage == .japanese
         var mangaCandidate: ImageTranslationBlock?
 
         if sourceLanguage == .japanese {
@@ -411,14 +487,14 @@ struct VisionOCRService: Sendable {
         }
 
         guard let crop = Self.cropImageForBlock(image, normalizedRect: blockCropRect) else {
-            if japanese {
+            if sourceLanguage == .japanese {
                 return mangaCandidate
             }
             throw VisionOCRServiceError.blockRecognitionFailed
         }
 
         let angles: [Int]
-        if japanese {
+        if sourceLanguage == .japanese {
             // Keep this comparison compatible with the lightweight runtime
             // harness, whose block direction predates the app's optional field.
             if block.effectiveSourceDirection == .vertical {
@@ -449,7 +525,9 @@ struct VisionOCRService: Sendable {
                     in: orientedCrop,
                     recognitionLanguages: japanese
                         ? ["ja-JP", "ja"]
-                        : sourceLanguage.visionRecognitionLanguageIdentifiers,
+                        : sourceLanguage?.visionRecognitionLanguageIdentifiers ?? [
+                            "ja-JP", "ja", "zh-Hans", "zh-CN", "zh", "en-US", "en"
+                        ],
                     minimumTextHeight: japanese ? 0.006 : 0.01,
                     automaticallyDetectsLanguage: !japanese,
                     rotationApplied: angle,
@@ -464,7 +542,7 @@ struct VisionOCRService: Sendable {
                 // A Vision orientation failure must not discard an accepted
                 // Manga OCR candidate. Other angles remain bounded and may
                 // still provide a comparable candidate.
-                if japanese {
+                if sourceLanguage == .japanese {
                     continue
                 }
                 throw error
@@ -496,7 +574,7 @@ struct VisionOCRService: Sendable {
             selectionReason: selectionReason,
             reconcileJapaneseTextKind: japanese
         )
-        if japanese {
+        if sourceLanguage == .japanese {
             return Self.selectJapaneseScopedBlockCandidate(
                 mangaCandidate: mangaCandidate,
                 visionCandidate: visionCandidate

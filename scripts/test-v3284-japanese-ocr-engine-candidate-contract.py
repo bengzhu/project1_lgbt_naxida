@@ -47,7 +47,7 @@ class JapaneseOCREngineCandidateContractTests(unittest.TestCase):
         cls.protocol_readme = read("benchmarks/japanese_ocr/engine_candidate/README.md")
         cls.shell = read("scripts/run-japanese-ocr-engine-candidate-cloud-smoke.sh")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
 
     def evaluate(self, payload: dict | None = None) -> dict:
@@ -191,7 +191,7 @@ class JapaneseOCREngineCandidateContractTests(unittest.TestCase):
         self.assertIn("v3.284", self.route)
         self.assertIn("CER/exact/latency/memory/energy/license", self.route)
         self.assertIn("不默认启用", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.389", "3.389"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.390", "3.390"])
 
 
 if __name__ == "__main__":

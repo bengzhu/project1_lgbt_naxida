@@ -288,6 +288,7 @@ permissions:
 # if grep -Fx 'scripts/test-v3289-image-ocr-block-structure-editor-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3290-image-translation-render-safety-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3290-image-translation-render-safety-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+# if grep -Fx 'scripts/test-v3390-image-ocr-detection-ui-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 # if grep -Fx 'scripts/test-v3295-image-japanese-weak-block-recovery-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
 
 jobs:
@@ -617,7 +618,7 @@ jobs:
             home_ui_contract_required=true
             paste_matrix_contract_required=true
           fi
-          if grep -E '^(AITRANS/Services/(MangaOverlayProbeService|TranslationSessionStore)\.swift|AITRANS/Models/(TranscriptModels|KoharuMaskPayloadEvaluator)\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v(192-koharu-line-polygon-warp|199-koharu-line-polygon-containment|200-koharu-shadow-coverage|201-koharu-geometry-coverage|32-koharu-mask-payload|33-koharu-mask-topology)-contract\.py|scripts/test-v3(2-koharu-mask-payload|3-koharu-mask-topology)-evaluator\.swift|scripts/test-v(38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action|8-koharu-render-core-output-gate-action|9-koharu-render-output-summary-action)|390-koharu-render-failure-overlay-compaction)-contract\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
+          if grep -E '^(AITRANS/Services/(MangaOverlayProbeService|TranslationSessionStore)\.swift|AITRANS/Models/(TranscriptModels|KoharuMaskPayloadEvaluator)\.swift|test/1\.|scripts/validate-koharu-artifacts\.py|scripts/test-v(192-koharu-line-polygon-warp|199-koharu-line-polygon-containment|200-koharu-shadow-coverage|201-koharu-geometry-coverage|32-koharu-mask-payload|33-koharu-mask-topology)-contract\.py|scripts/test-v3(2-koharu-mask-payload|3-koharu-mask-topology)-evaluator\.swift|scripts/test-v(38(2-manga-render-newline|3-koharu-fit-budget|4-koharu-render-min-font|5-koharu-render-lock-min-font|6-koharu-render-output-ledger|7-koharu-render-output-action|8-koharu-render-core-output-gate-action|9-koharu-render-output-summary-action)|390-koharu-render-failure-overlay-compaction)-contract\.py|md/人工空间/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             koharu_contract_required=true
           fi
 
@@ -1029,6 +1030,9 @@ jobs:
           if grep -Fx 'scripts/test-v3290-image-translation-render-safety-runtime.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             ui_interaction_contract_required=true
           fi
+          if grep -Fx 'scripts/test-v3390-image-ocr-detection-ui-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            ui_interaction_contract_required=true
+          fi
           # Historical v3.47-v3.81 contracts retain this route expression as a compatibility anchor.
           # grep -E '^scripts/test-v3(4[7-9]|[5-7][0-9]|8[01])-.*-contract\.py$'
 
@@ -1134,7 +1138,7 @@ jobs:
           fi
 
           koharu_validator_extended_required=false
-          if [ "$koharu_contract_required" = "true" ] && { [ "$koharu_artifact_requested" = "true" ] || grep -E '^(scripts/validate-koharu-artifacts\.py|md/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; }; then
+          if [ "$koharu_contract_required" = "true" ] && { [ "$koharu_artifact_requested" = "true" ] || grep -E '^(scripts/validate-koharu-artifacts\.py|md/人工空间/koharu研究/artifact_contract/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; }; then
             koharu_validator_extended_required=true
           fi
 
@@ -1380,11 +1384,11 @@ jobs:
               python3 -B scripts/test-v390-koharu-render-failure-overlay-compaction-contract.py
               python3 -B scripts/test-v391-koharu-diagnostic-triage-contract.py
               python3 -B scripts/test-v394-manga-probe-failure-cleanup-contract.py
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_payload > "$RESULT_ROOT/koharu-valid-v2-mask-payload-validation.json"
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_v2_mask_topology > "$RESULT_ROOT/koharu-valid-v2-mask-topology-validation.json"
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/v2_mask_topology_cross_assignment > "$RESULT_ROOT/koharu-invalid-v2-mask-topology-validation.json"
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/v2_mask_payload_mismatch --expect-fail > "$RESULT_ROOT/koharu-invalid-v2-mask-payload-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/valid > "$RESULT_ROOT/koharu-valid-fixture-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/valid_v2_mask_payload > "$RESULT_ROOT/koharu-valid-v2-mask-payload-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/valid_v2_mask_topology > "$RESULT_ROOT/koharu-valid-v2-mask-topology-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/v2_mask_topology_cross_assignment > "$RESULT_ROOT/koharu-invalid-v2-mask-topology-validation.json"
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/v2_mask_payload_mismatch --expect-fail > "$RESULT_ROOT/koharu-invalid-v2-mask-payload-validation.json"
             python3 - <<'PY'
           import json
           with open("ci-results/koharu-valid-fixture-validation.json", "r", encoding="utf-8") as handle:
@@ -1407,12 +1411,12 @@ jobs:
               if item.get("exists") is not True or len(str(item.get("sha256") or "")) != 64:
                   raise SystemExit(f"valid fixture missing file identity {key}: {identity}")
           PY
-            if python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid --package-release-archive "$RUNNER_TEMP/koharu-fixture-refuse.zip" >/tmp/koharu-fixture-refuse.out 2>/tmp/koharu-fixture-refuse.err; then
+            if python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/valid --package-release-archive "$RUNNER_TEMP/koharu-fixture-refuse.zip" >/tmp/koharu-fixture-refuse.out 2>/tmp/koharu-fixture-refuse.err; then
               echo "contractExampleOnly fixture package unexpectedly allowed without --allow-fixture-package" >&2
               exit 1
             fi
             python3 scripts/validate-koharu-artifacts.py \
-              --root md/koharu研究/artifact_contract/examples/valid \
+              --root md/人工空间/koharu研究/artifact_contract/examples/valid \
               --package-release-archive "$RUNNER_TEMP/koharu-fixture-package.zip" \
               --allow-fixture-package \
               --emit-handoff-packet \
@@ -1530,7 +1534,7 @@ jobs:
           if not any("probe_mode=skip" in rule for rule in stale_rules) or not any("releaseArchive.inspection" in rule for rule in stale_rules):
               raise SystemExit(f"CI result review missing skip/local-proof rejection rule: {ci_result_review}")
           PY
-            python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported > "$RESULT_ROOT/koharu-orientation-fixture-validation.json"
+            python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported > "$RESULT_ROOT/koharu-orientation-fixture-validation.json"
             python3 - <<'PY'
           import json
           with open("ci-results/koharu-orientation-fixture-validation.json", "r", encoding="utf-8") as handle:
@@ -1559,19 +1563,19 @@ jobs:
             python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing > "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             cat "$RESULT_ROOT/koharu-active-artifacts-validation.json"
             if [ "${{ steps.ci_scope.outputs.koharu_validator_extended_required }}" = "true" ]; then
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/bubble_identity_invalid --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_missing --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_mismatch --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
-              python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/bubble_identity_invalid --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/source_image_sha_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/source_image_sha_mismatch --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
+              python3 scripts/validate-koharu-artifacts.py --root md/人工空间/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
             else
               echo "Skipping extended Koharu invalid fixture matrix for fast CI scope"
             fi
@@ -1910,6 +1914,7 @@ jobs:
             python3 -B scripts/test-v3289-image-translation-session-persistence-contract.py
             python3 -B scripts/test-v3289-image-ocr-block-structure-editor-contract.py
             python3 -B scripts/test-v3290-image-translation-render-safety-contract.py
+            python3 -B scripts/test-v3390-image-ocr-detection-ui-contract.py
             bash scripts/test-v3285-image-ocr-selector-policy-runtime.sh
             bash scripts/test-v3286-local-gguf-chat-template-runtime.sh
             bash scripts/test-v3290-image-translation-render-safety-runtime.sh

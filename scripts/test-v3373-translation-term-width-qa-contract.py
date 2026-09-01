@@ -53,8 +53,8 @@ class TranslationTermWidthQAContractTests(unittest.TestCase):
             , read("md/flow/flow.md")
             , read("md/flow/flowchart.md")
             , read("md/test/test.md")
-            , read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-            , read("update_log.md")
+            , read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+            , read("md/log/update_log.md")
         ]
         cls.docs = "\n".join(cls.documents)
 
@@ -152,9 +152,14 @@ class TranslationTermWidthQAContractTests(unittest.TestCase):
         self.assertLess(self.workflow.index(previous), self.workflow.index(current))
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
-        for document in self.documents:
+        for document in self.documents[:4]:
+            self.assertNotIn("v3.389", document)
+            self.assertNotIn(contract, document)
+            self.assertNotIn("test/3.png", document)
+            self.assertNotIn("未提供", document)
+        for document in self.documents[4:]:
             self.assertIn("v3.389", document)
             self.assertIn(contract, document)
             self.assertIn("test/3.png", document)

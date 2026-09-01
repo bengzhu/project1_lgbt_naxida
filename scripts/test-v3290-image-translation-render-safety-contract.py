@@ -42,7 +42,7 @@ class ImageTranslationRenderSafetyContractTests(unittest.TestCase):
         )
         cls.runtime = read("scripts/test-v3290-image-translation-render-safety-runtime.sh")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
 
     def test_report_is_explicitly_report_only_and_ground_truth_free(self) -> None:
@@ -161,7 +161,7 @@ class ImageTranslationRenderSafetyContractTests(unittest.TestCase):
             self.assertIn(marker, self.project + self.workflow + self.route)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
 
     def test_static_contract_has_no_process_entry(self) -> None:

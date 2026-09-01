@@ -1,3 +1,19 @@
+## 协作流程：人工步进与 Agent X 托管边界（2026-09-01）
+
+- A/B/C 明确为人工步进模式：A 写提示词，B 建候选分支实现并触发 CI，C 独立验收后创建 PR、合并和清理分支。
+- Agent X 明确为 `/goal` 全自动托管模式，按小目标循环完成分支、实现、CI、PR、合并和清理，并用 `md/log/work.md` 保存当前计划与进度。
+- 本地和远端空闲时只保留 `main`、`smalldata_test`，开发时最多增加一个活动 `codeb/...`；旧候选分支须确认无保留价值后再删除。
+
+## 文档维护：入口、流程与测试职责收口（2026-09-01）
+
+- `AGENTS.md` 仅保留核心事实、迭代流程、硬边界和文档维护规则；`README.md` 改为简明项目介绍。
+- `md/test/test.md` 收口为测试制度并接管语音质量探针说明；`md/flow/` 只保留当前架构、流程图和体验闸门。
+- Markdown 历史、验证和调查结论统一归档到 `md/log/`；活动文档已改用 `md/log/update_log.md` 路径。
+
+## v3.390：独立 OCR 检测工作台（待云端验收）
+
+新增独立 `OCR 检测` tab，不进入图片翻译或 LLM 状态：上传/相册/拍照/粘贴图片后，复用现有 `VisionOCRService` 输出文字块、归一化 bbox、方向、provenance 和方向复读结果。页面提供原图叠加编号框、点击高亮、语言（自动/日语/中文/英语）、版式（自动/横排/竖排/漫画竖排）、低置信筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出，以及准备图片→检测文字区域→OCR→整理阅读顺序的阶段反馈。诊断默认折叠，保留分辨率、引擎/模型、阶段耗时、块/字符速度、平均模型原始分数、低置信比例和分布；Vision/Manga OCR 分数不横向校准。CI test2 capture 将现有 OCR overlay 同步为 `test2-ocr-full-overlay-v3388.png` 产物别名。新增 `scripts/test-v3390-image-ocr-detection-ui-contract.py`，工程版本 `3.390`；尚未运行本机 Xcode/App/Core ML，待云端基础 build、UI evidence 和静态合同验收。
+
 ## v3.389：普通图片 Local GGUF 日语 few-shot 翻译 fallback（待云端验收）
 
 v3.388 的真实 `test/2.png` 运行已完成 17 个非空日语 OCR 块，但 `translatedBlockCount=0/17`；LLM trace 还显示裸 completion 的语言标签/长说明，以及普通 QA 可能接受的无关短回答。v3.389 将 pair-specific few-shot chat candidate 前置到标准日语→简体中文/英文候选队列，裸 completion 降为最后回退，并新增单行、无语言标签/元话术的严格门；成功输出仍进入现有清洗、源文泄漏、目标语言、数字/术语/长度和逐块 QA。漫画 `[N]` 批译、OCR、预算、取消、持久化和非图片路径不变。新增纯静态合同 `scripts/test-v3389-japanese-few-shot-translation-contract.py`，工程版本 `3.389`，CI 已接入；真实 `test/2.png` 云端重跑待完成，尚不合成质量证据。
@@ -6035,6 +6051,25 @@ post-merge 验收：CI Results run `29229554065` 与 Build IPA run `29229554033`
 - `scripts/capture-ui-evidence.sh` 在 11 张 compact-iPhone 之外新增 1 张 `wide-iPad` 文本空态运行态证据（共 12 张）。
 - 新增 `scripts/test-v189-paste-manual-matrix-contract.py`；CI 对 `codeb/v1.89-*` 开启 UI evidence，JUnit / manifest 增加 v1.89 contract 字段。
 
+### 0.3 v1.89 人工交互与 a11y 矩阵
+
+这份矩阵属于 v1.89 历史验收记录，当前测试制度见 [`md/test/test.md`](../test/test.md)。CI 的 v1.88 home UI contract、v1.89 paste/matrix contract 与 12 张 UI evidence（11 张 compact-iPhone + 1 张 wide-iPad）不能替代本矩阵的 M1–M6；Agent C 不得把未勾选项写成已验证。
+
+| ID | 场景 | 期望 | 人工勾选 |
+|---|---|---|---|
+| M1 | 空剪贴板点「粘贴」 | 已有输入保留，不崩，不自动翻译；不得以 `isEnabled == false` 作为唯一标准 | [ ] |
+| M2 | 空输入 + 有文本剪贴板 | 直接填入，状态仍等待翻译 / 不自动 `submitDraft` | [ ] |
+| M3 | 非空输入再粘贴 | 换行追加，不覆盖已有内容 | [ ] |
+| M4 | keyboard toolbar「完成」 | 一次点击收起键盘 | [ ] |
+| M5 | 点「翻译」 | 先失焦再 `store.submitDraft()` | [ ] |
+| M6 | VoiceOver / 标签 | 粘贴、翻译、交换语言、完成与关键状态可读 | [ ] |
+| M7 | 标准字号 + 键盘关闭 | 首屏完整可见中文「粘贴」与「翻译」，无固定 48pt 外部净空 | [ ] |
+| M8 | XXL / Accessibility 或输入聚焦 | 48pt 外部净空，浮动 Tab 不遮挡输入与主按钮；键盘「完成」可见 | [ ] |
+
+宽屏证据：`scripts/capture-ui-evidence.sh` 必须额外产出 `wide-iPad` / `text-empty-wide-ipad-day.png` 运行态截图；Preview 的 iPad landscape 状态不冒充运行态。
+
+DEBUG 可测性：仅在用户点击粘贴时，若系统 `PasteButton` payload 为空，DEBUG 构建可回退 `AITRANS_UI_TEST_PASTE_TEXT` 环境变量或 `-AITRANS_UI_TEST_PASTE_TEXT <text>` launch argument。Release 无注入；禁止 lifecycle / 后台读剪贴板；禁止把系统 `PasteButton` 换成普通 Button。
+
 关键文件：
 
 - `AITRANS/Views/TextTranslationView.swift`
@@ -10922,3 +10957,11 @@ detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag
 ## v3.383：普通图片 Local GGUF standard fallback prompt 修复（已验证失败，继续前进）
 
 v3.382 的真实云端 test2 trace 已确认漫画批量 prompt 不再发生 context 超限，但 270M 模型返回整批原文/提示词回显；v3.383 让所有日语 standard 单块回退也使用 compact 只读 context，完整 context 仍只供 QA。精确 SHA `08a605303ae098be0c077ad74c809cb6f17970a2` 的云端运行 [33378259762](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33378259762) 已完成 `test/2.png` OCR（17 个非空日语块）并生成 350015-byte 结果截图，但翻译完整性失败：`translatedBlockCount=0/17`；probe 显示批量回显原文/提示词，单块第 4 块触发 `outputTooLong`。该截图仅作失败诊断，不作为翻译完成证据。新增合同 `scripts/test-v3383-japanese-standard-compact-context-contract.py`，本轮不合成样图或外推静态合同为通用质量证据。
+
+## v3.390：OCR 检测独立工作台（验证中）
+
+本轮新增独立的 OCR 检测入口：上传图片、拍照、粘贴图片，选择自动/日语/中文/英语与自动/横排/竖排/漫画竖排，展示原图识别框和逐块结果，支持点击定位、低置信度筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出、取消与重试。OCR-only 状态树不进入图片翻译或 LLM；诊断保留总耗时、分阶段耗时、分辨率、块数、引擎/模型、原始 confidence、质量状态和块/字符速度。
+
+CI 继续复用既有 v3388 test2 overlay 产物，并输出 test2-ocr-full-overlay-v3388.png。候选分支 codeb/v3.390-ocr-detection-ui 的首个 exact push run [33478190505](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33478190505) 已通过 UI interaction contract 与 Xcode build，但因文档迁移后的历史 Japanese benchmark contract 仍读取旧路径并断言 3.389 而失败；本轮已将 CI 实际执行的 113 个合同同步到当前路径/3.390 版本，并完成本地 113/113 静态回归。exact-SHA full、test2 真实截图和合并结果待候选修复提交后核对。
+
+本轮不把静态合同、单张固定图或 v3388 历史截图外推为通用 OCR/CER/翻译质量证据；本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。

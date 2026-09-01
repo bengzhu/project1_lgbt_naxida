@@ -40,10 +40,10 @@ class JapaneseOCRDiacriticPreservationContractTests(unittest.TestCase):
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.flow = read("md/flow/flow.md") + read("md/flow/flowchart.md")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
         cls.test_log = read("md/test/test.md")
-        cls.update_log = read("update_log.md")
+        cls.update_log = read("md/log/update_log.md")
 
     def test_canonical_composition_precedes_width_comparison(self) -> None:
         normalizer = function_body(
@@ -99,7 +99,7 @@ class JapaneseOCRDiacriticPreservationContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         for marker in (
             "scripts/test-v3316-japanese-ocr-diacritic-preservation-contract.py",

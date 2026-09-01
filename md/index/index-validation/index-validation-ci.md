@@ -9,7 +9,7 @@
 | profile/changed-file 分流 | [`.github/workflows/ci-results.yml`](../../../.github/workflows/ci-results.yml) | `ci_scope`、`validation_profile`、`expected_commit_sha` |
 | Python benchmark job | 同上 | `japanese_benchmark` |
 | App result bundle/receipt | 同上 | `ci-results`、manifest/failure summary steps |
-| test2 real UI | 同上 | `test2_image_translation_ui` |
+| test2 real UI | 同上 | `test2_image_translation_ui`；`test2-results/test2-ocr-full-overlay-v3388.png` 是现有 OCR overlay 的兼容产物别名 |
 | 手动 test2 UI | [`.github/workflows/test2-image-translation-ui.yml`](../../../.github/workflows/test2-image-translation-ui.yml) | workflow dispatch inputs |
 | Koharu parity | [`.github/workflows/koharu-mit48-parity.yml`](../../../.github/workflows/koharu-mit48-parity.yml) | artifact/quality smoke |
 | 构建/IPA | [`.github/workflows/build.yml`](../../../.github/workflows/build.yml) | `build`/`package` |

@@ -129,7 +129,7 @@ class KoharuShadowCoverageContractTests(unittest.TestCase):
                 "-B",
                 "scripts/validate-koharu-artifacts.py",
                 "--root",
-                "md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid",
+                "md/人工空间/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid",
                 "--expect-fail",
             ],
             cwd=ROOT,

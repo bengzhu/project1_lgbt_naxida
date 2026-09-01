@@ -58,7 +58,7 @@ class KoharuGeometryCoverageContractTests(unittest.TestCase):
                 "-B",
                 VALIDATOR,
                 "--root",
-                "md/koharu研究/artifact_contract/examples/invalid/bubble_identity_invalid",
+                "md/人工空间/koharu研究/artifact_contract/examples/invalid/bubble_identity_invalid",
                 "--expect-fail",
             ],
             cwd=ROOT,
@@ -141,7 +141,7 @@ class KoharuGeometryCoverageContractTests(unittest.TestCase):
         probe = read("AITRANS/Services/MangaOverlayProbeService.swift")
         self.assertIn("scripts/test-v201-koharu-geometry-coverage-contract.py", workflow)
         self.assertIn(
-            "md/koharu研究/artifact_contract/examples/invalid/bubble_identity_invalid",
+            "md/人工空间/koharu研究/artifact_contract/examples/invalid/bubble_identity_invalid",
             workflow,
         )
         for field in [

@@ -23,7 +23,7 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
         self.flow = read("md/flow/flow.md")
         self.flowchart = read("md/flow/flowchart.md")
         self.test_log = read("md/test/test.md")
-        self.update_log = read("update_log.md")
+        self.update_log = read("md/log/update_log.md")
 
     def test_mixed_script_helper_preserves_ascii_tokens_and_required_spaces(self) -> None:
         for marker in [
@@ -101,20 +101,16 @@ class JapaneseMixedScriptNormalizationContractTests(unittest.TestCase):
 
     def test_version_workflow_and_docs_are_current(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.389", "3.389"])
+        self.assertEqual(versions, ["3.390", "3.390"])
         self.assertIn(
             "python3 -B scripts/test-v3305-japanese-mixed-script-normalization-contract.py",
             self.workflow,
         )
         self.assertIn("v3.306", self.workflow)
         self.assertIn("japanese-benchmark-v3.306-", self.workflow)
-        for document in (
-            self.flow,
-            self.flowchart,
-            self.test_log,
-            self.update_log,
-        ):
-            self.assertIn("v3.306", document)
+        for document in (self.flow, self.flowchart, self.test_log):
+            self.assertNotIn("v3.306", document)
+        self.assertIn("v3.306", self.update_log)
 
 
 if __name__ == "__main__":

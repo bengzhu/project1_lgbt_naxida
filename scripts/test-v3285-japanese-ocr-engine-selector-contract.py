@@ -49,7 +49,7 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         cls.runtime_shell = read("scripts/test-v3285-image-ocr-selector-policy-runtime.sh")
         cls.fixture = read("scripts/fixtures/v3285-image-ocr-selector-policy-evaluator.swift")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.provenance_source = read("AITRANS/Models/ImageOCRProvenance.swift")
 
@@ -242,7 +242,7 @@ class JapaneseOCREngineSelectorContractTests(unittest.TestCase):
         self.assertIn("v3.285", self.route)
         self.assertIn("GT 隔离", self.route)
         self.assertIn("rollback", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.389", "3.389"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.390", "3.390"])
         for marker in (
             "struct ImageOCRSelectorPolicy",
             "struct ImageOCRSelectorEngineSignal",

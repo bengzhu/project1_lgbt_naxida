@@ -195,6 +195,17 @@ final class TranslationSessionStore: ObservableObject {
     @Published private(set) var imageTranslationReviewedBlockIDs: Set<UUID> = []
     @Published private(set) var imageTranslationIgnoredBlocks: [ImageTranslationBlock] = []
     @Published private(set) var speechRecognitionCapabilities: [SpeechRecognitionCapability] = []
+    @Published var imageOCRDetectionState: ImageOCRDetectionState = .idle
+    @Published var imageOCRDetectionMessage = "上传、拍照或粘贴图片后开始 OCR 检测"
+    @Published var imageOCRDetectionBlocks: [ImageTranslationBlock] = []
+    @Published var imageOCRDetectionData: Data?
+    @Published var imageOCRDetectionFilename = ""
+    @Published var imageOCRDetectionRevision = 0
+    @Published var imageOCRDetectionLanguage: ImageOCRDetectionLanguage = .automatic
+    @Published var imageOCRDetectionLayout: ImageOCRDetectionLayout = .automatic
+    @Published var imageOCRDetectionMetrics: ImageOCRDetectionMetrics = .empty
+    @Published private(set) var imageOCRDetectionRerecognizingBlockID: UUID?
+    @Published private(set) var imageOCRDetectionCorrectedBlockIDs: Set<UUID> = []
 
     let localModelDirectory: URL
     let localModelFilename = "model.gguf"
@@ -211,6 +222,11 @@ final class TranslationSessionStore: ObservableObject {
     private var modelDownloadTask: Task<Void, Never>?
     private var imageTranslationTask: Task<Void, Never>?
     private var imageTranslationTaskID = UUID()
+    private var imageOCRDetectionTask: Task<Void, Never>?
+    private var imageOCRDetectionTaskID = UUID()
+    private var imageOCRDetectionBlockRerecognitionTask: Task<Void, Never>?
+    private var imageOCRDetectionBlockRerecognitionID = UUID()
+    private var imageOCRDetectionFileSelectionID: UUID?
     private var imageTranslationCorrectionID = UUID()
     private var imageTranslationBlockRetryTask: Task<Void, Never>?
     private var imageTranslationBlockRetryID = UUID()
@@ -287,6 +303,8 @@ final class TranslationSessionStore: ObservableObject {
         ticker?.cancel()
         modelDownloadTask?.cancel()
         imageTranslationTask?.cancel()
+        imageOCRDetectionTask?.cancel()
+        imageOCRDetectionBlockRerecognitionTask?.cancel()
         imageTranslationBlockRetryTask?.cancel()
         imageTranslationBlockRerecognitionTask?.cancel()
         imageOverlayRenderTask?.cancel()
@@ -487,6 +505,30 @@ final class TranslationSessionStore: ObservableObject {
             return false
         }
         return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    var isImageOCRDetectionRunning: Bool {
+        imageOCRDetectionState.isRunning
+    }
+
+    var canRetryImageOCRDetection: Bool {
+        !isImageOCRDetectionRunning
+            && imageOCRDetectionData != nil
+            && (imageOCRDetectionState == .failed
+                || imageOCRDetectionState == .idle
+                || imageOCRDetectionState == .completed)
+    }
+
+    var imageOCRDetectionDirectionRereadEnabled: Bool {
+        imageOCRDetectionLanguage == .japanese && imageOCRDetectionLayout.isVertical
+    }
+
+    func imageOCRDetectionRawConfidence(for block: ImageTranslationBlock) -> Float {
+        block.ocrProvenance?.candidates.first?.rawConfidence ?? block.confidence
+    }
+
+    func imageOCRDetectionQualityStatus(for block: ImageTranslationBlock) -> String {
+        ImageOCRResultSummary.requiresReview(block) ? "需复核" : "通过"
     }
 
     /// A failed/partial image translation keeps its OCR blocks in memory. Allow
@@ -1257,6 +1299,161 @@ final class TranslationSessionStore: ObservableObject {
         }.value
     }
 
+    private func beginImageOCRDetectionTask(
+        filename: String,
+        preservingData: Data? = nil,
+        language: ImageOCRDetectionLanguage,
+        layout: ImageOCRDetectionLayout
+    ) -> UUID {
+        imageOCRDetectionTask?.cancel()
+        imageOCRDetectionTask = nil
+        imageOCRDetectionBlockRerecognitionTask?.cancel()
+        imageOCRDetectionBlockRerecognitionTask = nil
+        imageOCRDetectionBlockRerecognitionID = UUID()
+        imageOCRDetectionRerecognizingBlockID = nil
+        imageOCRDetectionFileSelectionID = nil
+
+        let taskID = UUID()
+        imageOCRDetectionTaskID = taskID
+        imageOCRDetectionState = .preparing
+        imageOCRDetectionMessage = "准备图片"
+        imageOCRDetectionFilename = filename
+        imageOCRDetectionData = preservingData
+        imageOCRDetectionBlocks = []
+        imageOCRDetectionCorrectedBlockIDs = []
+        imageOCRDetectionRevision += 1
+
+        let usesJapanesePipeline = language == .japanese
+        imageOCRDetectionMetrics = ImageOCRDetectionMetrics(
+            totalMilliseconds: 0,
+            preprocessingMilliseconds: 0,
+            detectionMilliseconds: 0,
+            ocrMilliseconds: 0,
+            layoutMilliseconds: 0,
+            imageWidth: 0,
+            imageHeight: 0,
+            language: language,
+            layout: layout,
+            blocks: [],
+            engine: usesJapanesePipeline ? "Vision + bundled Manga OCR" : "Vision",
+            model: usesJapanesePipeline
+                ? "Vision .accurate / bundled Manga OCR"
+                : language == .automatic
+                    ? "Vision .accurate · 自动语言检测"
+                    : "Vision .accurate"
+        )
+        dataTransferMessage = imageOCRDetectionMessage
+        return taskID
+    }
+
+    private func isCurrentImageOCRDetectionTask(_ taskID: UUID) -> Bool {
+        imageOCRDetectionTaskID == taskID && !Task.isCancelled
+    }
+
+    private func runImageOCRDetectionPipeline(
+        with data: Data,
+        taskID: UUID,
+        language: ImageOCRDetectionLanguage,
+        layout: ImageOCRDetectionLayout
+    ) async throws {
+        guard isCurrentImageOCRDetectionTask(taskID) else { throw CancellationError() }
+
+        let wallClockStartedAt = DispatchTime.now().uptimeNanoseconds
+        let preparationStartedAt = DispatchTime.now().uptimeNanoseconds
+        guard let image = UIImage(data: data),
+              let cgImage = image.cgImage,
+              cgImage.width > 0,
+              cgImage.height > 0 else {
+            throw VisionOCRServiceError.imageDecodeFailed
+        }
+        let fallbackPreparationMilliseconds = Self.elapsedMilliseconds(since: preparationStartedAt)
+        imageOCRDetectionData = data
+        imageOCRDetectionState = .detecting
+        imageOCRDetectionMessage = "检测文字区域"
+        try Task.checkCancellation()
+        await Task.yield()
+        guard isCurrentImageOCRDetectionTask(taskID) else { throw CancellationError() }
+
+        imageOCRDetectionState = .recognizing
+        imageOCRDetectionMessage = language == .japanese && layout.isVertical
+            ? "OCR 识别中（日语竖排会自动进行方向复读）"
+            : language == .automatic
+                ? "OCR 识别中（自动检测语言）"
+                : "OCR 识别中"
+        let output = try await visionOCRService.recognizeTextBlocksWithShadowLedger(
+            in: data,
+            sourceLanguage: language.visionSourceLanguage,
+            japaneseDirectionReread: language == .japanese && layout.isVertical,
+            layoutPreference: layout
+        )
+        try Task.checkCancellation()
+        guard isCurrentImageOCRDetectionTask(taskID) else { throw CancellationError() }
+
+        imageOCRDetectionState = .arranging
+        imageOCRDetectionMessage = "整理阅读顺序"
+        await Task.yield()
+        guard isCurrentImageOCRDetectionTask(taskID) else { throw CancellationError() }
+
+        let blocks = output.blocks
+        let timings = output.timings
+        let totalMilliseconds = timings.totalMilliseconds > 0
+            ? timings.totalMilliseconds
+            : Self.elapsedMilliseconds(since: wallClockStartedAt)
+        let metrics = ImageOCRDetectionMetrics(
+            totalMilliseconds: totalMilliseconds,
+            preprocessingMilliseconds: timings.preprocessingMilliseconds > 0
+                ? timings.preprocessingMilliseconds
+                : fallbackPreparationMilliseconds,
+            detectionMilliseconds: timings.detectionMilliseconds,
+            ocrMilliseconds: timings.ocrMilliseconds,
+            layoutMilliseconds: timings.layoutMilliseconds,
+            imageWidth: timings.imageWidth > 0 ? timings.imageWidth : cgImage.width,
+            imageHeight: timings.imageHeight > 0 ? timings.imageHeight : cgImage.height,
+            language: language,
+            layout: layout,
+            blocks: blocks,
+            engine: language == .japanese
+                ? "Vision + bundled Manga OCR"
+                : "Vision",
+            model: language == .japanese
+                ? "Vision .accurate / bundled Manga OCR"
+                : language == .automatic
+                    ? "Vision .accurate · 自动语言检测"
+                    : "Vision .accurate"
+        )
+        imageOCRDetectionMetrics = metrics
+        imageOCRDetectionBlocks = blocks
+
+        guard !blocks.isEmpty else {
+            imageOCRDetectionState = .failed
+            imageOCRDetectionMessage = "本机 OCR 没有识别到文字区域"
+            dataTransferMessage = imageOCRDetectionMessage
+            imageOCRDetectionTask = nil
+            return
+        }
+
+        imageOCRDetectionState = .completed
+        imageOCRDetectionMessage = "已识别 \(blocks.count) 个文字块，可逐块复查或导出"
+        dataTransferMessage = imageOCRDetectionMessage
+        imageOCRDetectionTask = nil
+    }
+
+    private func finishImageOCRDetection(taskID: UUID, with error: Error) {
+        guard imageOCRDetectionTaskID == taskID else { return }
+        imageOCRDetectionTask = nil
+
+        if error is CancellationError {
+            imageOCRDetectionState = .idle
+            imageOCRDetectionMessage = imageOCRDetectionBlocks.isEmpty
+                ? "OCR 检测已取消，可以重试"
+                : "OCR 检测已取消，已保留当前文字块"
+        } else {
+            imageOCRDetectionState = .failed
+            imageOCRDetectionMessage = "OCR 检测失败：\(error.localizedDescription)"
+        }
+        dataTransferMessage = imageOCRDetectionMessage
+    }
+
     private func beginImageTranslationTask(
         filename: String,
         sourceLanguage: SupportedLanguage,
@@ -1692,6 +1889,341 @@ final class TranslationSessionStore: ObservableObject {
 
     func translateImageData(_ data: Data, filename: String) {
         translateImageTransfer(filename: filename) { data }
+    }
+
+    // MARK: - OCR detection workspace
+
+    /// Starts an OCR-only run. This deliberately does not require Pro and
+    /// never enters the image translation pipeline, because the page is meant
+    /// to inspect/copy/export source text without generating translations.
+    func recognizeImageOCR(from url: URL) {
+        let filename = Self.sanitizedImageFilename(from: url)
+        let language = imageOCRDetectionLanguage
+        let layout = imageOCRDetectionLayout
+        let taskID = beginImageOCRDetectionTask(
+            filename: filename,
+            language: language,
+            layout: layout
+        )
+
+        imageOCRDetectionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let data = try await Self.loadSecurityScopedData(from: url)
+                try Task.checkCancellation()
+                guard self.isCurrentImageOCRDetectionTask(taskID) else {
+                    throw CancellationError()
+                }
+                try await self.runImageOCRDetectionPipeline(
+                    with: data,
+                    taskID: taskID,
+                    language: language,
+                    layout: layout
+                )
+            } catch {
+                self.finishImageOCRDetection(taskID: taskID, with: error)
+            }
+        }
+    }
+
+    func recognizeImageOCRTransfer(
+        filename: String,
+        loadData: @escaping @Sendable () async throws -> Data?
+    ) {
+        let cleanFilename = Self.sanitizedImageFilename(
+            filename.isEmpty ? "photo-library-image.png" : filename
+        )
+        let language = imageOCRDetectionLanguage
+        let layout = imageOCRDetectionLayout
+        let taskID = beginImageOCRDetectionTask(
+            filename: cleanFilename,
+            language: language,
+            layout: layout
+        )
+
+        imageOCRDetectionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                guard self.isCurrentImageOCRDetectionTask(taskID) else {
+                    throw CancellationError()
+                }
+                guard let data = try await loadData() else {
+                    throw PhotoLibraryTransferError.noData
+                }
+                try Task.checkCancellation()
+                try await self.runImageOCRDetectionPipeline(
+                    with: data,
+                    taskID: taskID,
+                    language: language,
+                    layout: layout
+                )
+            } catch {
+                self.finishImageOCRDetection(taskID: taskID, with: error)
+            }
+        }
+    }
+
+    func recognizeImageOCRData(_ data: Data, filename: String = "pasted-image.png") {
+        recognizeImageOCRTransfer(filename: filename) { data }
+    }
+
+    func beginImageOCRFileSelection() -> UUID {
+        let selectionID = UUID()
+        imageOCRDetectionFileSelectionID = selectionID
+        return selectionID
+    }
+
+    func handleSelectedImageOCRFile(_ result: Result<URL, Error>, selectionID: UUID) {
+        guard imageOCRDetectionFileSelectionID == selectionID else { return }
+        imageOCRDetectionFileSelectionID = nil
+
+        switch result {
+        case .success(let url):
+            recognizeImageOCR(from: url)
+        case .failure(let error):
+            if let cocoaError = error as? CocoaError,
+               cocoaError.code == .userCancelled {
+                return
+            }
+            let message = "OCR 图片文件选择失败：\(error.localizedDescription)"
+            imageOCRDetectionState = .failed
+            imageOCRDetectionMessage = message
+            dataTransferMessage = message
+        }
+    }
+
+    func retryImageOCRDetection() {
+        guard let data = imageOCRDetectionData,
+              canRetryImageOCRDetection else { return }
+        let language = imageOCRDetectionLanguage
+        let layout = imageOCRDetectionLayout
+        let taskID = beginImageOCRDetectionTask(
+            filename: imageOCRDetectionFilename,
+            preservingData: data,
+            language: language,
+            layout: layout
+        )
+        imageOCRDetectionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                try await self.runImageOCRDetectionPipeline(
+                    with: data,
+                    taskID: taskID,
+                    language: language,
+                    layout: layout
+                )
+            } catch {
+                self.finishImageOCRDetection(taskID: taskID, with: error)
+            }
+        }
+    }
+
+    func cancelImageOCRDetection() {
+        guard isImageOCRDetectionRunning else { return }
+        imageOCRDetectionTask?.cancel()
+        imageOCRDetectionTask = nil
+        imageOCRDetectionTaskID = UUID()
+        imageOCRDetectionFileSelectionID = nil
+        imageOCRDetectionBlockRerecognitionTask?.cancel()
+        imageOCRDetectionBlockRerecognitionTask = nil
+        imageOCRDetectionBlockRerecognitionID = UUID()
+        imageOCRDetectionRerecognizingBlockID = nil
+        imageOCRDetectionState = .idle
+        imageOCRDetectionMessage = imageOCRDetectionBlocks.isEmpty
+            ? "OCR 检测已取消，可以重试"
+            : "OCR 检测已取消，已保留当前文字块"
+        dataTransferMessage = imageOCRDetectionMessage
+    }
+
+    func clearImageOCRDetection() {
+        imageOCRDetectionTask?.cancel()
+        imageOCRDetectionTask = nil
+        imageOCRDetectionTaskID = UUID()
+        imageOCRDetectionFileSelectionID = nil
+        imageOCRDetectionBlockRerecognitionTask?.cancel()
+        imageOCRDetectionBlockRerecognitionTask = nil
+        imageOCRDetectionBlockRerecognitionID = UUID()
+        imageOCRDetectionRerecognizingBlockID = nil
+        imageOCRDetectionState = .idle
+        imageOCRDetectionMessage = "上传、拍照或粘贴图片后开始 OCR 检测"
+        imageOCRDetectionBlocks = []
+        imageOCRDetectionData = nil
+        imageOCRDetectionFilename = ""
+        imageOCRDetectionCorrectedBlockIDs = []
+        imageOCRDetectionMetrics = .empty
+        imageOCRDetectionRevision += 1
+        dataTransferMessage = imageOCRDetectionMessage
+    }
+
+    @discardableResult
+    func updateImageOCRDetectionBlock(_ blockID: UUID, original: String) -> Bool {
+        guard !isImageOCRDetectionRunning,
+              let blockIndex = imageOCRDetectionBlocks.firstIndex(where: { $0.id == blockID }) else {
+            return false
+        }
+        let cleanText = original.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanText.isEmpty else {
+            imageOCRDetectionMessage = "文字块不能为空，请保留原文或输入修正后的文字"
+            return false
+        }
+
+        var updatedBlock = imageOCRDetectionBlocks[blockIndex]
+        updatedBlock.original = cleanText
+        imageOCRDetectionBlocks[blockIndex] = updatedBlock
+        imageOCRDetectionCorrectedBlockIDs.insert(blockID)
+        imageOCRDetectionMetrics = imageOCRDetectionMetrics.updatingResults(
+            with: imageOCRDetectionBlocks
+        )
+        imageOCRDetectionMessage = "已手动修正第 \(blockIndex + 1) 个文字块"
+        dataTransferMessage = imageOCRDetectionMessage
+        return true
+    }
+
+    func canRerecognizeImageOCRDetectionBlock(_ blockID: UUID) -> Bool {
+        !isImageOCRDetectionRunning
+            && imageOCRDetectionData != nil
+            && (imageOCRDetectionState == .completed || imageOCRDetectionState == .failed)
+            && imageOCRDetectionBlocks.contains(where: { $0.id == blockID })
+            && imageOCRDetectionBlocks.first(where: { $0.id == blockID })?.boundingBox.normalizedToUnit() != nil
+            && imageOCRDetectionRerecognizingBlockID == nil
+    }
+
+    func rerecognizeImageOCRDetectionBlock(_ blockID: UUID) {
+        guard canRerecognizeImageOCRDetectionBlock(blockID),
+              let data = imageOCRDetectionData,
+              let block = imageOCRDetectionBlocks.first(where: { $0.id == blockID }) else {
+            return
+        }
+
+        imageOCRDetectionBlockRerecognitionTask?.cancel()
+        let requestID = UUID()
+        let contentTaskID = imageOCRDetectionTaskID
+        let previousState = imageOCRDetectionState
+        imageOCRDetectionBlockRerecognitionID = requestID
+        imageOCRDetectionRerecognizingBlockID = blockID
+        imageOCRDetectionState = .recognizing
+        imageOCRDetectionMessage = "正在重新识别第 \(imageOCRDetectionBlocks.firstIndex(where: { $0.id == blockID })! + 1) 个文字块"
+
+        imageOCRDetectionBlockRerecognitionTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                guard let recognized = try await self.visionOCRService.recognizeTextBlock(
+                    in: data,
+                    sourceLanguage: self.imageOCRDetectionLanguage.visionSourceLanguage,
+                    block: block
+                ) else {
+                    throw VisionOCRServiceError.blockRecognitionFailed
+                }
+                try Task.checkCancellation()
+                guard self.imageOCRDetectionBlockRerecognitionID == requestID,
+                      self.imageOCRDetectionTaskID == contentTaskID,
+                      self.imageOCRDetectionRerecognizingBlockID == blockID,
+                      let blockIndex = self.imageOCRDetectionBlocks.firstIndex(where: { $0.id == blockID }),
+                      self.imageOCRDetectionBlocks[blockIndex] == block else {
+                    return
+                }
+
+                let cleanText = recognized.original.trimmingCharacters(
+                    in: .whitespacesAndNewlines
+                )
+                guard !cleanText.isEmpty else {
+                    throw VisionOCRServiceError.blockRecognitionFailed
+                }
+
+                var replacement = block
+                replacement.original = cleanText
+                replacement.confidence = recognized.confidence
+                replacement.sourceDirection = recognized.sourceDirection
+                replacement.directionConfidence = recognized.directionConfidence
+                replacement.directionReason = recognized.directionReason
+                replacement.textKind = recognized.textKind
+                replacement.ocrProvenance = recognized.ocrProvenance
+                self.imageOCRDetectionBlocks[blockIndex] = replacement
+                self.imageOCRDetectionCorrectedBlockIDs.remove(blockID)
+                self.imageOCRDetectionMetrics = self.imageOCRDetectionMetrics.updatingResults(
+                    with: self.imageOCRDetectionBlocks
+                )
+                self.imageOCRDetectionRerecognizingBlockID = nil
+                self.imageOCRDetectionBlockRerecognitionTask = nil
+                self.imageOCRDetectionState = .completed
+                self.imageOCRDetectionMessage = "已重新识别第 \(blockIndex + 1) 个文字块"
+                self.dataTransferMessage = self.imageOCRDetectionMessage
+            } catch is CancellationError {
+                guard self.imageOCRDetectionBlockRerecognitionID == requestID,
+                      self.imageOCRDetectionTaskID == contentTaskID else { return }
+                self.imageOCRDetectionRerecognizingBlockID = nil
+                self.imageOCRDetectionBlockRerecognitionTask = nil
+                self.imageOCRDetectionState = previousState
+                self.imageOCRDetectionMessage = "已取消此文字块重新识别，保留原结果"
+                self.dataTransferMessage = self.imageOCRDetectionMessage
+            } catch {
+                guard self.imageOCRDetectionBlockRerecognitionID == requestID,
+                      self.imageOCRDetectionTaskID == contentTaskID else { return }
+                self.imageOCRDetectionRerecognizingBlockID = nil
+                self.imageOCRDetectionBlockRerecognitionTask = nil
+                self.imageOCRDetectionState = previousState
+                self.imageOCRDetectionMessage = "此文字块重新识别失败：\(error.localizedDescription)"
+                self.dataTransferMessage = self.imageOCRDetectionMessage
+            }
+        }
+    }
+
+    func cancelImageOCRDetectionBlockRerecognition() {
+        guard imageOCRDetectionRerecognizingBlockID != nil else { return }
+        imageOCRDetectionBlockRerecognitionTask?.cancel()
+    }
+
+    func reportImageOCRDetectionInputError(_ message: String) {
+        imageOCRDetectionMessage = message
+        dataTransferMessage = message
+    }
+
+    func imageOCRDetectionTextExport() -> String {
+        imageOCRDetectionBlocks
+            .map { $0.original.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+    }
+
+    func imageOCRDetectionJSONExport() -> Data? {
+        let exportBlocks = imageOCRDetectionBlocks.enumerated().map { index, block in
+            ImageOCRDetectionExportBlock(
+                index: index + 1,
+                id: block.id,
+                original: block.original,
+                boundingBox: block.boundingBox,
+                direction: block.effectiveSourceDirection ?? .unknown,
+                modelRawConfidence: imageOCRDetectionRawConfidence(for: block),
+                qualityStatus: imageOCRDetectionQualityStatus(for: block),
+                engine: block.ocrProvenance?.candidates.first?.engine.rawValue ?? "vision"
+            )
+        }
+        let document = ImageOCRDetectionExportDocument(
+            version: "3.390",
+            filename: imageOCRDetectionFilename,
+            language: imageOCRDetectionLanguage,
+            layout: imageOCRDetectionLayout,
+            imageWidth: imageOCRDetectionMetrics.imageWidth,
+            imageHeight: imageOCRDetectionMetrics.imageHeight,
+            metrics: imageOCRDetectionMetrics,
+            blocks: exportBlocks
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try? encoder.encode(document)
+    }
+
+    @discardableResult
+    func copyImageOCRDetectionAll() -> Bool {
+        let text = imageOCRDetectionTextExport()
+        guard !text.isEmpty else {
+            imageOCRDetectionMessage = "当前没有可复制的 OCR 原文"
+            return false
+        }
+        UIPasteboard.general.string = text
+        imageOCRDetectionMessage = "已复制全部 OCR 原文"
+        dataTransferMessage = imageOCRDetectionMessage
+        return true
     }
 
     func beginImageFileSelection() -> UUID {
@@ -27697,6 +28229,10 @@ final class TranslationSessionStore: ObservableObject {
         let sanitized = rawName.unicodeScalars.map { allowed.contains($0) ? Character($0) : "_" }
         let name = String(sanitized).trimmingCharacters(in: CharacterSet(charactersIn: "._-"))
         return name.isEmpty ? fallback : name
+    }
+
+    nonisolated private static func elapsedMilliseconds(since start: UInt64) -> Double {
+        Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
     }
 
     nonisolated private static func renderImageTranslationOverlay(

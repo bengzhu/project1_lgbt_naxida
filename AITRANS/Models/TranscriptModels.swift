@@ -6361,6 +6361,212 @@ enum ImageTranslationState: String, Equatable, Codable, Sendable {
     case failed
 }
 
+/// State for the OCR-only workspace. It intentionally stays separate from
+/// ImageTranslationState so cancelling an OCR review never cancels an image
+/// translation session or clears its translated blocks.
+enum ImageOCRDetectionState: String, Equatable, Codable, Sendable {
+    case idle
+    case preparing
+    case detecting
+    case recognizing
+    case arranging
+    case completed
+    case failed
+
+    var title: String {
+        switch self {
+        case .idle: "等待图片"
+        case .preparing: "准备图片"
+        case .detecting: "检测文字区域"
+        case .recognizing: "OCR 识别"
+        case .arranging: "整理阅读顺序"
+        case .completed: "识别完成"
+        case .failed: "识别失败"
+        }
+    }
+
+    var isRunning: Bool {
+        switch self {
+        case .preparing, .detecting, .recognizing, .arranging:
+            true
+        case .idle, .completed, .failed:
+            false
+        }
+    }
+}
+
+enum ImageOCRDetectionLanguage: String, CaseIterable, Identifiable, Codable, Sendable {
+    case automatic = "自动（推荐）"
+    case japanese = "日语"
+    case chinese = "中文"
+    case english = "英语"
+
+    var id: String { rawValue }
+
+    /// `nil` asks Vision to use its automatic language detector. Explicit
+    /// Japanese keeps the existing Manga OCR and orientation reread path.
+    var visionSourceLanguage: SupportedLanguage? {
+        switch self {
+        case .automatic:
+            nil
+        case .japanese:
+            .japanese
+        case .chinese:
+            .simplifiedChinese
+        case .english:
+            .englishUS
+        }
+    }
+}
+
+/// User-facing OCR diagnostics. Engine-local raw confidence remains attached
+/// to each block; the summary is for review triage and never compares Vision
+/// and Manga OCR scores as if they were calibrated on one common scale.
+struct ImageOCRDetectionMetrics: Equatable, Codable, Sendable {
+    var totalMilliseconds: Double
+    var preprocessingMilliseconds: Double
+    var detectionMilliseconds: Double
+    var ocrMilliseconds: Double
+    var layoutMilliseconds: Double
+    var imageWidth: Int
+    var imageHeight: Int
+    var blockCount: Int
+    var characterCount: Int
+    var averageConfidence: Double?
+    var lowConfidenceRatio: Double
+    var confidenceDistribution: [String: Int]
+    var engine: String
+    var model: String
+    var language: ImageOCRDetectionLanguage
+    var layout: ImageOCRDetectionLayout
+
+    static let empty = Self(
+        totalMilliseconds: 0,
+        preprocessingMilliseconds: 0,
+        detectionMilliseconds: 0,
+        ocrMilliseconds: 0,
+        layoutMilliseconds: 0,
+        imageWidth: 0,
+        imageHeight: 0,
+        language: .automatic,
+        layout: .automatic,
+        blocks: [],
+        engine: "—",
+        model: "—"
+    )
+
+    private static let lowConfidenceThreshold: Float = 0.55
+
+    private static func normalizedConfidence(_ rawConfidence: Float) -> Float {
+        guard rawConfidence.isFinite,
+              (0...1).contains(rawConfidence) else {
+            return 0
+        }
+        return rawConfidence
+    }
+
+    private static func hasLowConfidence(_ block: ImageTranslationBlock) -> Bool {
+        normalizedConfidence(block.confidence) < lowConfidenceThreshold
+    }
+
+    init(
+        totalMilliseconds: Double,
+        preprocessingMilliseconds: Double,
+        detectionMilliseconds: Double,
+        ocrMilliseconds: Double,
+        layoutMilliseconds: Double,
+        imageWidth: Int,
+        imageHeight: Int,
+        language: ImageOCRDetectionLanguage,
+        layout: ImageOCRDetectionLayout,
+        blocks: [ImageTranslationBlock],
+        engine: String,
+        model: String
+    ) {
+        self.totalMilliseconds = max(totalMilliseconds, 0)
+        self.preprocessingMilliseconds = max(preprocessingMilliseconds, 0)
+        self.detectionMilliseconds = max(detectionMilliseconds, 0)
+        self.ocrMilliseconds = max(ocrMilliseconds, 0)
+        self.layoutMilliseconds = max(layoutMilliseconds, 0)
+        self.imageWidth = max(imageWidth, 0)
+        self.imageHeight = max(imageHeight, 0)
+        self.blockCount = blocks.count
+        self.characterCount = blocks.reduce(0) { $0 + $1.original.count }
+        let confidences = blocks.map { Double(Self.normalizedConfidence($0.confidence)) }
+        self.averageConfidence = confidences.isEmpty
+            ? nil
+            : confidences.reduce(0, +) / Double(confidences.count)
+        let lowCount = blocks.count(where: { Self.hasLowConfidence($0) })
+        self.lowConfidenceRatio = blocks.isEmpty ? 0 : Double(lowCount) / Double(blocks.count)
+        self.confidenceDistribution = [
+            "≥ 0.90": blocks.count(where: { Self.normalizedConfidence($0.confidence) >= 0.90 }),
+            "0.60–0.89": blocks.count(where: {
+                let confidence = Self.normalizedConfidence($0.confidence)
+                return confidence >= 0.60 && confidence < 0.90
+            }),
+            "< 0.60": blocks.count(where: { Self.normalizedConfidence($0.confidence) < 0.60 })
+        ]
+        self.engine = engine
+        self.model = model
+        self.language = language
+        self.layout = layout
+    }
+
+    func updatingResults(with blocks: [ImageTranslationBlock]) -> Self {
+        Self(
+            totalMilliseconds: totalMilliseconds,
+            preprocessingMilliseconds: preprocessingMilliseconds,
+            detectionMilliseconds: detectionMilliseconds,
+            ocrMilliseconds: ocrMilliseconds,
+            layoutMilliseconds: layoutMilliseconds,
+            imageWidth: imageWidth,
+            imageHeight: imageHeight,
+            language: language,
+            layout: layout,
+            blocks: blocks,
+            engine: engine,
+            model: model
+        )
+    }
+
+    var blocksPerSecond: Double? {
+        guard totalMilliseconds > 0, blockCount > 0 else { return nil }
+        return Double(blockCount) / (totalMilliseconds / 1_000)
+    }
+
+    var charactersPerSecond: Double? {
+        guard totalMilliseconds > 0, characterCount > 0 else { return nil }
+        return Double(characterCount) / (totalMilliseconds / 1_000)
+    }
+
+    var averageMillisecondsPerBlock: Double? {
+        guard blockCount > 0, totalMilliseconds > 0 else { return nil }
+        return totalMilliseconds / Double(blockCount)
+    }
+}
+
+struct ImageOCRDetectionExportBlock: Codable, Sendable {
+    var index: Int
+    var id: UUID
+    var original: String
+    var boundingBox: NormalizedImageRect
+    var direction: ImageTextDirection
+    var modelRawConfidence: Float
+    var qualityStatus: String
+    var engine: String
+}
+
+struct ImageOCRDetectionExportDocument: Codable, Sendable {
+    var version: String
+    var filename: String
+    var language: ImageOCRDetectionLanguage
+    var layout: ImageOCRDetectionLayout
+    var imageWidth: Int
+    var imageHeight: Int
+    var metrics: ImageOCRDetectionMetrics
+    var blocks: [ImageOCRDetectionExportBlock]
+}
+
 enum ImageTranslationOverlayMode: String, CaseIterable, Identifiable, Codable, Sendable {
     case adjacent = "旁贴"
     case replace = "覆盖"

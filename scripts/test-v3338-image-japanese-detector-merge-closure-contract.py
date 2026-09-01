@@ -122,9 +122,9 @@ class JapaneseDetectorMergeClosureContractTests(unittest.TestCase):
             + read("md/flow/flowchart.md")
             + read("md/test/test.md")
             + read(
-                "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+                "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
             )
-            + read("update_log.md")
+            + read("md/log/update_log.md")
         )
         cls.merge = function_body(
             cls.detector,
@@ -187,7 +187,7 @@ class JapaneseDetectorMergeClosureContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         combined = self.workflow + self.docs
         for marker in (
