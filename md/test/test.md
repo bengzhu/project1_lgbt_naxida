@@ -1,413 +1,169 @@
-# Test
+# AITRANS 测试规范
 
-## 1. 固定前缀 / 环境要求
-人工明确要求本机命令行构建时，固定使用完整 Xcode：
+本文只定义当前可复用的测试选择、探针边界和验收要求，不记录版本历史、CI run、某次通过结果或临时指标。此类内容统一写入 [`md/log/`](../log/)。
 
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-```
+## 1. 基本原则
 
-常用构建命令：
+- 先根据 `git diff --name-only <base>...HEAD` 确定变更范围，再选择 `baseline + direct + optional`。
+- 所有变更至少运行 `git diff --check`；只增加与修改代码直接相关的合同或运行证据。
+- 没有失败、共享依赖、发布风险或用户明确要求，不运行全部历史 `scripts/test-v*.py`。
+- App 源码、工程、资源或构建依赖变化，需要当前 SHA 的基础 iOS 编译证据；文档、fixture 或纯脚本变化通常不需要 Xcode。
+- UI 截图、真实 GGUF、漫画探针、Speech 语料、Koharu 工件和目标设备验证默认是可选证据，只有验收目标或诊断需要时开启。
+- 不得伪造结果，不得拿旧 artifact 验收新 SHA；未运行的项目必须说明原因。
+- 静态合同只能证明结构和接线，不能证明真机、模型、OCR、翻译或 Speech 质量。
 
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
-  -project AITRANS.xcodeproj \
-  -scheme AITRANS \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .derivedData \
-  CODE_SIGNING_ALLOWED=NO build
-```
+## 2. Task-scoped 选择
 
-漫画探针运行依赖：
-
-- `test/1.png` 已打入 App bundle。
-- `test/1.ground_truth.json` 可解析。
-- Local 模式需要沙盒内存在 GGUF 模型，默认内置下载模型只适合接口冒烟。
-- 导出模拟器 App 容器通常需要读取 CoreSimulator 容器，受限环境下要请求批准。
-
-当前仓库没有独立 XCTest 目标作为主要验收入口。日常核心验证由 GitHub Actions 快验产出 build 结果包、日志、manifest 和失败摘要；探针 JSON/PNG artifact 只在手动 `ci-fast` / `full` 运行中要求。本地命令保留为人工要求或紧急排查路径。
-
-## 2. 测试分层
-### 2.0 Task-scoped 选择算法（默认）
-
-本节命令是测试目录，不是每轮默认全集。Agent B 在提交前先计算 `git diff --name-only <base>...HEAD`，把变更按“源码/工程、合同脚本、benchmark、文档”分类，再生成唯一的 `baseline + direct + optional` 清单；没有失败、共享依赖或人工要求，不得追加历史合同。
-
-| 变更 | 必要基线 | 直接测试 | 默认跳过 |
+| 变更范围 | Baseline | Direct | 默认不跑 |
 | --- | --- | --- | --- |
-| `AITRANS/**/*.swift`、`AITRANS.xcodeproj/**`、App 资源/Info.plist | 云端基础 iOS simulator `xcodebuild` | 与修改符号所属领域对应的最新边界合同 | 全部历史合同、截图、test2/Koharu 探针 |
-| `VisionOCRService`、detector、Manga OCR、image/layout | 同上（若改 App 源码） | `image`/`japanese`/`ocr`/`layout`/`manga` 命名且直接覆盖该路径的合同 | 翻译/Speech/无关旧版本合同 |
-| `GemmaLocalService`、`LlamaRuntime`、translation/context/QA | 同上（若改 App 源码） | `translation`/`context`/`prompt`/`QA` 直接合同 | OCR/Koharu/截图 |
-| `TranslationSessionStore`、SwiftUI、App 入口 | 同上 | 受影响的 state/UI/accessibility 合同；涉及运行入口时加现有基础 UI smoke | 全量 UI evidence、test2 |
-| Speech 源码/合同 | 同上（若改 App 源码） | `test-speech-recognition-contract.py`、`test-speech-quality-contract.py`；算法改动再加 evaluator/corpus validator | 真实 WER/CER、截图、无语料的质量结论 |
-| `scripts/test-*`、`scripts/evaluate-*`、`benchmarks/`、schema/fixture | `git diff --check` + route/version contract | 只跑本次修改文件及其直接依赖 | Xcode（除非 harness/接线改变）、历史全量 |
-| `md/`、`README.md`、`AGENTS.md`、`update_log.md`、`metrics/` | diff + Markdown 链接/路径 + 必要 JSON/YAML smoke | 父 receipt 可信时 metadata fast；否则按当前 diff 重新判定 | Xcode、App runtime、探针 |
+| `AGENTS.md`、`README.md`、`md/` | diff、Markdown 链接和路径 | 必要的 JSON/YAML/代码块 smoke | Xcode、App、探针 |
+| SwiftUI、Store、App 入口 | diff、云端 iOS simulator build | 对应状态/UI/accessibility 合同 | 全量截图、无关 OCR/Speech |
+| Vision OCR、Manga OCR、detector、layout | diff、云端 iOS simulator build | 修改符号对应的 OCR/geometry/reading-order 合同 | 翻译、Speech、全部历史 Koharu 合同 |
+| 翻译、prompt、GGUF、llama runtime | diff、云端 iOS simulator build | translation/context/QA/runtime 合同 | OCR、Speech；真实模型仅按需 |
+| Speech 源码或质量算法 | diff、云端 iOS simulator build | Speech run-id/取消合同、质量 evaluator、corpus validator | 无语料的 WER/CER、截图 |
+| `scripts/`、`benchmarks/`、schema、fixture | diff、语法/解析 | 变更脚本及其直接输入输出 | Xcode，除非改变 App 接线 |
+| workflow、Xcode target、bundle 资源 | diff、workflow/工程解析、云端 iOS build | 被影响领域的路由或资源 smoke | 无关探针和截图 |
 
-所有云端候选都保留现有 `full`/`fast` 语义：候选核心代码用 task-scoped full，App 变更包含基础 iOS build；PR/merge fast 只复用已核对的 full receipt。`ui_evidence_mode=skip`、`probe_mode=skip` 默认关闭。`test/2.png` 整图 OCR/翻译截图、GGUF、授权语料、Koharu 和目标设备只在验收目标或失败诊断明确要求时作为 `optional` 单独开启。
+直接依赖是被修改代码显式调用、读取，或共享同一公共协议/状态边界的测试。不能只因文件名版本相近就扩大范围。
 
-失败时只重跑失败合同和修复影响范围；若共享协议/状态边界被改动，向上扩大一个相邻领域并写明理由。若无法从文件名判断覆盖关系，选择最近的公共边界合同，不恢复历史全量。
+## 3. 本地轻量检查
 
-### 2.1 Local Light / Fast
-最快发现主链路断点。
-
-以下命令是可按命中范围选用的目录，不是默认全部执行；带 `xcrun`、runtime、真实模型或外部 artifact 的命令仅在人工明确要求时运行。
-
-触发条件：
-
-- 非 App 构建相关修改。
-- JSON、脚本、指标读取或报告字段整理。
-- 不影响 Swift 编译路径的小改动。
-
-命令：
-
-```sh
-git diff --check
-python3 -m json.tool test/1.ground_truth.json
-python3 -m json.tool output/probe_report.json
-python3 -m json.tool output/clean_text_diagnostic.json
-python3 -B scripts/test-speech-recognition-contract.py
-python3 -B scripts/test-speech-quality-contract.py
-python3 -B scripts/validate-speech-corpus.py --root test/speech_corpus
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcrun --sdk macosx swiftc -module-cache-path /private/tmp/aitrans-swift-module-cache AITRANS/Models/SpeechQualityModels.swift AITRANS/Services/SpeechQualityEvaluator.swift scripts/test-speech-quality-evaluator.swift -o /private/tmp/aitrans-speech-quality-contract
-/private/tmp/aitrans-speech-quality-contract
-python3 -B scripts/test-v194-ci-validation-tier-contract.py
-python3 -B scripts/test-v197-ci-version-identity-contract.py
-python3 -B scripts/test-v192-koharu-line-polygon-warp-contract.py
-python3 -B scripts/test-v32-koharu-mask-payload-contract.py
-python3 -B scripts/test-v187-ui-interaction-contract.py
-python3 -B scripts/test-v188-home-ui-contract.py
-python3 scripts/make-koharu-native-draft-artifacts.py --out build/koharu_native_draft
-python3 scripts/validate-koharu-artifacts.py --root build/koharu_native_draft
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/valid_orientation_partial_unsupported
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/coordinate_mismatch --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/invalid_bbox --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/missing_textboxes --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/schema_mismatch --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/path_escape --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/generated_by_forbidden --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/textbox_metadata_invalid --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_missing --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_missing --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/source_image_sha_mismatch --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_missing --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root md/koharu研究/artifact_contract/examples/invalid/contract_example_only_invalid --expect-fail
-python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --print-required-files
-python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing
-python3 scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --allow-missing --emit-handoff-packet
-```
-
-`build/koharu_native_draft/` 是 `scripts/make-koharu-native-draft-artifacts.py` 生成的非 active 四件套草稿，只用于 contract shape / validator smoke。它必须保持 `contractExampleOnly=true`，validator 应输出 `verdict = contractExampleOnly`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`；不得复制到 `test/koharu_artifacts/`，不得作为真实 detector / SegmentMask / BubbleMask 验收证据。
-
-`scripts/test-speech-recognition-contract.py` 是无设备依赖的源代码契约测试，覆盖 v1.86 状态枚举、运行摘要字段、异步 run ID 隔离、UI 取消/翻译状态和 CI 动态 bundle ID。它不能代替真机 Speech 权限、麦克风采集或识别质量测试。
-
-`scripts/test-speech-quality-evaluator.swift` 和 `scripts/test-speech-quality-contract.py` 证明评分算法、隐私边界和 App/CI 接线；`scripts/validate-speech-corpus.py` 证明 manifest 与音频身份。三者都不能代替 v1.96 的真实 Apple Speech 运行报告。
-
-当前基线：
-
-- `output/probe_report.json` 可解析。
-- `output/clean_text_diagnostic.json` 可解析。
-- `test/1.ground_truth.json` 可解析。
-- 最新 `configuration.currentBlockSource = fusedWholePageBubble`。
-- 最新 `totalBlocksDetected = 13`，`frameworkComparison.consistencyPassed = true`，`fusionComparison.consistencyPassed = true`。
-
-### 2.2 Cloud Smoke
-验证主要集成路径，默认在 GitHub Actions 运行。
-
-Cloud Smoke 仍按 2.0 的 changed-files 清单执行：基础 iOS simulator build 只对 App/工程/资源变更保留，合同和 benchmark 只跑直接命中项；“Cloud Smoke”不等于历史合同全量。
-
-触发条件：
-
-- Swift 代码或 Xcode 工程文件改变。
-- `TranslationSessionStore`、模型接口、OCR 服务、SwiftUI 入口或 Info.plist 改变。
-- 需要确认 target 能编译。
-- Speech 状态机或 bundle ID / simulator launch 工作流改变。
-
-默认动作：
-
-```text
-Agent B 集中 push codeb/vX.Y-短标题 的核心 commit
-  -> task-scoped full：基础静态 + 相关领域契约 + 必要 xcodebuild
-  -> 成功后写 full-validation status 并上传未加密 full 结果包
-  -> 创建 PR；opened/reopened/ready-for-review 只跑 fast，不监听 synchronize
-  -> Agent C 按 manifest 核对 exact SHA、profile、required flags、full status 和 artifact
-  -> C 退回：B 修复 push，新 SHA 重新跑对应 full
-  -> C 通过：PR merge；第二父 full status success 才走 merge fast，否则回退 full
-  -> 删除远端 codeb/... 候选分支
-```
-
-云端最低命令等价于：
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
-  -project AITRANS.xcodeproj \
-  -scheme AITRANS \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .derivedData \
-  CODE_SIGNING_ALLOWED=NO build
-```
-
-当前基线：
-
-- 近期多轮该 build 通过。
-- 构建日志可能出现 CoreSimulator 沙盒警告，只要最终 `BUILD SUCCEEDED` 即可作为 build 通过。
-
-### 2.3 Stage Regression
-覆盖当前阶段核心模块。
-
-Stage Regression 只在本次变更跨越一个共享阶段（例如 OCR → layout、Store → UI、prompt → QA）时启用；先跑直接合同，再补一个最近的阶段边界合同。没有新的失败或证据需求，不重复整条历史阶段链。
-
-触发条件：
-
-- 修改漫画探针、OCR 合并、覆盖绘制、报告模型、clean text diagnostic、translation quality gate、Local/Mock 模型适配。
-- 修改会影响 `probe_report.json` 结构或 `output/` 产物。
-
-默认动作：push 先由 GitHub Actions 跑静态检查、JSON 检查、Xcode build 和结果包生成；需要探针产物时再手动 `workflow_dispatch` 运行 `ci-fast` 或 `full`。若完整漫画探针因 GitHub-hosted macOS runner、GGUF、模拟器容器或 App 沙盒访问不稳定而不能运行，workflow 必须生成失败摘要或跳过说明，不能伪造新 `output/`。
-
-人工明确要求本机运行时命令：
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
-  -project AITRANS.xcodeproj \
-  -scheme AITRANS \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .derivedData \
-  CODE_SIGNING_ALLOWED=NO build
-```
-
-运行 App 内开发页 `运行漫画覆盖翻译探针`，或用 DEBUG 环境变量触发：
-
-```sh
-AITRANS_RUN_MANGA_PROBE=1
-```
-
-导出输出：
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer scripts/export-probe-output.sh booted
-```
-
-检查报告：
-
-```sh
-python3 -m json.tool output/probe_report.json
-python3 -m json.tool output/clean_text_diagnostic.json
-python3 -m json.tool test/1.ground_truth.json
-```
-
-当前基线：
-
-- `configuration.currentBlockSource = fusedWholePageBubble`
-- `totalBlocksDetected = 13`
-- `postFusionCleanup.blockCountBeforeCleanup = 16`
-- `postFusionCleanup.blockCountAfterCleanup = 13`
-- `postFusionCleanup.rejectedBlockCount = 3`
-- `groundTruthMatchedBlocks = 13`
-- `groundTruthUnmatchedBlocks = 0`
-- `averageCoreDialogueOCRSimilarity = 0.7106`
-- `averageDecorativeOCRSimilarity = 0.8000`
-- `wholePageAccuracyVsGroundTruth = 0.5972`
-- `bubbleFirstAccuracyVsGroundTruth = 0.7300`
-- `fusion.fused.accuracyVsGroundTruth = 0.7384`
-- `frameworkComparison.consistencyPassed = true`
-- `fusionComparison.consistencyPassed = true`
-- `textRegionCropReport.totalRegions = 13`
-- `textRegionCropReport.cropSucceededCount = 10`
-- `textRegionCropReport.adoptedCount = 0`
-- `textRegionCropReport.rejectedCount = 13`
-- `bubbleSubRegionReport.totalSubRegions = 11`
-- `bubbleSubRegionReport.clampEligibleCount = 2`
-- `bubbleSubRegionReport.oversizedBubbleIDs = [4, 6, 7]`
-- `textRegionCropReport.clampSources = { bubbleBBox: 9, contentRect: 2, subRegion: 2 }`
-- `subRegion` clamp 实际用于块 `[6, 8]`
-- `bubbleMaskReport.instanceCount = 8`
-- `bubbleMaskReport.maskSafeLayoutBlocks = 13`
-- `bubbleMaskReport.bboxFallbackBlocks = 0`
-- `bubbleMaskReport.inconsistentBubbleAssignmentBlocks = [4, 5, 11, 12]`
-- `bubbleMaskReport.renderMaskOverflowBlocks = []`
-- `cropMaskCoverage` 低的块 `[4, 5, 9, 12]`
-- `bubbleAssignmentCorrectionReport.recommendedCorrectionBlocks = [5, 11]`
-- `bubbleAssignmentCorrectionReport.appliedToCropClampBlocks = [5]`
-- `bubbleAssignmentCorrectionReport.rejectedCorrectionBlocks = [4, 11, 12]`
-- `bubbleSplitCandidateReport.parentBubbleIDs = [4, 6, 7]`
-- `bubbleSplitCandidateReport.candidateCount = 6`
-- `bubbleSplitCandidateReport.clampEligibleCount = 3`
-- `bubbleSplitCandidateReport.appliedToCropClampBlocks = [5, 9, 10]`
-- `textBoxCandidateReport.usedForCropBlocks = []`
-- `preCropTextBoxPlanReport.planCount = 37`
-- `preCropTextBoxPlanReport.shadowOCREligiblePlanCount = 29`
-- `preCropTextBoxPlanReport.selectedForShadowOCRBlocks = [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11]`
-- `preCropTextBoxPlanReport.stoppedBlocks = [4, 12]`
-- `cropExperimentReport.candidateCount = 48`
-- `cropExperimentReport.controlCandidateCount = 13`
-- `cropExperimentReport.ocrSucceededCount = 36`
-- `cropExperimentReport.betterThanControlCount = 13`
-- `cropExperimentReport.promotedShadowBlocks = []`
-- `cropExperimentReport.stoppedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
-- `cropExperimentReport` 每块候选数最大为 4，即 control + 最多 3 个 shadow 候选；v18 shadow 候选优先来自 `preCropTextBoxPlan.*`
-- `textBoxPlanFailureReport.evaluatedBlockCount = 13`
-- `textBoxPlanFailureReport.evaluatedPlanCount = 37`
-- `textBoxPlanFailureReport.evaluatedCandidateCount = 35`
-- `textBoxPlanFailureReport.betterThanControlCandidateCount = 13`
-- `textBoxPlanFailureReport.promotedShadowBlockCount = 0`
-- `textBoxPlanFailureReport.stopRecommendedBlocks = [2, 3, 4, 5, 7, 9, 11, 12]`
-- `textBoxPlanFailureReport.continueGeometryResearchBlocks = [1, 6, 10]`
-- `textBoxPlanFailureReport.candidatePromotionBlockedBlocks = [1, 2, 4, 5, 6, 9, 10]`
-- `lineTextBoxPlanReport.targetBlocks = [1, 6, 10]`
-- `lineTextBoxPlanReport.planCount = 12`
-- `lineTextBoxPlanReport.shadowOCREligiblePlanCount = 12`
-- `lineCropExperimentReport.candidateCount = 12`
-- `lineCropExperimentReport.ocrSucceededCount = 12`
-- `lineCropExperimentReport.betterThanControlCount = 5`
-- `lineCropExperimentReport.promotedLineShadowBlocks = []`
-- `lineCropExperimentReport.stoppedAfterLineResearchBlocks = [1, 6, 10]`
-- `externalArtifactReadinessReport.manifestFound = false`
-- `externalArtifactReadinessReport.textBoxesFound = false`
-- `externalArtifactReadinessReport.bubbleMaskFound = false`
-- `externalArtifactReadinessReport.segmentMaskFound = false`
-- `externalArtifactReadinessReport.readinessVerdict = manifestMissing`
-- `externalArtifactReadinessReport.nextAction = stopUntilArtifactsProvided`
-- `externalArtifactReadinessReport.missingArtifacts = [manifest, TextBoxes, BubbleMask, SegmentMask]`
-- `externalArtifactReadinessReport.blockAlignment.count = 13`
-- 默认缺 active artifact 时，`externalTextBoxShadowOCRReport.executed = false`、`gateVerdict = manifestMissing`、`candidateCount = 0`、`ocrExecutedCount = 0`、`promotedExternalShadowBlocks = []`、`skippedBlocks = [0...12]`。
-- 若真实 `test/koharu_artifacts/` readiness 通过，`externalTextBoxShadowOCRReport` 每块最多生成 1 个 `externalArtifact.textBoxCrop` candidate；选择和 report-only promotion 不能读取 `test/1.ground_truth.json`，且不得改变 `finalTextUsedForTranslation`、主覆盖图、`blockPassed`、`configuration.currentBlockSource` 或 `textRegionCropReport.adoptedCount`。
-- v1.18 起云端 `ci-fast` 也必须产出 `internalStructureBottleneckReport`；`evaluatedBlockCount` 必须等于 `totalBlocksDetected`，`primaryBottleneckBreakdown` 和 `recommendedActionBreakdown` 必须非空，`1_ocr_probe_text.txt` 必须包含 `internalStructureBottleneck` 逐块摘要。
-- v1.19 起云端 `ci-fast` 也必须产出 `routingDrivenTranslationComparisonReport` 和 `ocrCharacterDamageAuditReport`；前者 `enabled = true`、`evaluatedCaseCount <= 5`，target 只能来自 `modelTranslationQuality` 路由块，后者 `enabled = true`、`evaluatedBlockCount > 0`，并写出 damaged / missing / extra / substitution token 证据。`1_ocr_probe_text.txt` 必须包含两个新报告的逐块摘要。
-- v1.20 起云端 `ci-fast` 也必须产出 `readingOrderStructureAuditReport`；`enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`cases.count == totalBlocksDetected`，`recommendedStructureActionBreakdown`、`bubbleAssignmentRiskBreakdown`、`textBoxEvidenceBreakdown`、`segmentMaskEvidenceBreakdown` 必须非空。`1_ocr_probe_text.txt` 必须包含报告级 `readingOrderStructureAuditReport` summary 和每块 `readingOrderStructureAudit` 摘要；该报告不得改变 `blocks` 顺序、`finalTextUsedForTranslation`、主覆盖图、`blockPassed` 或失败分类。
-- v1.21 起云端 `ci-fast` 也必须产出 `structureActionCandidateReport`；`enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`candidateCount >= 1`，`candidateTypeBreakdown`、`promotionVerdictBreakdown`、`recommendedNextStepBreakdown` 必须非空。每个 candidate 必须保持 `diagnosticOnly = true`、`groundTruthUsedForPlanning = false`、`wouldChangeMainFlow = false`；`1_ocr_probe_text.txt` 必须包含报告级 `structureActionCandidateReport` summary 和每块 `structureActionCandidates` 摘要。该报告只复用已有 shadow / geometry / render 证据，不新增昂贵 OCR / LLM，不改变 `blocks` 顺序、`finalTextUsedForTranslation`、主覆盖图、`blockPassed`、失败分类或 post-fusion cleanup。
-- v1.22 起云端 `ci-fast` 也必须产出 `koharuArtifactDAGReport`；`enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`stageCount >= 8`、`edgeCount >= 8`，`stageStatusBreakdown`、`artifactKindBreakdown`、`firstBlockingStageBreakdown`、`downstreamImpactBreakdown` 必须非空。每个 `dependencyEdges[]` 必须保持 `diagnosticOnly = true`、`wouldChangeMainFlow = false`；每个 `blockTraces[]` 必须含关键阶段 trace，至少覆盖 `bubbleMask`、`textBoxes`、`segmentMask`、`ocrText`、`translation`、`renderLayout` 中 4 个。`1_ocr_probe_text.txt` 必须包含报告级 `koharuArtifactDAGReport` summary 和逐块 `koharuArtifactTrace` 摘要；该报告只复用既有证据，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择。
-- v1.23 起云端 `ci-fast` 也必须产出 `koharuStageGapReplicationReport`；`enabled = true`、`evaluatedBlockCount == totalBlocksDetected`、`canonicalStageCount >= 9`、`workPackageCount >= 1`，`stageCapabilityBreakdown`、`gapCategoryBreakdown`、`replicationReadinessBreakdown` 必须非空。每个 `stageGaps[]` 必须保持 `diagnosticOnly = true`、`wouldChangeMainFlow = false`、`groundTruthUsedForPlanning = false`；每个 promotion gate 的 `groundTruthUsedForDecision = false`；`workPackages[]` 至少包含一个 `requiresRealExternalArtifact = true` 的包；`blockPlans.count == totalBlocksDetected` 且含 `firstBlockingStageFromDAG`、`primaryGapCategory`、`recommendedWorkPackageID`、`nextAction`。`1_ocr_probe_text.txt` 必须包含报告级 `koharuStageGapReplicationReport` summary 和逐块 `koharuStageGapPlan` 摘要；该报告只把 v1.22 DAG 和既有诊断转成复刻计划，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择。
-- v1.24 起云端 `ci-fast` 也必须产出 `koharuNativeReplicationScoreboardReport`；`enabled = true`、`source = AITRANSProbe`、`evaluatedBlockCount == totalBlocksDetected`、`stageScorecardCount >= 9`、`gateCount >= 8`、`workItemCount >= 1`，`externalArtifactsRequiredForThisReport = false`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`。`stageStatusBreakdown`、`gateStatusBreakdown`、`blockPrimaryBottleneckBreakdown`、`recommendedPriorityBreakdown` 必须非空；每个 `stageScorecards[]` 必须保持 `diagnosticOnly = true`、`wouldChangeMainFlow = false`、`groundTruthUsedForDecision = false`；每个 `gateLedger[]` 的 `groundTruthUsedForDecision = false`；`blockScorecards.count == totalBlocksDetected` 且每块包含 `primaryNativeStage`、`primaryBottleneck`、`recommendedPriority`、`priorityUsedGroundTruth = false`、`recommendedWorkItemID`、`nextAction`；`recommendedNextWorkItems[]` 至少包含 `P0` 或 `stop` 的 stoplist / native scoreboard 工作项。`1_ocr_probe_text.txt` 必须包含报告级 `koharuNativeReplicationScoreboardReport` summary 和逐块 `koharuNativeBlockScorecard` 摘要。该报告只复用现有 probe 证据，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择；缺真实 artifact 只能记为 optional external path，不阻塞 native scoreboard。
-- v1.25 起云端 `ci-fast` 也必须产出 `nativeTextBoxProxyLedgerReport`；`enabled = true`、`source = AITRANSProbe`、`referenceWorkItemID = WI-native-textbox-artifact-scorecard`、`evaluatedBlockCount == totalBlocksDetected`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`。`blockLedgers.count == totalBlocksDetected`，`gateLedger.count >= 10`，`qualityStatusBreakdown`、`candidateSourceBreakdown`、`freezeReasonBreakdown`、`nextActionBreakdown` 必须非空；`stoplist[]` 应覆盖 `textBoxPlanFailureReport.stopRecommendedBlocks` 和 `lineCropExperimentReport.stoppedAfterLineResearchBlocks` 的并集，除非上游报告为空。每个 block ledger 必须保持 `groundTruthUsedForDecision = false`、`diagnosticOnly = true`、`wouldChangeMainFlow = false`；`1_ocr_probe_text.txt` 必须包含报告级 `nativeTextBoxProxyLedgerReport` summary 和逐块 `nativeTextBoxProxyLedger` 摘要。该报告只聚合现有 TextBox / crop / line / BubbleMask / SegmentMask / OCR damage / scoreboard 证据，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup 或候选选择。
-- v1.26 起云端 `ci-fast` 也必须产出 `bubbleMaskAssignmentSplitScoreboardReport`；`enabled = true`、`source = AITRANSProbe`、`referenceWorkItemID = WI-bubblemask-assignment-split-scorecard`、`referenceKoharuArtifact = BubbleMask`、`evaluatedBlockCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`。`blockScorecards.count == totalBlocksDetected`，`bubbleScorecards.count == bubbleMaskReport.instanceCount`，`splitCandidateLedgers.count == bubbleSplitCandidateReport.candidateCount`，`gateLedger.count >= 10`，`assignmentStatusBreakdown`、`splitRiskBreakdown`、`siblingLayoutStatusBreakdown`、`renderMaskStatusBreakdown`、`nextActionBreakdown` 必须非空；`conflictBlocks` 应覆盖 `bubbleMaskReport.inconsistentBubbleAssignmentBlocks`，除非上游为空；每个 block scorecard 必须保持 `groundTruthUsedForDecision = false`、`diagnosticOnly = true`、`wouldChangeMainFlow = false`；`1_ocr_probe_text.txt` 必须包含报告级 `bubbleMaskAssignmentSplitScoreboardReport` summary 和逐块 `bubbleMaskScoreboard` 摘要。该报告只聚合现有 BubbleMask proxy / assignment / split / sibling layout / render / Native TextBox ledger 证据，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect` 或 `configuration.currentBlockSource`。
-- v1.27 起云端 `ci-fast` 也必须产出 `segmentMaskProxyCoverageScoreboardReport`；`enabled = true`、`source = AITRANSProbe`、`referenceWorkItemID = WI-segmentmask-proxy-coverage-scorecard`、`referenceKoharuArtifact = SegmentMask`、`evaluatedBlockCount == totalBlocksDetected`、`glyphMaskBlockCount == segmentMaskReport.glyphMaskBlocks`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealSegmentMask = true`。`blockScorecards.count == totalBlocksDetected`，`cleanupLedgerCount >= glyphMaskBlockCount`，`gateLedger.count >= 12`，`coverageStatusBreakdown`、`cleanupStatusBreakdown`、`renderMaskStatusBreakdown`、`backgroundFillStatusBreakdown`、`nextActionBreakdown` 必须非空；`usableForCleanupBlocks` / `usableForCropEvidenceBlocks` / `weakSegmentBlocks` 应覆盖 `segmentMaskReport` 对应列表，除非上游为空。每个 block scorecard 必须保持 `groundTruthUsedForDecision = false`、`diagnosticOnly = true`、`wouldChangeMainFlow = false`；`1_ocr_probe_text.txt` 必须包含报告级 `segmentMaskProxyCoverageScoreboardReport` summary 和逐块 `segmentMaskProxyScoreboard` 摘要。该报告只聚合现有 glyph mask / SegmentMask proxy / TextBox / BubbleMask / background fill / render 证据，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为或 `configuration.currentBlockSource`。
-- v1.28 起云端 `ci-fast` 也必须产出 `koharuArtifactConvergenceReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`evaluatedBlockCount == totalBlocksDetected`、`stageCount >= 9`、`blockPathCount == totalBlocksDetected`、`workItemLedgerCount >= 6`、`gateCount >= 10`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`externalArtifactsRequiredForThisReport = false`。`convergenceStatusBreakdown`、`firstBlockingArtifactBreakdown`、`primaryNextActionBreakdown`、`workItemStatusBreakdown` 必须非空；`closedWorkItems` 至少包含 `WI-native-textbox-artifact-scorecard`、`WI-bubblemask-assignment-split-scorecard`、`WI-segmentmask-proxy-coverage-scorecard`；v1.29 起 `referenceReports` 必须包含 `translationModelFloorComparisonReport`，且 `WI-translation-model-floor-comparison` 不再只是 v1.28 的未执行 open 状态；v1.58 起 `workItemLedger` 必须包含 `WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage` 和 `WI-koharu-native-promotion-gate-lite-textbox-segment-linkage`，`gateLedger` 必须包含 `G-koharu-convergence-bundle-lite-textbox-segment-linkage` 和 `G-koharu-convergence-promotion-lite-textbox-segment-linkage`，`stages[]` / `blockPaths[]` 必须能把 weak / fallback / rejected / wrong-bubble linkage 传播为 TextBoxes / SegmentMask 阻塞；v1.64 起 `workItemLedger` 必须包含 `WI-external-textbox-orientation-shadow-path`，`gateLedger` 必须包含 `G-external-textbox-orientation-shadow-path`，并核对 `orientationShadowPathPartialBlocks`、`orientationUnsupportedBlocks`、`orientationUnsupportedReasonBreakdown` 已进入 decision signals；partial 或 unsupported 块不得被判为 `closedReportOnly` 或 passed；v1.69 起 `workItemLedger` 必须包含 `WI-external-textbox-shadow-ocr-coverage`，`gateLedger` 必须包含 `G-external-textbox-shadow-ocr-coverage`，ready artifact 后若 shadow OCR report 缺失、`executed=false`、`candidateCount=0`、`ocrExecutedCount=0` 或 `ocrSucceededCount=0`，ExternalArtifacts stage 不得为 `nativeReady`，coverage gate status 必须为 `blocked` 而不是 warning；v1.68 起 `referenceReports` 必须包含 `koharuArtifactIdentityReconciliationReport`，`workItemLedger` 必须包含 `WI-koharu-artifact-identity-reconciliation`，`gateLedger` 必须包含 `G-koharu-artifact-identity-reconciliation-ready`，同一 coverage work item / gate 必须消费 `identityReconciliationVerdict`、`readyForCIManifestComparison` 和 App 侧 identity receipt verdict / files / hashes。v1.69 起 `G-ci-fast-report-availability` 的 threshold / decision signals 必须覆盖当前 v1.24-v1.70 convergence dependency set，并写出 `missingReportCount`、`missingReports` 和 `requiredReportSpan`，不得继续只描述 v1.24-v1.27 旧依赖。每个 `stages[]`、`blockPaths[]`、`workItemLedger[]`、`gateLedger[]` 必须保持 `groundTruthUsedForDecision = false`；`1_ocr_probe_text.txt` 必须包含报告级 `koharuArtifactConvergenceReport` summary、逐块 `koharuArtifactPath` 摘要、`convergenceBundleTextBoxSegmentLinkage`、`convergencePromotionTextBoxSegmentLinkage`、`convergenceExternalShadowOCRCoverage`、`convergenceExternalTextBoxOrientation` 和 `convergenceArtifactIdentityReconciliation`。该报告只聚合既有 DAG / stage gap / native scoreboard / TextBox / BubbleMask / SegmentMask / external gate / clean text / diagnostics / blocks，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、`safeLayoutRect`、`glyphMaskFillRects`、背景填充行为、渲染逻辑或 `configuration.currentBlockSource`。
-- v1.70 起同一 convergence 验收还必须覆盖 App/CI handoff strict closure：artifact archive 不能配 `probe_mode=skip`，coverage work item / gate ID 与 status 必须出现在 smoke 证据里，orientation work item / gate 在 partial 或 unsupported blockers 存在时不得 passed，TXT 摘要必须能让 Agent C 快速看到 coverage / orientation / App-side identity 状态。
-- v1.29 起云端 `ci-fast` 也必须产出 `translationModelFloorComparisonReport`；`enabled = true`、`source = AITRANSProbe`、`referenceWorkItemID = WI-translation-model-floor-comparison`、`evaluatedCleanCaseCount == cleanTextDiagnostic.totalCases`、`evaluatedNoisyBlockCount == totalBlocksDetected`、`baselinePassRate == cleanTextDiagnostic.passRate`、`variantPassRate` 和 `passRateDelta` 可解析、`floorVerdict` 非空、`floorVerdictBreakdown`、`promptVariantOutcomeBreakdown`、`failureReasonBreakdown` 非空、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`cleanTextGroundTruthUsedForModelFloorOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`。`cleanCases.count == cleanTextDiagnostic.totalCases`、`noisyBlockSummaries.count == totalBlocksDetected`、每个 clean case / noisy summary 的 `groundTruthUsedForDecision = false`、`gateLedger.count >= 9`；`1_ocr_probe_text.txt` 必须包含报告级 `translationModelFloorComparisonReport` summary、`translationFloorCleanCase` 和逐块 `translationFloorNoisyBlock` 摘要。该报告允许新增 deterministic strict clean text LLM 诊断调用，但不得替换主 prompt、主译文、覆盖图、`blockPassed`、失败分类、质量规则或模型。
-- v1.30 起云端 `ci-fast` 也必须产出 `koharuRenderRegressionLockReport`；`enabled = true`、`source = AITRANSProbe`、`referenceWorkItemID = WI-render-regression-lock`、`referencePipeline = Koharu`、`evaluatedBlockCount == totalBlocksDetected`、`renderLockVerdict` 非空、`renderLockVerdictBreakdown`、`renderStatusBreakdown`、`safeLayoutSourceBreakdown`、`outputFileStatusBreakdown` 非空、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuRenderer = true`。`blockLocks.count == totalBlocksDetected`、`artifactStages.count >= 5`、`gateLedger.count >= 13`、`outputFileChecks` 覆盖 `probe_report.json`、`clean_text_diagnostic.json`、`1_ocr_probe_text.txt`、`1_debug_boxes.png`、`1_translated_overlay.png`；`failureOverlayRequiredBlocks` 必须覆盖所有 `blockPassed = false` 的块。v1.30 起 `koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuRenderRegressionLockReport`，且 `WI-render-regression-lock` 不再只是 v1.28 的未执行 open 状态；`1_ocr_probe_text.txt` 必须包含报告级 `koharuRenderRegressionLockReport` summary、逐块 `renderLock` 摘要和 convergence render work item 摘要。该报告只聚合现有渲染和输出证据，不新增 OCR / LLM，不改 renderer、safe layout、glyph mask、背景填充、主 OCR、主翻译、`blockPassed` 或失败分类。Agent C 还必须直接核对未加密结果包里的 `output/1_debug_boxes.png` 和 `output/1_translated_overlay.png` 非空。
-- v1.31 起云端 `ci-fast` 也必须产出 `koharuPipelineResolverReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = EngineInfo.needsProduces.DAGResolver.OpPreview`、`evaluatedBlockCount == totalBlocksDetected`、`nodeCount >= 12`、`edgeCount >= 12`、`blockTraceCount == totalBlocksDetected`、`executionQueueCount >= 6`、`opPreviewCount >= 4`、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`。`nodes[]` 必须包含 `sourceImage`、`contentCrop`、`visionOCRCandidates`、`bubbleCandidates`、`bubbleMaskProxy`、`textBoxProxy`、`segmentMaskProxy`、`ocrText`、`fusionCleanup`、`translations`、`renderedSpritesProxy`、`finalRender`、`externalArtifacts`；`nodeStatusBreakdown`、`artifactAvailabilityBreakdown`、`firstBlockedNodeBreakdown`、`executionItemStatusBreakdown`、`nextActionBreakdown` 必须非空。缺 active `test/koharu_artifacts/` 时，`externalArtifacts` 节点必须保持 missing / blocked，不能把 proxy 冒充真实 artifact；`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuPipelineResolverReport`，并且 `workItemLedger` 或 `gateLedger` 必须包含 `WI-koharu-pipeline-resolver-shadow-dag` / `G-koharu-pipeline-resolver-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuPipelineResolverReport` summary、`resolverExecutionQueue` 摘要和逐块 `koharuPipelineResolverTrace`。该报告只聚合现有报告，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择或渲染行为。
-- v1.32 起云端 `ci-fast` 也必须产出 `koharuWorkOrderRouterReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = ResolverExecutionQueue.WorkOrderRouter.BudgetGate`、`evaluatedBlockCount == totalBlocksDetected`、`workOrderCount >= 7`、`blockRouteCount == totalBlocksDetected`、`gateCount >= 10`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`externalArtifactsRequiredForThisReport = false`。`workOrderStatusBreakdown`、`workOrderPriorityBreakdown`、`targetStageBreakdown`、`nextActionBreakdown`、`budgetClassBreakdown` 必须非空；`budgetLedger.ciFastRunnableWorkOrderIDs.count >= 1`；缺 active `test/koharu_artifacts/` 时，external artifact work orders 必须保持 `blockedMissingExternalArtifact` 或等价阻塞状态，不能把 proxy 变成真实 artifact ready。`WO-v132-stop-local-crop-line-deskew`、`WO-v132-request-real-textboxes`、`WO-v132-external-artifact-package-handoff` 必须存在；`WO-v132-stop-local-crop-line-deskew` 不得建议继续 crop / line / deskew 调参。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuWorkOrderRouterReport`，并且 `workItemLedger` 或 `gateLedger` 必须包含 `WI-koharu-workorder-router` / `G-koharu-workorder-router-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuWorkOrderRouterReport` summary、`workOrderQueue` 和逐块 `koharuWorkOrderRoute`。该报告只聚合现有报告，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择或渲染行为。
-- v1.33 起云端 `ci-fast` 也必须产出 `koharuExternalArtifactRequestPacketReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = ExternalArtifacts.ContractReadiness.RequestPacket`、`evaluatedBlockCount == totalBlocksDetected`、`requiredFileCount >= 4`、`artifactRequirementCount >= 3`、`blockRequestCount == totalBlocksDetected`、`gateCount >= 13`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`externalArtifactsRequiredForThisReport = false`。`requiredFiles[]` 必须覆盖 `test/koharu_artifacts/1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`；`artifactRequirements[]` 必须覆盖 `TextBoxes`、`BubbleMask`、`SegmentMask`；缺 active artifact 时 `requestPacketVerdict` 必须是 missing / waiting / blocked 类状态，不能 ready；`forbiddenActiveSources` 必须包含 contract examples、Vision OCR blocks、pre-crop plan、line plan、BubbleMask proxy、SegmentMask proxy、ground truth 和 handwritten ideal boxes 或等价项。`blockRequests.count == totalBlocksDetected`，每块要有 primary work order、needs artifact flags、stoplist / model floor / render lock 信号。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuExternalArtifactRequestPacketReport`，并且 `workItemLedger` 或 `gateLedger` 必须包含 `WI-koharu-external-artifact-request-packet` / `G-koharu-external-artifact-request-packet-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuExternalArtifactRequestPacketReport` summary、`requiredFiles`、`artifactRequirements` 和逐块 `koharuExternalArtifactRequest`。该报告只聚合现有报告，不新增 OCR / LLM，不创建、复制、修改或提交 active `test/koharu_artifacts/`，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、safe layout、glyph mask、背景填充或渲染行为。
-- v1.34 起云端 `ci-fast` 也必须产出 `koharuNativeAlgorithmReplayMatrixReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = NativeAlgorithmReplayMatrix.ProbeEvidenceBudgetGate`、`evaluatedBlockCount == totalBlocksDetected`、`stageCount >= 10`、`candidateCount >= 9`、`blockRouteCount == totalBlocksDetected`、`gateCount >= 14`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`externalArtifactsRequiredForThisReport = false`。固定 candidates 必须包含 `C-v134-preserve-fused-mainflow-audit`、`C-v134-stop-local-crop-line-deskew`、`C-v134-textbox-proxy-replay-ledger`、`C-v134-bubblemask-assignment-split-replay`、`C-v134-segmentmask-coverage-replay`、`C-v134-ocr-quality-bottleneck-replay`、`C-v134-translation-floor-replay`、`C-v134-render-lock-replay`、`C-v134-external-artifact-handoff-replay`。缺 active artifact 时 external candidate 必须保持 blocked；crop / line / deskew stoplist 必须继续阻止本地调参；model floor、OCR 输入问题和 render lock 必须分开路由。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeAlgorithmReplayMatrixReport`，并且 `workItemLedger` 或 `gateLedger` 必须包含 `WI-koharu-native-algorithm-replay-matrix` / `G-koharu-native-algorithm-replay-matrix-executed`。`1_ocr_probe_text.txt` 必须包含 report summary、`candidateQueue`、`stageMatrix` 和逐块 `koharuNativeReplayRoute`。该报告只聚合现有报告，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、post-fusion cleanup、候选选择、safe layout、glyph mask、背景填充、active artifacts 或 `configuration.currentBlockSource`。
-- v1.35 起云端 `ci-fast` 也必须产出 `koharuBubbleIndexShadowLedgerReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = BubbleIndex.MajorityMaskSafeAreaSiblingPartition`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`bubbleLedgerCount == bubbleMaskReport.instanceCount`、`gateCount >= 12`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealBubbleMask = true`、`externalArtifactsRequiredForThisReport = false`。`assignmentVerdictBreakdown`、`safeAreaVerdictBreakdown`、`siblingPartitionVerdictBreakdown`、`renderLockVerdictBreakdown`、`bubbleLayoutVerdictBreakdown`、`nextActionBreakdown` 必须非空；每个 block ledger 必须保持 `groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`，并写出当前 `bubbleID`、shadow bubble、assignment、safe-area、sibling partition、render lock 和 next action。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuBubbleIndexShadowLedgerReport`，并且 `workItemLedger` 或 `gateLedger` 必须包含 `WI-koharu-bubble-index-shadow-ledger` / `G-koharu-bubble-index-shadow-ledger-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuBubbleIndexShadowLedgerReport` summary、`bubbleIndexBubbleLedger`、`bubbleIndexSiblingLedger` 和逐块 `koharuBubbleIndexBlockLedger`。该报告只聚合现有报告，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`blockPassed`、失败分类、post-fusion cleanup、候选选择、glyph mask、背景填充、active artifacts 或 `configuration.currentBlockSource`。
-- v1.36 起云端 `ci-fast` 也必须产出 `koharuDistanceFieldSafeAreaReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = BubbleIndex.DistanceFieldSafePixels.MaximumSafeRect`、`evaluatedBlockCount == totalBlocksDetected`、`bubbleLedgerCount == bubbleMaskReport.instanceCount`、`blockLedgerCount == totalBlocksDetected`、`gateCount >= 10`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealBubbleMask = true`、`usesRoundedRectProxyMask = true`、`externalArtifactsRequiredForThisReport = false`。`safePixelVerdictBreakdown`、`safeRectComparisonBreakdown`、`spriteContainmentBreakdown`、`nextActionBreakdown` 必须非空；每个 block ledger 必须包含当前 `safeLayoutRect`、v1.35 `bubbleIndexShadowSafeRect`、distance-field safe rect 或明确 fallback source、sprite containment、render lock 和 report-only next action。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuDistanceFieldSafeAreaReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-distance-field-safe-area` / `G-koharu-distance-field-safe-area-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuDistanceFieldSafeAreaReport` summary、`distanceFieldBubbleLedger`、逐块 `distanceFieldBlockLedger` 和 `distanceFieldSiblingLedger`。该报告只在 rounded-rect proxy ID mask 的 bubble bbox 内计算 distance field / safe pixels / maximum safe rect，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`。
-- v1.37 起云端 `ci-fast` 也必须产出 `koharuBubbleAdjacencySeamReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = BubbleMask.InstanceAdjacency.SeamPartition`、`evaluatedBlockCount == totalBlocksDetected`、`evaluatedBubbleCount == bubbleMaskReport.instanceCount`、`blockLedgerCount == totalBlocksDetected`、`pairLedgerCount >= 1`、`seamCandidateCount >= bubbleSplitCandidateReport.candidateCount`（若上游为空，必须有明确 warning / fallback note）、`gateCount >= 10`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealBubbleMask = true`、`usesRoundedRectProxyMask = true`、`externalArtifactsRequiredForThisReport = false`。`pairVerdictBreakdown`、`seamCandidateVerdictBreakdown`、`blockSeamRiskBreakdown`、`nextActionBreakdown` 必须非空；block ledgers 必须覆盖 assignment conflict、same-bubble sibling、split candidate、needs real BubbleMask 和 render lock 信号。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuBubbleAdjacencySeamReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-bubble-adjacency-seam` / `G-koharu-bubble-adjacency-seam-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuBubbleAdjacencySeamReport` summary、`bubbleAdjacencyPair`、`bubbleSeamCandidate` 和逐块 `bubbleSeamBlockLedger`。该报告只聚合现有 proxy / BubbleIndex / DistanceField / split / sibling / OCR damage / render lock 证据，不新增 OCR / LLM，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`。
-- v1.38 起云端 `ci-fast` 也必须产出 `koharuRenderSpriteFitPlannerReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = RenderedSprites.FontSizeSearch.SpriteFitBudget`、`referenceWorkItemID = WI-koharu-render-sprite-fit-planner`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`layoutCandidateCount >= totalBlocksDetected`、`gateCount >= 10`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuRenderer = true`、`proxyNotRealBubbleMask = true`、`externalArtifactsRequiredForThisReport = false`。`fitVerdictBreakdown`、`fontBudgetBreakdown`、`spriteContainmentBreakdown`、`failureOverlayFitBreakdown`、`nextActionBreakdown` 必须非空；block ledgers 必须覆盖当前 safe rect、DistanceField safe rect、BubbleIndex shadow safe rect、render font / sprite bounds、failure overlay fit、seam / sibling / render lock 信号。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuRenderSpriteFitPlannerReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-render-sprite-fit-planner` / `G-koharu-render-sprite-fit-planner-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuRenderSpriteFitPlannerReport` summary、逐块 `renderSpriteFit`、`renderSpriteLayoutCandidate` 和 `renderSpriteSiblingFit`。该报告只聚合现有 render / BubbleIndex / DistanceField / seam 证据，不新增 OCR / LLM，不重新渲染 PNG，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、`renderFontSize`、`renderNonTransparentBounds`、`glyphMaskFillRects`、背景填充、`blockPassed`、失败分类、post-fusion cleanup、候选选择、active artifacts 或 `configuration.currentBlockSource`。
-- v1.39 起云端 `ci-fast` 也必须产出 `koharuNativeTextBoxDetectorLiteReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = TextBoxes.NativeDetectorLite.PreOCRArtifact`、`referenceWorkItemID = WI-koharu-native-textbox-detector-lite`、`evaluatedBlockCount == totalBlocksDetected`、`evaluatedBubbleCount > 0`、`blockLedgerCount == totalBlocksDetected`、`bubbleLedgerCount == evaluatedBubbleCount`、`candidateCount >= 1`、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuTextBoxes = true`、`externalArtifactsRequiredForThisReport = false`。`candidateSourceBreakdown`、`candidateVerdictBreakdown`、`blockRelationBreakdown`、`primaryBottleneckBreakdown`、`nextActionBreakdown` 必须非空；candidates 必须标记 `source = nativeDetectorLite`，并记录 bbox、direction、dark pixel density、component count、projection peak、bubble coverage、glyph overlap、`relatedBlockRelations[]` 的 block index / overlap / center-contained / same-bubble / relation reason、`componentCluster` / `singleUnion` / `unionFallback` generation signal 和有上限的 per-bubble candidate pool（最多 4 个 component-cluster + 1 个 diagnostic union fallback，fallback 必须 `shadowOCREligible = false`）。每个 block ledger 必须记录 best candidate 的 coverage ratio、center-contained、same-bubble、candidate verdict 和 shadow eligibility。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeTextBoxDetectorLiteReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-textbox-detector-lite` / `G-koharu-native-textbox-detector-lite-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuNativeTextBoxDetectorLiteReport` summary、带 relation 的 `nativeTextBoxDetectorLiteCandidateLedger`、逐块 `nativeTextBoxDetectorLiteBlockLedger` 和 bubble ledger。该报告默认不执行 shadow OCR，不使用 Vision OCR 文本、ground truth、pre-crop plan、line plan 或 TextRegion crop 结果生成 / 排序候选，不改变主 OCR、翻译输入、覆盖图、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
-- v1.40 起云端 `ci-fast` 也必须产出 `koharuNativeTextBoxDetectorLiteShadowOCRReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = TextBoxes.NativeDetectorLite.ShadowOCR`、`referenceWorkItemID = WI-koharu-native-textbox-detector-lite-shadow-ocr`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`selectedCandidateCount <= totalBlocksDetected`、`ocrExecutedCount == selectedCandidateCount`、`gateCount >= 9`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuTextBoxes = true`、`proxyNotRealKoharuOCR = true`、`externalArtifactsRequiredForThisReport = false`。`ocrOutcomeBreakdown`、`qualityDeltaBreakdown`、`candidateSourceBreakdown`、`primaryBottleneckBreakdown`、`nextActionBreakdown` 必须非空或在无候选时明确 blocked ledger；candidates 必须标记 `source = nativeDetectorLite.shadowOCR`，只来自 v1.39 `shadowOCREligible` detector-lite bbox，并按当前 block overlap / center containment 优先，避免同 bubble sibling 共享错误高分候选；full 模式 block ledger 必须记录本块 report-only 最佳 shadow OCR 候选。`verticalCandidate` candidates 必须只做有上限的 `[0,90]` rotation shadow OCR 对照，使用 `ja-JP/ja/en-US/en` 受限 language profile，记录 `rotationApplied`，并由无真值 OCR 质量和当前文本保词率选择 report-only 最佳结果；`G-native-textbox-detector-lite-shadow-ocr-vertical-rotation-budget` 必须存在。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeTextBoxDetectorLiteShadowOCRReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-textbox-detector-lite-shadow-ocr` / `G-koharu-native-textbox-detector-lite-shadow-ocr-executed`。`1_ocr_probe_text.txt` 必须包含 report summary、`nativeTextBoxDetectorLiteShadowOCRRotation`、`nativeTextBoxDetectorLiteShadowOCRCandidate` 和逐块 `nativeTextBoxDetectorLiteShadowOCRBlockLedger`。该报告允许新增受限 Vision crop OCR 调用，不新增 LLM，不用 ground truth 决定候选、排序、OCR 执行、nextAction 或 gate，不改变主 OCR、翻译输入、覆盖图、`finalTextUsedForTranslation`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
-- v1.41 起云端 `ci-fast` 也必须产出 `koharuNativeTextBoxDetectorLiteRefinementReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = TextBoxes.NativeDetectorLite.ClosedLoopRefinement`、`referenceWorkItemID = WI-koharu-native-textbox-detector-lite-refinement`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`ocrExecutedCount <= min(6,totalBlocksDetected)` 或报告明确当前 budget、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuTextBoxes = true`、`proxyNotRealKoharuOCR = true`、`externalArtifactsRequiredForThisReport = false`。`targetReasonBreakdown`、`refinementStrategyBreakdown`、`ocrOutcomeBreakdown`、`primaryBottleneckBreakdown`、`nextActionBreakdown` 必须非空或在无 eligible target 时明确 `blockedByNoEligibleTargets`；candidates 必须标记 `source = nativeDetectorLite.refinementShadowOCR`，refined bbox 必须从 v1.39 detector-lite 父 bbox 派生。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeTextBoxDetectorLiteRefinementReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-textbox-detector-lite-refinement` / `G-koharu-native-textbox-detector-lite-refinement-executed`。`1_ocr_probe_text.txt` 必须包含 report summary、`nativeTextBoxDetectorLiteRefinementCandidate` 和逐块 `nativeTextBoxDetectorLiteRefinementBlockLedger`。该报告允许新增受限 Vision crop OCR 调用，不新增 LLM，不用 ground truth 决定 target、bbox、排序、OCR 执行、nextAction 或 gate，不改变主 OCR、翻译输入、覆盖图、`finalTextUsedForTranslation`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
-- v1.42 起云端 `ci-fast` 也必须产出 `koharuNativeTextBoxDetectorLiteClosedLoopReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = TextBoxes.NativeDetectorLite.ClosedLoopRouter`、`referenceWorkItemID = WI-koharu-native-textbox-detector-lite-closed-loop-router`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`candidateFamilyCount == totalBlocksDetected`、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`proxyNotRealKoharuTextBoxes = true`、`proxyNotRealKoharuOCR = true`、`externalArtifactsRequiredForThisReport = false`。`routeBreakdown`、`candidateFamilyVerdictBreakdown`、`ocrOutcomeRollup`、`primaryBottleneckBreakdown`、`nextActionBreakdown` 必须非空，或在上游 v1.39-v1.41 报告缺失时明确 `blockedByMissingUpstreamReports`。`stopBlockIndexes`、`fullProbeReviewBlockIndexes`、`realTextBoxesNeededBlocks`、`realBubbleMaskNeededBlocks`、`realSegmentMaskNeededBlocks`、`modelFloorRoutedBlocks`、`renderLockRoutedBlocks` 字段必须存在；每个 block ledger 必须保留 `finalTextUsedForTranslation` 原值、route、nextAction、failureCategory、BubbleMask / SegmentMask / translation / render 证据、decisionSignals 和 evaluationSignals。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeTextBoxDetectorLiteClosedLoopReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-textbox-detector-lite-closed-loop-router` / `G-koharu-native-textbox-detector-lite-closed-loop-router-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuNativeTextBoxDetectorLiteClosedLoopReport` summary、`nativeTextBoxDetectorLiteCandidateFamily` 和逐块 `nativeTextBoxDetectorLiteClosedLoopBlockLedger`。该报告不新增 OCR / LLM / PNG，不使用 ground truth 决定 route、nextAction、gate 或 candidate family verdict，不改变主 OCR、翻译输入、覆盖图、`finalTextUsedForTranslation`、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
-- v1.43 起云端 `ci-fast` 也必须产出 `koharuNativeBubbleMaskInstanceLiteReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = BubbleMask.NativeInstanceLite.PixelIDMask`、`referenceWorkItemID = WI-koharu-native-bubblemask-instance-lite`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`nativeInstanceLite = true`、`proxyNotRealKoharuBubbleMask = true`、`usesSourceImagePixels = true`、`externalArtifactsRequiredForThisReport = false`。`instanceCount >= 1`，若像素证据不足则必须写 `instanceLiteVerdict = blockedByInsufficientPixelEvidence`，不能静默空报告；`assignmentAgreementBreakdown`、`splitRiskBreakdown`、`siblingPartitionBreakdown`、`safeRectComparisonBreakdown`、`safeRectPolicyBreakdown`、`spriteBlockScopedContainmentBreakdown`、`spriteSiblingCollisionBreakdown`、`primaryBottleneckBreakdown`、`nextActionBreakdown` 必须非空或有明确 warning / blocked gate。每个 block ledger 必须包含 current bubble、instance-lite majority、由实例像素 erosion / projection 派生的 `instanceLiteSafeRect`、实际 report-only `instanceLiteBlockScopedSafeRect`、`instanceLiteSafeRectPolicy`、`spriteBlockScopedSafeRectContainmentRatio`、`spriteContainedByBlockScopedSafeRect`、`spriteContainmentPolicy`、`sameInstanceRenderSpriteOverlapCount`、`spriteSiblingCollisionPolicy`、render lock、translation failure route、detector-lite closed-loop route 和 nextAction；同 instance 多 block 时 policy 必须避免共享同一个最大 safe rect，并输出 sibling render sprite overlap / collision policy。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeBubbleMaskInstanceLiteReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-bubblemask-instance-lite` / `G-koharu-native-bubblemask-instance-lite-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuNativeBubbleMaskInstanceLiteReport` summary、`nativeBubbleMaskInstanceLiteSafeRectPolicy`、`nativeBubbleMaskInstanceLiteBlockScopedSpriteContainment`、`nativeBubbleMaskInstanceLiteSiblingSpriteCollision`、`nativeBubbleMaskInstanceLiteInstance`、逐块 `nativeBubbleMaskInstanceLiteBlockLedger`、`nativeBubbleMaskInstanceLiteSiblingLedger` 和 `nativeBubbleMaskInstanceLiteAdjacencyLedger`。该报告不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不把 instance-lite mask 冒充真实 Koharu `BubbleMask`，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、DistanceField safe rect、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
-- v1.44 起云端 `ci-fast` 也必须产出 `koharuNativeSegmentMaskRefinementLiteReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = SegmentMask.NativeRefinementLite.TextBoxConstrainedGlyphMask`、`referenceWorkItemID = WI-koharu-native-segmentmask-refinement-lite`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`candidateLedgerCount >= totalBlocksDetected`、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`nativeRefinementLite = true`、`proxyNotRealKoharuSegmentMask = true`、`usesSourceImagePixels = true`、`usesTextBoxConstraints = true`、`usesBubbleMaskConstraints = true`、`externalArtifactsRequiredForThisReport = false`。若像素证据不足必须写 `refinementLiteVerdict = blockedByInsufficientPixelEvidence`，不能静默空报告；`candidateSourceBreakdown`、`candidateVerdictBreakdown`、`pixelEvidenceBreakdown`、`textboxClampBreakdown`、`textBoxSegmentLinkBreakdown`、`bubbleClampBreakdown`、`componentFilteringBreakdown`、`maskContainmentBreakdown`、`maskMajorityAgreementBreakdown`、`primaryBottleneckBreakdown`、`nextActionBreakdown` 必须非空或有明确 warning / blocked gate。每个 candidate ledger 必须包含 source TextBox candidate verdict、shadow eligibility、block overlap ratio、same-bubble、accepted-for-SegmentMask 和 link verdict；每个 block ledger 必须包含 selected candidate、selected source TextBox candidate ID / link verdict、pixel counts、TextBox / BubbleMask clamp、`maskContainedByTextBoxRatio`、`maskContainedByBubbleRatio`、`maskMajorityAgreement`、glyph overlap、SegmentMask proxy agreement、clear-text / OCR crop / render containment 可用性、primary bottleneck 和 nextAction。报告必须输出 `segmentFromAcceptedTextBoxCount`、`segmentFromRejectedTextBoxCount`、`segmentFromFallbackBBoxCount`，并包含 `G-native-segmentmask-refinement-lite-textbox-linkage-audited` 和 `G-native-segmentmask-refinement-lite-no-rejected-textbox-silent-selection` gates。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeSegmentMaskRefinementLiteReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-segmentmask-refinement-lite` / `G-koharu-native-segmentmask-refinement-lite-executed`。`1_ocr_probe_text.txt` 必须包含 `koharuNativeSegmentMaskRefinementLiteReport` summary、`nativeSegmentMaskRefinementLiteTextBoxLink`、`nativeSegmentMaskRefinementLiteMajorityAgreement`、`nativeSegmentMaskRefinementLiteCandidate`、逐块 `nativeSegmentMaskRefinementLiteBlockLedger` 和 `nativeSegmentMaskRefinementLiteSiblingLedger`。该报告不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不把 refinement-lite mask 冒充真实 Koharu `SegmentMask`，不改变主 OCR、翻译输入、覆盖图、`safeLayoutRect`、`glyphMaskFillRects`、背景填充、renderer、`blockPassed`、失败分类、`textRegionCropReport.adoptedCount`、active artifacts 或 `configuration.currentBlockSource`。
-- v1.45 起云端 `ci-fast` 也必须产出 `koharuNativeArtifactBundleLiteReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = ArtifactBundle.NativeLite.TextBoxesBubbleMaskSegmentMaskConsistency`、`referenceWorkItemID = WI-koharu-native-artifact-bundle-lite`、`evaluatedBlockCount == totalBlocksDetected`、`bundleLedgerCount == totalBlocksDetected`、`consistencyEdgeCount >= totalBlocksDetected`、`workItemCount >= 1`、`gateCount >= 8`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`nativeBundleLite = true`、`proxyNotRealKoharuTextBoxes = true`、`proxyNotRealKoharuBubbleMask = true`、`proxyNotRealKoharuSegmentMask = true`、`externalArtifactsRequiredForThisReport = false`。每个 final block 必须有 bundle ledger，至少包含 selected TextBox / Bubble / Segment component、OCR evidence、translation route、render evidence、artifact consistency verdict、primary blocking artifact 和 nextAction；v1.57 起每块 ledger 还必须包含 `selectedTextBoxSegmentLinkVerdict`、`textBoxSegmentLinkageStatus`、`textBoxSegmentLinkageRisk`，consistency edges 必须包含 `TextBoxSegmentMaskLinkage`，报告必须包含 `textBoxSegmentLinkBreakdown` 和 `textBoxSegmentLinkageReviewBlocks`。consistency edges 必须覆盖 TextBox/Bubble、Segment/TextBox、Segment/Bubble、final OCR bbox/TextBox、same-bubble sibling non-overlap、seam/split risk、render sprite containment、model-floor separation 和 TextBox -> SegmentMask linkage。`componentReadinessBreakdown`、`artifactConsistencyBreakdown`、`textBoxSegmentLinkBreakdown`、`primaryBlockingArtifactBreakdown`、`nextActionBreakdown` 必须非空或有明确 warning / blocked gate。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeArtifactBundleLiteReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-artifact-bundle-lite` / `G-koharu-native-artifact-bundle-lite-executed`；v1.57 起还必须包含 `WI-koharu-native-artifact-bundle-lite-textbox-segment-linkage` / `G-native-artifact-bundle-lite-textbox-segment-linkage`。`1_ocr_probe_text.txt` 必须包含 report summary、`nativeArtifactBundleLiteTextBoxSegmentLink`、逐块 `nativeArtifactBundleLiteBlockLedger` 的 `textBoxSegmentLink=`、`nativeArtifactBundleLiteConsistencyEdge` 和 `nativeArtifactBundleLiteWorkItem`。该报告不新增 OCR / LLM / PNG，不创建或修改 active `test/koharu_artifacts/`，不把 bundle-lite 冒充真实 Koharu artifacts，不改变主 OCR、翻译输入、覆盖图、renderer、`blockPassed`、失败分类、`safeLayoutRect`、`glyphMaskFillRects`、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
-- v1.46 起云端 `ci-fast` 也必须产出 `koharuNativePromotionGateLiteReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = NativePromotionGateLite.ProbeDrivenArtifactReadiness`、`referenceWorkItemID = WI-koharu-native-promotion-gate-lite`、`evaluatedBlockCount == totalBlocksDetected`、`blockLedgerCount == totalBlocksDetected`、`stageGateCount >= 8`、`candidateExportPreviewCount >= 1` 或明确 blocked / warning reason、`workItemCount >= 1`、`gateCount >= 8`、`promotionGateLite = true`、`nativePromotionPreviewOnly = true`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`externalArtifactsRequiredForThisReport = false`、`proxyNotRealKoharuTextBoxes = true`、`proxyNotRealKoharuBubbleMask = true`、`proxyNotRealKoharuSegmentMask = true`、`proxyNotRealKoharuOCR = true`、`proxyNotRealKoharuRenderer = true`。每个 final block 必须有 promotion ledger，至少包含 TextBoxes / BubbleMask / SegmentMask / OcrText / Translations / Render promotion status、primary blocking artifact、probe bottleneck、promotion eligibility、nextAction 和 `mustNotPromoteReasons`；v1.57 起每块 ledger 还必须包含 `textBoxSegmentLinkVerdict` 和 `textBoxSegmentLinkagePromotionStatus`，报告必须包含 `textBoxSegmentLinkBreakdown` 和 `textBoxSegmentLinkageBlockedBlocks`，weak / fallback / rejected / wrong-bubble linkage 必须进入 `mustNotPromoteReasons`。`stageGates[]` 必须覆盖 TextBoxes、BubbleMask、SegmentMask、OcrText、Translations、RenderedSprites、FinalRender、ExternalArtifacts；`candidateExportPreviews[]` 必须保持 `canBeExportedNow = false`、`wouldCreateActiveArtifact = false`。`stageReadinessBreakdown`、`promotionEligibilityBreakdown`、`primaryBlockingArtifactBreakdown`、`probeBottleneckBreakdown`、`textBoxSegmentLinkBreakdown`、`nextActionBreakdown` 必须非空或有明确 warning / blocked gate。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativePromotionGateLiteReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-promotion-gate-lite` / `G-koharu-native-promotion-gate-lite-executed`；v1.57 起还必须包含 `WI-koharu-native-promotion-gate-lite-textbox-segment-linkage` / `G-native-promotion-gate-lite-textbox-segment-linkage`。`1_ocr_probe_text.txt` 必须包含 report summary、`nativePromotionTextBoxSegmentLink`、`nativePromotionStageGate`、逐块 `nativePromotionBlockLedger` 的 `textBoxSegmentLink=`、`nativeCandidateExportPreview` 和 `nativePromotionWorkItem`。该报告不新增 OCR / LLM / PNG，不更换模型，不创建或修改 active `test/koharu_artifacts/`，不把 native-lite proxy 冒充真实 Koharu promotion / detector / artifact，不改变主 OCR、翻译输入、覆盖图、renderer、`blockPassed`、失败分类、`safeLayoutRect`、`glyphMaskFillRects`、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`；ground truth 只进 evaluation signals。
-- v1.47 起云端 `ci-fast` 也必须产出 `koharuNativeArtifactContractDryRunReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = NativeArtifactContractDryRun.FourFileReadiness`、`referenceWorkItemID = WI-koharu-native-artifact-contract-dry-run`、`sourceImage = test/1.png`、`coordinateSpace = originalImageTopLeftPixels`、`activeInputDirectory = test/koharu_artifacts`、`examplesDirectory = md/koharu研究/artifact_contract/examples`、`evaluatedBlockCount == totalBlocksDetected`、`requiredFileCount >= 4`、`contractGateCount >= 6`、`groundTruthUsedForDecision = false`、`groundTruthUsedForEvaluationOnly = true`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalArtifactsRequiredForThisReport = false`。`requiredFiles[]` 必须覆盖 `1.manifest.json`、`1.textboxes.json`、`1.bubbles.json`、`1.segment_mask.json`，且 manifest required fields 必须包含 `sourceImageSHA256=<expected runtime test/1.png sha256>`；v1.67 起每个 required file 还必须写出 `identityStatus`，有 active 文件时写出 `fileSizeBytes` 和 `sha256`，顶层必须写 `appSideArtifactIdentityVerdict`、`appSideArtifactIdentityFilesPresent`、`appSideArtifactIdentityHashesPresent`；v1.80 起 App-side identity ready 还必须要求 `externalArtifactReadinessReport.artifactIdentityReceipt.sourceImageSHA256Matches = true`。真实 artifact ready 后 `contractDryRunVerdict = activeArtifactsReadyForShadowOCR` 必须要求 App 侧 identity ready。`validatorCommands[]` 必须包含 `scripts/validate-koharu-artifacts.py --root test/koharu_artifacts --print-required-files` 和 `--allow-missing`；`forbiddenActiveSources[]` 必须包含 contract examples、Vision OCR blocks、pre-crop plan、line plan、BubbleMask proxy、SegmentMask proxy、ground truth、handwritten ideal boxes。`previews[]` 必须保持 `activeExportAllowed = false`、`wouldCreateActiveArtifact = false`，并写出 required / missing fields 与 forbidden source reasons。`koharuArtifactConvergenceReport.referenceReports` 必须包含 `koharuNativeArtifactContractDryRunReport`，并且 `workItemLedger` / `gateLedger` 必须包含 `WI-koharu-native-artifact-contract-dry-run` / `G-koharu-native-artifact-contract-dry-run-executed`；缺 active 四件套时该 work item 应为 `blockedByMissingRealArtifact`，禁止把 proxy preview 当成真实 artifact readiness。`1_ocr_probe_text.txt` 必须包含 `koharuNativeArtifactContractDryRunReport` summary、App-side identity summary、`nativeArtifactContractDryRunRequiredFile` 的 size / SHA、`nativeArtifactContractDryRunPreview`、validator commands 和 forbidden active sources。该报告只做四件套 contract dry-run，不创建、复制、修改 active `test/koharu_artifacts/`，不新增 OCR / LLM / PNG，不改变主 OCR、翻译输入、覆盖图、renderer、`blockPassed`、失败分类、`safeLayoutRect`、`glyphMaskFillRects`、`textRegionCropReport.adoptedCount` 或 `configuration.currentBlockSource`。
-- v1.68 起云端 `ci-fast` 也必须产出 `koharuArtifactIdentityReconciliationReport`；`enabled = true`、`source = AITRANSProbe`、`referencePipeline = Koharu`、`referenceConcept = ArtifactIdentityReconciliation.CIManifestAppReceipt`、`referenceWorkItemID = WI-koharu-artifact-identity-reconciliation`、`evaluatedBlockCount == totalBlocksDetected`、`fileRowCount >= 5`、`gateCount >= 3`、`groundTruthUsedForDecision = false`、`wouldChangeMainFlow = false`、`diagnosticOnly = true`、`dryRunOnly = true`、`activeExportAllowed = false`、`externalArtifactsRequiredForThisReport = false`。`fileRows[]` 必须覆盖 `SourceImage`、`manifest`、`TextBoxes`、`BubbleMask`、`SegmentMask`，每行必须包含 App size / SHA256、`ciManifestFieldPathForSize`、`ciManifestFieldPathForSHA256` 和 `comparisonStatus`；v1.80 起顶层还必须包含 `sourceImageSHA256Declared`、`sourceImageSHA256Expected`、`sourceImageSHA256Matches`，真实 artifact ready 后 `readyForCIManifestComparison = true` 必须要求每行 `comparisonStatus = appReceiptReady` 且 `sourceImageSHA256Matches = true`。`koharuArtifactConvergenceReport.referenceReports` 必须包含该报告，`workItemLedger` / `gateLedger` 必须包含 `WI-koharu-artifact-identity-reconciliation` / `G-koharu-artifact-identity-reconciliation-ready`；`1_ocr_probe_text.txt` 必须包含 `koharuArtifactIdentityReconciliationReport`、逐行 `artifactIdentityReconciliationFile`、source image SHA declared / expected / matches 和 `convergenceArtifactIdentityReconciliation`。Actions 注入真实 artifact 后还必须在 `ci-artifact-manifest.json` 写出 `koharuArtifactIdentityReconciliationMatch.matchVerdict = matched`，否则不得把 artifact handoff 当作通过。该报告不读取 CI manifest、不创建或修改 active artifact、不新增 OCR / LLM / PNG、不改变主 OCR、翻译输入、覆盖图或 renderer。
-- 若 post-fusion cleanup 新增拒绝块，`fusionComparison.postFusionCleanup.rejectedBlocks[]` 必须写出 ground-truth-free 的 `reason`、`relatedKeptBlockIndex`、`qualityScore`、`protectedTextMatched` 和 `evidence`；保护文本与 decorative 标题不能被清理掉。
-- 外部 Koharu artifact validator 对 `md/koharu研究/artifact_contract/examples/valid` 应返回 `validationPassed = true`、`verdict = contractExampleOnly`、`externalTextBoxesShadowOCRAllowed = false`，且 `artifactIdentitySummary.sourceImageSHA256Declared` 等于 `artifactIdentitySummary.sourceImage.sha256`、`sourceImageSHA256Matches = true`；对 `examples/valid_orientation_partial_unsupported` 还必须输出 `orientationMetadataSummary`，其中 `orientationLinePolygonWarpSupportedTextBoxIDs` 包含合法竖排 + line polygon fixture，`currentShadowOCRSupport.linePolygonWarp = true`，unsupported 只保留 `arbitraryRotationUnsupported`，不得继续输出 `linePolygonWarpUnsupported`。对 invalid fixtures 应在 `--expect-fail` 下成功，至少覆盖 coordinate mismatch、invalid bbox、missing textboxes、schema mismatch、manifest path escape、forbidden `generatedBy` source、TextBox 方向元数据非法、line polygon 脱离所属 TextBox bbox、manifest 缺 `sourceImage`、manifest 缺 / 错 `sourceImageSHA256` 和 manifest 缺 `contractExampleOnly`。v1.79 起 active manifest 缺 `sourceImageSHA256` 必须输出 `sourceImageSHA256Missing`，SHA 格式非法输出 `sourceImageSHA256Invalid`，与当前仓库 `test/1.png` 不一致输出 `sourceImageSHA256Mismatch`，并阻止 `readyForShadowOCR`；v1.80 起 Swift readiness、App identity receipt 和 identity reconciliation 也必须输出同等 missing / invalid / mismatch 阻塞，不能只由 Python validator 拦截。v1.81 起 `--emit-handoff-packet` 必须输出 Release upload / `workflow_dispatch` 输入，`--package-release-archive` 生成的 zip 必须只有一个目录且包含四个标准 JSON，并输出 archive SHA256；默认不得把 `contractExampleOnly` examples 标记为 handoff ready，云端 static checks 也必须覆盖 fixture 默认拒绝打包、允许 fixture 打包后的 zip 布局和带空格 dispatch 参数 shell quote。v1.82 起 `--inspect-release-archive` 必须按 CI 同口径拒绝 0 个或多个四件套 candidate directory 的 archive，成功时输出 archive size/SHA、members、candidate directory 和 validation verdict；handoff packet 必须输出带 `--repo` 的 `ghReleaseUploadCommand`、`ghWorkflowDispatchCommand` 和 `ghRunListCommand`。v1.83 起 `--package-release-archive` 的 handoff packet 还必须包含 `releaseArchive.inspection`、`releaseArchiveInspectionPassed`、`releaseArchiveInspectionVerdict`、`inspectReleaseArchiveCommand` 和 `expectedCIManifestEcho`，static checks 必须断言 fixture package 的 inspection proof 存在且 candidate directory count 为 1；v1.84 起 handoff packet 还必须包含 `ghRunWatchCommand`、`ghRunDownloadCommand`、`ciResultReview`、`expectedCIManifestAssertions`、`expectedAppRuntimeAssertions`、`expectedReconciliationAssertions`、`expectedExternalShadowOCRAssertions`、`expectedConvergenceAssertions`、`expectedCloudIdentityRows`、`expectedProbeTextNeedles` 和 `staleRunRejectionAssertions`，static checks 只断言这些结构化 review 字段的 shape 和关键路径存在，不增加真实 GitHub 下载或 App 探针负载；云端注入真实 archive 时仍以 Release 下载 SHA、唯一目录解包、active validator identity / orientation 摘要、App runtime readiness、identity reconciliation、external shadow OCR coverage 和 orientation gates 为验收证据。v1.69 起 active manifest 缺 `sourceImage` 必须输出 `sourceImageMissing`，缺或非布尔 `contractExampleOnly` 必须输出 source policy 错误并阻止 `readyForShadowOCR`。TextBox 可选 `sourceDirection`、`rotationDegrees` / `rotationDeg`、`linePolygons` 一旦提供，validator 和 Swift readiness 必须校验方向枚举、旋转范围、源图点位范围和 bbox 所属关系；`--print-required-files` 应输出 active 目录四件套和 forbidden active sources；对缺失的 `test/koharu_artifacts` 应在 `--allow-missing` 下返回 `manifestMissing`、`readyForShadowOCR = false`、`externalTextBoxesShadowOCRAllowed = false`、`nextAction = stopUntilArtifactsProvided` 和缺失文件 blockers，不应额外混入 schema / coordinate 缺失噪音。
-- v3.2 mask payload contract 由 `scripts/test-v32-koharu-mask-payload-contract.py` 统一验收 Python validator、Swift evaluator、Store / report / Xcode target / CI 接线。v1 fixture 必须继续 `validationPassed = true` 但 `maskPayloadGateReady = false`；v2 BubbleMask / SegmentMask 必须声明 `width`、`height`、`encoding = rowMajorRLE` 和 `runs`，解码总长精确等于源图像素且不得越界。Bubble label 只能为 0 或唯一正 `maskValue`，并精确重算 `pixelCount` 与 tight bbox；Segment label 只能为 0/1，并重算 `glyphPixelCount` 与四连通 component。App readiness 必须输出两个 payload verdict、gate ready 和逐块 majority / coverage / TextBox containment；`WI/G-external-mask-pixel-payload` 只有 active 非 fixture v2 payload 与全部块空间证据可信时才能 `closedReportOnly / passed`。该 gate 保持 shadow-only，不改变 OCR、翻译、renderer、`blockPassed` 或 `currentBlockSource`。
-- v3.3 mask topology contract 由 `scripts/test-v33-koharu-mask-topology-contract.py` 和纯 Swift `scripts/test-v33-koharu-mask-topology-evaluator.swift` 验收。Python valid fixture 必须做到 TextBox 的 expected Bubble label 唯一、每个 glyph component 只归属一个 TextBox、无 foreign / orphan 像素且 partition 守恒；cross-assignment invalid fixture 在 v3.2 payload 仍有效时必须单独令 `maskTopologyGateReady = false`。App 必须复用 `stableOneToOneExternalTextBoxShadowMatching`，不得为 topology 再独立选 best TextBox；缺 block、duplicate TextBox/block、invalid expected Bubble、empty glyph、overlap、foreign / no-bubble / orphan 像素、cross-Bubble component 或分区不守恒都阻止 `WI/G-external-mask-topology-linkage`。该 gate 只是 shadow 证据，不改 OCR、翻译、renderer、`blockPassed` 或 `currentBlockSource`。
-- v1.97 要求 handoff packet 使用单一 `targetIdentity`；repo / workflow ref / expected commit SHA 由显式参数或 GitHub / git 环境解析，upload、dispatch、run list、manifest assertions、review 和 stale-run rules 必须全部使用同一组值，workflow 入口必须在验证前拒绝 `expected_commit_sha != GITHUB_SHA`。CI fixture 必须显式传测试 identity，并运行 `scripts/test-v197-koharu-handoff-target-contract.py`。
-- `1_ocr_probe_text.txt` 每块包含 `textBoxPlanFailure` 和 `promotionChecks`；目标块 `[1, 6, 10]` 还包含 `lineTextBoxPlans`、`lineCropExperiment`、`linePromotionChecks` 和 `lineResearchDecision`；每块还包含 `externalArtifacts` 与 `externalTextBoxShadowOCR` 摘要。
-- `cleanTextDiagnostic.passRate = 0.4545`
-- `passedBlocks = 1`
-- `failedBlocks = 12`
-- `translationFailureBreakdown = { modelOutputFailure: 2, ocrInputSuspect: 7, translationLanguageQualityFailure: 3 }`
-- `likelyRuleFalseFailureBlocks = []`
-
-### 2.4 Full（仅在必要时）
-当前提交的完整必要验证。
-
-Full 指当前提交的完整必要证据，不指所有历史 `test-v*.py`。除构建依赖、workflow/target、持久化迁移或明确的发布验收外，仍应按 2.0 运行 task-scoped full；无 App 变更时允许 `xcodeBuildRequired=false`，但必须记录 skip reason。
-
-触发条件：
-
-- 修改 llama.cpp 封装、模型下载/导入、Xcode framework、bundle resource、持久化迁移、Pro 权限或发布相关配置。
-- 版本收尾或准备提交时需要高置信度。
-
-默认动作：由 GitHub Actions 负责 build/test/report/artifact 重验证。人工明确要求本机全量时命令：
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
-  -project AITRANS.xcodeproj \
-  -scheme AITRANS \
-  -destination 'generic/platform=iOS Simulator' \
-  -derivedDataPath .derivedData \
-  CODE_SIGNING_ALLOWED=NO build
-```
-
-```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
-  -project AITRANS.xcodeproj \
-  -scheme AITRANS \
-  -destination 'generic/platform=iOS' \
-  -derivedDataPath .derivedDataDevice \
-  CODE_SIGNING_ALLOWED=NO build
-```
-
-然后运行 Stage Regression 的完整漫画探针、导出和 JSON 检查。
-
-当前基线：
-
-- generic iOS Simulator build 近期通过。
-- generic iOS device build 在 README 当前验证中记录通过。
-- Debug iOS Simulator app bundle 曾确认内嵌 `llama.framework`。
-
-### 2.5 大版本用户视角体验验证
-
-版本完成后的首次使用体验验证是独立的 post-merge 闸门，不替代 task-scoped full，也不随普通提交重复触发。具体场景、`run.jsonl` 操作日志、`100 ms` 反馈底线、最多 3 张截图、`test/experience/latest/` 清理边界、唯一 latest build 和根目录状态记忆统一遵循 [`md/flow/experience-iteration.md`](../flow/experience-iteration.md)。只有 `pass` 才能解锁下一版本；`fail` 必须修复并重跑同一场景，`blocked` 停留在当前版本。
-
-## 3. 云端结果包要求
-Agent B 的云端结果必须可下载、可追溯、未加密，供 Agent C 验收。最低内容：
-
-- `.xcresult`：当 `xcodeBuildRequired = true` 时必须包含 Xcode 结果包，例如 `TestResults/AITRANS-${version}-${short_sha}.xcresult`；文档 / 元数据快路径允许缺省，但必须在 manifest 写明 skip reason。
-- `junit.xml`：CI 可读摘要。当前没有 XCTest 时，至少生成 build smoke 的 JUnit 摘要。
-- `xcodebuild.log`：完整构建日志；build-skip 快路径时该文件保留 skip 说明。
-- `ci-artifact-manifest.json`：结果包索引，包含 `version`、`branch`、`commitSha`、`runId`、`runAttempt`、`workflowName`、`createdAt`、`xcodeVersion`、`scheme`、`destination`、`resultBundlePath`、`junitPath`、`xcodebuildLogPath`、`failureSummaryPath`、`probeReportPath`。v1.14 起还包含 `koharuActiveArtifactValidationPath`、`koharuArtifactValidation`、`externalArtifactReadinessSummary` 和 `externalTextBoxShadowOCRSummary`，用于区分缺 artifact 阻塞路径和 ready/executed=true 路径；v1.65 起还包含 `koharuArtifactValidationOrientationSummary`，`externalTextBoxShadowOCRSummary` 透传 orientation 与 coverage 相关字段；v1.66 起还必须包含 `koharuArtifactValidationIdentitySummary`、App 侧 identity receipt / reconciliation summary 和 `koharuArtifactIdentityReconciliationMatch`；v1.69 起 ready artifact 的 shadow OCR coverage 还必须核对 `ocrExecutedCount > 0`、`ocrSucceededCount > 0`，并在 convergence report 的 report availability gate 里保留 `missingReportCount`、`missingReports` 和 `requiredReportSpan`；v1.72 起还包含 `koharuNativeArtifactContractDryRunSummary` 和 `koharuArtifactConvergenceGateSummary`，直接汇总 contract dry-run、coverage/orientation work item、gate status、blocks 和 `G-ci-fast-report-availability` decision signals；v1.74 起还包含 `koharuNativeLiteReportSummary` 与 `koharuNativeLiteConvergenceGateSummary`，直接汇总 v1.39-v1.46 detector-lite、shadow OCR、refinement、closed-loop、instance-lite、SegmentMask refinement-lite、bundle-lite 和 promotion gate-lite 的 verdict、counts、work item / gate status、blocks 和 nextAction；v1.77 起还包含 `artifactName`、`eventName`、`repository`、`ref`、`refName`、`runUrl`、`changedFilesCount`、`changedFilesSHA256` 和 `changedFiles`，用于 Agent C 直接核对结果包来源、GitHub run URL 和本次变更范围；v1.78 起还包含 `scopeDiffMethod`、`scopeDiffBaseSha` 和 `scopeDiffFallbackUsed`，用于判断 changed-files 是 checkout diff、targeted fetch diff 还是全仓 fallback；v1.79 起 `koharuArtifactValidationIdentitySummary` 还必须透传 manifest 声明的 `sourceImageSHA256Declared`、实际 `sourceImageSHA256Expected` 和 `sourceImageSHA256Matches`；v1.80 起 App receipt summary 和 `koharuArtifactIdentityReconciliationSummary` 也必须透传 source image SHA declared / expected / matches。
-- v1.70 起 artifact requested 的云端结果还必须证明 `probe_mode != skip`，smoke 已硬核对 coverage work item / gate ID 与 status、orientation work item / gate ID 与 status、coverage gate passed、orientation blockers 存在时不得 passed，且 `1_ocr_probe_text.txt` 包含 coverage / orientation / App-side identity 摘要。
-- `xcodeBuildRequired` / `xcodeBuildSkippedReason`：仅文档 / 元数据快路径允许 `xcodeBuildRequired = false`；Agent C 必须把它视作“未提供 Swift/Xcode 编译证据”，不能用于验收代码改动。
-- `ci-failure-summary.md`：无论成功或失败都生成；失败时写清失败阶段、关键日志位置、建议 Agent B 先看哪些文件。
-- `model-download.log` / `model-verify.log`：仅 `ci-fast` / `full` 探针模式要求，记录 Release 下载、cache 命中和 SHA256 校验；`probe_mode=skip` 必须在 manifest 写 `modelSetupSkippedReason`。
-- `simulator-build.log` / `manga-probe.log`：仅 `ci-fast` / `full` 探针模式要求，记录 Debug simulator app 复用、安装、模型导入、探针启动、报告等待和导出；`probe_mode=skip` 必须保留 `probe-not-run.txt` 或 manifest skip reason。
-- 若运行漫画探针：上传 `output/probe_report.json`、`output/clean_text_diagnostic.json`、`output/1_ocr_probe_text.txt` 和关键 PNG。
-
-artifact 命名建议：
-
-```text
-aitrans-ci-${version}-${branch_slug}-${short_sha}-run${run_id}-attempt${run_attempt}
-```
-
-Agent C 取用规则：
-
-- 只看当前 `codeb/...` HEAD 对应的 `commitSha`。
-- 必须核对 manifest 的 `branch`、`commitSha`、`runId`、`runAttempt`。
-- 涉及 external artifact 时，必须核对 manifest 内 `koharuArtifactValidation.verdict`、payload / topology 两组 gate ready 与 summary、identity / orientation summary、`externalArtifactReadinessSummary` 的 readiness / payload / topology / block alignment、App 侧 identity receipt / reconciliation、`koharuArtifactIdentityReconciliationMatch.matchVerdict`、`externalTextBoxShadowOCRSummary`，以及 convergence 中 `WI/G-external-mask-pixel-payload` 和 `WI/G-external-mask-topology-linkage`，并确认这些值来自当前 `commitSha` 的结果包。
-- B 再次 push 后，旧 run 结果废弃。
-- Actions 重跑时，记录实际验收的 `runAttempt`。
-- C 验收通过后默认通过 PR merge 收口，并删除远端 `codeb/...` 候选分支；无权限删除时必须说明。
-
-## 4. 静态检查
-常用命令：
+按任务选用，不要求每轮全部执行：
 
 ```sh
 git diff --check
 plutil -lint AITRANS/Resources/Info.plist AITRANS.xcodeproj/project.pbxproj
 python3 -m json.tool test/1.ground_truth.json
+python3 -B scripts/test-speech-recognition-contract.py
+python3 -B scripts/test-speech-quality-contract.py
+python3 -B scripts/validate-speech-corpus.py --root test/speech_corpus
+```
+
+对 `output/` 做解析前先确认文件来自本轮运行：
+
+```sh
 python3 -m json.tool output/probe_report.json
 python3 -m json.tool output/clean_text_diagnostic.json
 ```
 
-版本指标追加：
+文档本地链接检查：
 
 ```sh
-python3 scripts/append-version-metrics.py --version vN --notes "简短说明"
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+root = Path.cwd()
+errors = []
+for doc in [root / "AGENTS.md", root / "README.md", *sorted((root / "md").rglob("*.md"))]:
+    text = doc.read_text(encoding="utf-8")
+    for target in re.findall(r"]\(([^)#]+)(?:#[^)]+)?\)", text):
+        if "://" in target or target.startswith(("mailto:", "#")):
+            continue
+        if not (doc.parent / target).resolve().exists():
+            errors.append(f"{doc.relative_to(root)} -> {target}")
+if errors:
+    raise SystemExit("broken markdown links:\n" + "\n".join(errors))
+print("markdown links: ok")
+PY
 ```
 
-## 5. 规则
-- 每次实现前先读本文件。
-- 默认从本地轻量检查开始，重负载验证交给 GitHub Actions。
-- 不得伪造测试结果。
-- 未跑测试必须说明原因。
-- 非 App 构建相关修改可只跑 `git diff --check` 和必要 JSON/YAML smoke，但要说明未跑 build 和探针的原因。
-- 未经人工明确要求，不因为 Swift 代码变化就在本机默认跑 Xcode build 或完整漫画探针。
-- 漫画探针或翻译链路修改后，最终回复必须汇总关键数字。
-- 如果 clean text 仍失败，优先讨论模型质量，不要继续盲目调 OCR 或放宽规则。
+## 4. Xcode 构建
+
+默认由 GitHub Actions 为 App 相关变更提供基础编译证据。人工明确要求本机构建或需要紧急定位时使用完整 Xcode：
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
+  -project AITRANS.xcodeproj \
+  -scheme AITRANS \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath .derivedData \
+  CODE_SIGNING_ALLOWED=NO build
+```
+
+发布、签名、framework、bundle resource 或真机专属问题再增加 device/archive 验证；普通功能修改不默认本地跑第二套构建。
+
+## 5. 云端验证
+
+- 候选核心 SHA 使用 task-scoped `full`：基础静态检查、直接合同，以及 App 相关变更的 iOS build。
+- PR/merge `fast` 只做路由和轻量检查，并复用已核对的候选 full receipt；它不是新的编译证据。
+- 候选实现变化后，旧 SHA 的 receipt 和 artifact 失效。
+- `probe_mode` 与 `ui_evidence_mode` 默认关闭；需要漫画输出、真实模型或视觉证据时单独触发。
+- 失败后只重跑失败项和修复影响范围；扩大范围时写清共享依赖或新增风险。
+
+最小未加密结果包应包含：
+
+- `ci-artifact-manifest.json`：branch、commit SHA、run/attempt、profile、changed-files 和各证据路径。
+- `junit.xml`、`xcodebuild.log`、`ci-failure-summary.md`。
+- `xcodeBuildRequired=true` 时包含 `.xcresult` 或等价可核查的 Xcode 结果包。
+- 运行漫画/Speech/模型探针时，包含对应报告、日志和必要图像。
+
+Agent C 必须先核对 artifact 身份与候选 HEAD，再看测试结论。`xcodeBuildRequired=false` 只能证明静态/路由检查，不能写成 App 编译通过。
+
+## 6. 语音识别质量探针
+
+语音质量探针位于开发入口，读取 `test/speech_corpus/manifest.json`。语料格式和生成要求见 [`test/speech_corpus/README.md`](../../test/speech_corpus/README.md)。
+
+流程：
+
+1. validator 校验 manifest、音频路径、字节数和 SHA256。
+2. 按每项 `localeIdentifier` 使用 `SFSpeechURLRecognitionRequest`，并要求设备侧识别能力。
+3. Apple Speech 返回最终文本后，评估器才读取参考 transcript。
+4. 生成 `Application Support/AITRANS/Output/speech_quality_report.json` 和 `.txt`。
+
+报告包含 corpus/设备/系统身份、识别文本、延迟、分段、置信度、失败分类和汇总指标。空格分词有意义的语言可报告词级 WER 与字符级 CER；中文、日文只报告 CER，不把字符编辑率标成 WER。
+
+硬边界：
+
+- 参考 transcript 不得进入 Speech 请求、候选选择、纠错或生产翻译。
+- 没有 manifest、真实音频、权限或目标设备时，只能报告未执行/阻塞，不能声称质量通过或提升。
+- `test-speech-recognition-contract.py`、质量合同和 corpus validator 只验证状态机、算法与语料身份，不能替代真实 Apple Speech 运行。
+
+## 7. 漫画覆盖翻译探针
+
+漫画探针固定读取 bundle 内 `test/1.png`，由 `MangaOverlayProbeService` 执行；它不污染普通图片会话、历史或 OCR-only 工作台。
+
+```text
+test/1.png
+  -> 内容区裁切
+  -> OCR / 漫画区域与方向候选
+  -> 文字块融合和阅读顺序
+  -> 逐块翻译与质量判定
+  -> 失败也保留并绘制
+  -> JSON / TXT / PNG 写入 App 沙盒 Output
+```
+
+核心要求：
+
+- 每轮先清理探针输出目录，避免混入旧文件。
+- 失败块保留 `blockPassed=false`、失败原因、原始 OCR 和判定轨迹；覆盖图显示失败文本，不静默跳过。
+- `test/1.ground_truth.json` 只用于事后匹配和统计，不得参与生产候选选择。
+- 未匹配项保留在明细但不进入可信平均值；对话与装饰标题分开统计。
+- clean-text 诊断用于区分 OCR 噪声与模型/翻译链路问题；不能靠放宽规则伪造通过。
+- Koharu、TextBox、BubbleMask、SegmentMask 等报告在未晋级前保持 diagnostic/shadow-only，不替换普通图片 OCR、翻译或 renderer。
+
+主要产物：
+
+- `output/probe_report.json`
+- `output/clean_text_diagnostic.json`
+- `output/1_ocr_probe_text.txt`
+- debug boxes、OCR overlay、translated overlay 和必要 contact sheet
+
+模拟器运行后使用以下脚本从 App 沙盒导出到项目根 `output/`：
+
+```sh
+scripts/export-probe-output.sh
+```
+
+缺少固定图片、GGUF、模拟器或真实 Koharu 四件套时，应明确报告缺失边界，不得用 fixture、proxy 或旧输出冒充本轮证据。
+
+## 8. 大版本体验验证
+
+大版本合入后的首次使用体验是独立闸门，不替代 task-scoped full。场景、证据范围和状态转移见 [`md/flow/experience-iteration.md`](../flow/experience-iteration.md)。普通提交、文档提交和单次合同修复不重复触发。
+
+## 9. 结果记录
+
+- 本文不追加某次测试结果、run ID、commit、PR、当前指标或逐版合同说明。
+- 有意义的实现与验证结论写入 [`md/log/update_log.md`](../log/update_log.md)；专项调查可在 `md/log/` 新建分类文件。
+- `metrics/` 只追加实际运行得到的机器可读指标；未跑对应探针时不追加质量行。
+- 最终回复必须区分：已运行、未运行、静态证据、运行证据和质量证据。

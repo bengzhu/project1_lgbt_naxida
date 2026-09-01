@@ -1,3 +1,9 @@
+## 文档维护：入口、流程与测试职责收口（2026-09-01）
+
+- `AGENTS.md` 仅保留核心事实、迭代流程、硬边界和文档维护规则；`README.md` 改为简明项目介绍。
+- `md/test/test.md` 收口为测试制度并接管语音质量探针说明；`md/flow/` 只保留当前架构、流程图和体验闸门。
+- Markdown 历史、验证和调查结论统一归档到 `md/log/`；活动文档已改用 `md/log/update_log.md` 路径。
+
 ## v3.390：独立 OCR 检测工作台（待云端验收）
 
 新增独立 `OCR 检测` tab，不进入图片翻译或 LLM 状态：上传/相册/拍照/粘贴图片后，复用现有 `VisionOCRService` 输出文字块、归一化 bbox、方向、provenance 和方向复读结果。页面提供原图叠加编号框、点击高亮、语言（自动/日语/中文/英语）、版式（自动/横排/竖排/漫画竖排）、低置信筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出，以及准备图片→检测文字区域→OCR→整理阅读顺序的阶段反馈。诊断默认折叠，保留分辨率、引擎/模型、阶段耗时、块/字符速度、平均模型原始分数、低置信比例和分布；Vision/Manga OCR 分数不横向校准。CI test2 capture 将现有 OCR overlay 同步为 `test2-ocr-full-overlay-v3388.png` 产物别名。新增 `scripts/test-v3390-image-ocr-detection-ui-contract.py`，工程版本 `3.390`；尚未运行本机 Xcode/App/Core ML，待云端基础 build、UI evidence 和静态合同验收。

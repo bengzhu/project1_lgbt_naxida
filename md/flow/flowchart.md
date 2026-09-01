@@ -141,186 +141,7 @@ flowchart TD
   T --> U["metrics/version_history.csv<br/>长期指标 append-only"]
 ```
 
-## 2. 漫画探针执行流
-这张图只看 `test/1.png` 的 OCR、翻译和覆盖合成链路。实线是主流程，旁路节点是诊断对照，不能在未验证前替代主流程。
-
-```mermaid
-flowchart TD
-  %% 输入：固定 bundle 素材
-  A["test/1.png<br/>固定漫画截图"] --> B["裁切内容区<br/>去掉浏览器 UI、广告、底部导航"]
-
-  %% OCR：整页与气泡候选
-  B --> C["2x 放大 + 0/90/180/270 Vision OCR<br/>生成 OCR candidates"]
-  C --> D["气泡候选检测<br/>white component + OCR seed"]
-  D --> E["bubbleID 归属<br/>unassigned 块保留"]
-  E --> F["同 bubble 合并<br/>跨 bubble 合并拒绝"]
-  F --> W["whole-page OCR blocks<br/>保留原始对照"]
-  D --> J["bubble-first OCR candidates<br/>气泡 crop 内识别和拆块"]
-  W --> G["fused OCR blocks<br/>whole-page + bubble-first 融合"]
-  J --> G
-  G --> X["fusionComparison / fusionResults<br/>选择、替换、拒绝可审计"]
-  X --> Y["post-fusion cleanup<br/>重复 / 碎片 / 低信息块拒绝"]
-  Y --> U["BubbleMask 子区域诊断<br/>block-local subregion"]
-  U --> BM["BubbleMask 实例 ID 近似<br/>mask-safe layout / collision / crop coverage"]
-  BM --> BA["BubbleMask 归属修正 / split candidate<br/>ground-truth-free 保守采用"]
-  BA --> PTB["preCropTextBoxPlanReport<br/>TextRegion crop 前上游 plan / shadow-only"]
-  PTB --> V["TextRegion crop OCR<br/>split / corrected bubble / subregion / bubble / content clamp + 护栏回退"]
-  V --> GV["ground-truth-free crop 护栏选择<br/>不放宽 adopted 规则"]
-  GV --> TB["TextBox / SegmentMask 派生证据层<br/>crop 后诊断 / failure attribution"]
-  D --> Z["bubbleAudits<br/>过大气泡和分割候选诊断"]
-  Z --> U
-
-  %% 诊断旁路：不替代主流程
-  TB --> H["自适应 crop 二次 OCR<br/>诊断和候选对照"]
-  TB --> I["确定性 OCR 纠错候选<br/>只做对照"]
-  TB --> K["slice OCR 对照<br/>长图触发"]
-
-  %% 翻译：逐块主路径
-  TB --> L["逐块英译中<br/>Mock 或 Local GGUF"]
-  L --> M["候选抽取与质量判定<br/>raw / candidate / failureCategory"]
-  M --> N["失败块保留<br/>blockPassed=false + failureReasons"]
-
-  %% 报告和渲染
-  N --> O["safeLayoutRect<br/>多块同气泡分区"]
-  O --> P["glyph mask + 背景估计<br/>纯色块才填充"]
-  P --> MODE{"probeRunMode"}
-  MODE -- "full" --> CE["cropExperimentReport<br/>control + pre-crop plan shadow OCR"]
-  MODE -- "ci-fast" --> EAR
-  CE --> TBF["textBoxPlanFailureReport<br/>plan / candidate / block 失败归因与晋级 blockers"]
-  TBF --> LTB["lineTextBoxPlanReport / lineCropExperimentReport<br/>目标块行级 TextBox / deskew shadow 验证"]
-  LTB --> EAR["externalArtifactReadinessReport<br/>v1 summary / v2 bounded mask RLE<br/>逐块 pixel shadow + App-side identity"]
-  EAR --> EMP["WI/G-external-mask-pixel-payload<br/>Bubble majority + Bubble/Segment coverage<br/>TextBox containment / shadow-only"]
-  EMP --> EMT["WI/G-external-mask-topology-linkage<br/>stable one-to-one TextBox assignment<br/>expected / foreign / orphan / component partition"]
-  EAR --> ETS["externalTextBoxShadowOCRReport<br/>ready 后每块最多 1 个 externalArtifact.textBoxCrop / shadow-only"]
-  ETS --> ESC["external TextBox shadow OCR coverage gate<br/>v2.1 一对一 + 完整 partition + OCR 全成功<br/>center-contained 或 IoU>=0.10 + Bubble ID matched + geometryCoverageRatio=1"]
-  ESC --> ETO["external TextBox orientation-aware shadow OCR<br/>bounded rotation + v1.92 polygon warp + v1.97 逐行失败隔离<br/>v1.99 polygon 必须属于 TextBox bbox / 非法 artifact 阻塞"]
-  ETO --> ISR["internalStructureBottleneckReport<br/>OCR / bubble / crop / translation / render 路由诊断"]
-  ISR --> RTA["routingDrivenTranslationComparisonReport<br/>modelTranslationQuality 块 strict prompt 对照 / report-only"]
-  RTA --> TMF["translationModelFloorComparisonReport<br/>clean text baseline + strict prompt 地板对照"]
-  ISR --> ODA["ocrCharacterDamageAuditReport<br/>OCR 损坏 token 审计 / report-only"]
-  ISR --> ROA["readingOrderStructureAuditReport<br/>阅读顺序 / 气泡归属 / 结构动作审计 / report-only"]
-  ROA --> SAC["structureActionCandidateReport<br/>结构动作候选矩阵 / shadow 执行评估 / report-only"]
-  SAC --> KAD["koharuArtifactDAGReport<br/>Artifact DAG 阶段账本 / firstBlockingStage / report-only"]
-  KAD --> KSG["koharuStageGapReplicationReport<br/>canonical stage 差距 / work package / promotion gate / report-only"]
-  KSG --> KNS["koharuNativeReplicationScoreboardReport<br/>stage scorecard / gate ledger / block scorecard / next work items"]
-  KNS --> NTB["nativeTextBoxProxyLedgerReport<br/>TextBox proxy quality ledger / gates / stoplist"]
-  NTB --> BMS["bubbleMaskAssignmentSplitScoreboardReport<br/>assignment / split / sibling layout scorecard"]
-  BMS --> SMS["segmentMaskProxyCoverageScoreboardReport<br/>glyph cleanup / coverage / render mask ledger"]
-  SMS --> KRL["koharuRenderRegressionLockReport<br/>RenderedSprites / FinalRender lock ledger"]
-  KRL --> KPR["koharuPipelineResolverReport<br/>needs / produces DAG resolver / op preview"]
-  KPR --> KWR["koharuWorkOrderRouterReport<br/>work orders / routes / budget gates"]
-  KWR --> KER["koharuExternalArtifactRequestPacketReport<br/>required files / artifact requests / gate ledger"]
-  KER --> KNR["koharuNativeAlgorithmReplayMatrixReport<br/>native replay candidates / stage matrix / block routes"]
-  KNR --> KBI["koharuBubbleIndexShadowLedgerReport<br/>BubbleIndex majority mask / safe area / sibling partition"]
-  KBI --> KDF["koharuDistanceFieldSafeAreaReport<br/>distance field / safe pixels / maximum safe rect"]
-  KDF --> KAS["koharuBubbleAdjacencySeamReport<br/>adjacency graph / seam candidate ledger"]
-  KAS --> KRS["koharuRenderSpriteFitPlannerReport<br/>font budget / layout candidate / sibling fit ledger"]
-  KRS --> KNT["koharuNativeTextBoxDetectorLiteReport<br/>pre-OCR TextBox candidates + block relation"]
-  KNT --> KNSO["koharuNativeTextBoxDetectorLiteShadowOCRReport<br/>detector-lite TextBoxes -> OCR / vertical rotation shadow loop"]
-  KNSO --> KNTR["koharuNativeTextBoxDetectorLiteRefinementReport<br/>detector-lite parent bbox refinement + shadow OCR"]
-  KNTR --> KNTCL["koharuNativeTextBoxDetectorLiteClosedLoopReport<br/>closed-loop route / stoplist / artifact routing"]
-  KNTCL --> KNBM["koharuNativeBubbleMaskInstanceLiteReport<br/>instance mask / scoped safe rect / sprite + sibling collision"]
-  KNBM --> KNSMR["koharuNativeSegmentMaskRefinementLiteReport<br/>TextBox-linked SegmentMask refinement / containment ratio"]
-  KNSMR --> KNABL["koharuNativeArtifactBundleLiteReport<br/>TextBoxes / BubbleMask / SegmentMask consistency + linkage closure"]
-  KNABL --> KNPG["koharuNativePromotionGateLiteReport<br/>probe-driven promotion gates / linkage-blocked preview"]
-  KNPG --> KNCD["koharuNativeArtifactContractDryRunReport<br/>four-file contract dry-run / sourceImageSHA256 / App-side identity receipt / validator commands"]
-  KNCD --> KIR["koharuArtifactIdentityReconciliationReport<br/>App receipt -> CI manifest identity field paths / source image SHA match / size-SHA ledger"]
-  EMP -.-> KAC
-  KIR --> KAC["koharuArtifactConvergenceReport<br/>artifact convergence matrix / mask pixel + linkage + identity reconciliation + external shadow coverage + orientation gates"]
-  TMF --> KAC
-  P --> Q["核心覆盖图 / debug boxes<br/>full 额外 OCR 图 / bubble 图 / contact sheet"]
-  M --> R["probe_report.json<br/>从明细实时汇总"]
-  X --> R
-  Y --> R
-  V --> R
-  GV --> R
-  PTB --> R
-  TB --> R
-  CE --> R
-  TBF --> R
-  LTB --> R
-  EAR --> R
-  ETS --> R
-  ESC --> R
-  ETO --> R
-  ISR --> R
-  RTA --> R
-  TMF --> R
-  ODA --> R
-  ROA --> R
-  SAC --> R
-  KAD --> R
-  KSG --> R
-  KNS --> R
-  NTB --> R
-  BMS --> R
-  SMS --> R
-  KRL --> R
-  KPR --> R
-  KWR --> R
-  KER --> R
-  KNR --> R
-  KBI --> R
-  KDF --> R
-  KAS --> R
-  KRS --> R
-  KNT --> R
-  KNSO --> R
-  KNTR --> R
-  KNTCL --> R
-  KNBM --> R
-  KNSMR --> R
-  KNABL --> R
-  KNPG --> R
-  KNCD --> R
-  KIR --> R
-  KAC --> R
-  Z --> R
-  M --> S["clean_text_diagnostic.json<br/>跳过 OCR 测模型"]
-  S --> TMF
-  M --> T["1_ocr_probe_text.txt<br/>逐块文本快照"]
-  CE --> T
-  TBF --> T
-  LTB --> T
-  EAR --> T
-  ETS --> T
-  ESC --> T
-  ETO --> T
-  ISR --> T
-  RTA --> T
-  TMF --> T
-  ODA --> T
-  ROA --> T
-  SAC --> T
-  KAD --> T
-  KSG --> T
-  KNS --> T
-  NTB --> T
-  BMS --> T
-  SMS --> T
-  KRL --> T
-  KPR --> T
-  KWR --> T
-  KER --> T
-  KNR --> T
-  KBI --> T
-  KDF --> T
-  KAS --> T
-  KRS --> T
-  KNT --> T
-  KNSO --> T
-  KNTR --> T
-  KNTCL --> T
-  KNBM --> T
-  KNSMR --> T
-  KNABL --> T
-  KNPG --> T
-  KNCD --> T
-  KIR --> T
-  KAC --> T
-```
-
-## 3. Agent 迭代流程图
+## 2. Agent 迭代流程图
 这张图描述以后每轮任务如何从人工目标进入 Agent A、Agent B、GitHub Actions 和 Agent C。默认重验证在云端，本机只做轻量检查；`main` 不参与日常开发合并。
 
 大版本合入后还必须执行一次首次使用体验闸门；具体日志字段、100 ms 底线、截图/产物清理和状态转移见 [`experience-iteration.md`](experience-iteration.md)。
@@ -379,3 +200,126 @@ flowchart TD
   DFULL --> H2
   H2 --> H
 ```
+
+# AITRANS 流程图
+
+本文件只提供与 [`flow.md`](flow.md) 对齐的当前流程图，不记录版本演进、测试结果或 CI 日志。
+
+## 1. App 架构
+
+```mermaid
+flowchart TD
+  APP["AITRANSApp"] --> UI["SwiftUI Views\n六个功能入口"]
+  UI --> STORE["TranslationSessionStore\n唯一业务状态与调度中心"]
+
+  STORE --> TEXT["文本翻译"]
+  STORE --> IMAGE["图片翻译"]
+  STORE --> OCR["OCR 检测\nOCR-only"]
+  STORE --> SPEECH["Apple Speech"]
+  STORE --> HISTORY["历史 / 设置 / 持久化"]
+  STORE --> PROBE["漫画覆盖诊断"]
+
+  TEXT --> MODEL["MockGemmaService\n或 GemmaLocalService"]
+  IMAGE --> VISION["VisionOCRService"]
+  OCR --> VISION
+  VISION --> APPLE["Apple Vision OCR"]
+  VISION --> DETECTOR["Comic text detector"]
+  VISION --> MANGA["Bundled Manga OCR"]
+  VISION --> LAYOUT["ImageOCRLayoutEngine"]
+  LAYOUT --> MODEL
+  SPEECH --> MODEL
+  MODEL --> LLAMA["LlamaRuntime / llama.cpp / GGUF"]
+
+  STORE --> STATE["state.json"]
+  PROBE --> OUTPUT["JSON / TXT / PNG\nApp Output -> repository output/"]
+```
+
+## 2. 图片与 OCR
+
+```mermaid
+flowchart TD
+  INPUT["照片 / 相机 / 文件 / 剪贴板"] --> TASK["Store 建立 task + revision"]
+  TASK --> VISION["Apple Vision OCR"]
+  VISION --> JAPANESE{"日语漫画或竖排场景?"}
+  JAPANESE -- "是" --> DETECT["文字区域检测"]
+  DETECT --> MANGA["Bundled Manga OCR\n受控局部补读"]
+  JAPANESE -- "否" --> MERGE["候选集合"]
+  MANGA --> MERGE
+  MERGE --> LAYOUT["几何校验 / 融合 / 阅读顺序"]
+  LAYOUT --> BLOCKS["ImageTranslationBlock"]
+
+  BLOCKS --> MODE{"入口"}
+  MODE -- "图片翻译" --> TRANSLATE["逐块本地翻译"]
+  TRANSLATE --> REVIEW["复查 / 修正 / 忽略与恢复"]
+  REVIEW --> RENDER["旁贴 / 覆盖 / 导出"]
+
+  MODE -- "OCR 检测" --> OCRONLY["定位 / 筛选 / 编辑 / 复制 / TXT / JSON"]
+  OCRONLY -. "不调用 LLM\n不写普通图片会话" .-> END["结束"]
+
+  TASK -. "取消、替换或重试" .-> INVALIDATE["旧 revision 失效"]
+  INVALIDATE -. "晚到结果拒收" .-> BLOCKS
+```
+
+## 3. 音频
+
+```mermaid
+flowchart TD
+  AUDIO["麦克风或音频文件"] --> RUN["Store 建立 Speech run ID"]
+  RUN --> AUTH["权限与设备侧识别能力"]
+  AUTH --> RECOGNIZE["Apple Speech recognition"]
+  RECOGNIZE --> CHECK{"run ID 仍有效?"}
+  CHECK -- "否" --> DROP["丢弃旧回调"]
+  CHECK -- "是" --> TRANSCRIPT["最终 transcript"]
+  TRANSCRIPT --> TRANSLATE["当前本地翻译引擎"]
+  TRANSLATE --> RESULT["识别文本 / 译文 / 运行摘要"]
+
+  TRANSCRIPT -. "质量探针时，识别完成后才读取" .-> REF["reference transcript"]
+  REF --> EVAL["WER/CER / latency / confidence"]
+  EVAL --> REPORT["speech quality report"]
+```
+
+## 4. 漫画覆盖诊断
+
+```mermaid
+flowchart TD
+  SOURCE["test/1.png"] --> CROP["内容区裁切"]
+  CROP --> OCR["OCR / 漫画区域 / 方向候选"]
+  OCR --> FUSION["逻辑文字块融合与阅读顺序"]
+  FUSION --> TRANSLATION["逐块翻译与质量判定"]
+  TRANSLATION --> FAIL["失败块仍保留原文和原因"]
+  FAIL --> RENDER["debug / OCR / translated overlay"]
+  FAIL --> REPORT["probe_report / clean text / text snapshot"]
+  RENDER --> SANDBOX["App 沙盒 Output"]
+  REPORT --> SANDBOX
+  SANDBOX --> EXPORT["export-probe-output.sh"]
+  EXPORT --> ROOT["repository output/"]
+
+  SHADOW["Koharu / TextBox / Mask / benchmark"] -. "diagnostic / shadow-only\n明确晋级前不改产品路径" .-> REPORT
+  GT["ground truth"] -. "仅事后匹配与统计" .-> REPORT
+```
+
+## 5. Agent 迭代
+
+```mermaid
+flowchart TD
+  GOAL["用户目标与边界"] --> READ["读 AGENTS / status / index / 相关源码"]
+  READ --> SCOPE["确定 changed-files\nbaseline + direct + optional"]
+  SCOPE --> ROLE{"角色"}
+
+  ROLE -- "Agent A" --> PROMPT["生成版本化实施提示词"]
+  PROMPT --> B["Agent B 从 smalldata_test 建 codeb/... 分支"]
+  ROLE -- "普通任务 / Agent B" --> B
+  B --> IMPLEMENT["小步实现，保留用户改动"]
+  IMPLEMENT --> LIGHT["本地轻量检查"]
+  LIGHT --> FULL["候选 SHA task-scoped full"]
+  FULL --> REVIEW["Agent C 核对 diff、SHA、CI、artifact"]
+  REVIEW --> PASS{"通过?"}
+  PASS -- "否" --> FIX["退回具体失败与日志位置"]
+  FIX --> IMPLEMENT
+  PASS -- "是" --> MERGE["合并到 smalldata_test\n禁止 main"]
+  MERGE --> CLEAN["清理候选分支"]
+  CLEAN --> DOCS["仅按职责更新稳定文档\n历史与验证写 md/log/"]
+  DOCS --> DONE["交付结果与未验证范围"]
+```
+
+流程图只在架构、ownership 或长期工作流变化时修改；单次版本、合同、CI 或指标变化只写入 `md/log/`。

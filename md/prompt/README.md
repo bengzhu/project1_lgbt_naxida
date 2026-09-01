@@ -40,7 +40,7 @@
 - GGUF 云端模型依赖已知，后续通过 GitHub Release + workflow 下载 + 缓存解决；v2 提示词不得要求提交 GGUF。
 
 ## 当前项目写作要求
-- 先读 `AGENTS.md`、`update_log.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`。
+- 先读 `AGENTS.md`、`md/log/update_log.md`、`md/flow/flow.md`、`md/flow/flowchart.md`、`md/test/test.md`。
 - 涉及漫画探针时，必须引用最新 `output/probe_report.json` 和 `metrics/version_history.csv` 的真实数字。
 - 不得把旧 `0.8378 / 0.8755` 当成当前验收基线。
 - 不得要求 Agent B 使用 ground truth 做生产候选选择。
