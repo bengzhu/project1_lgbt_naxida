@@ -41,7 +41,7 @@ class JapaneseSFXScopeContractTests(unittest.TestCase):
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
         cls.docs = (
             read("README.md")
@@ -49,7 +49,7 @@ class JapaneseSFXScopeContractTests(unittest.TestCase):
             + read("md/flow/flowchart.md")
             + read("md/test/test.md")
             + cls.route
-            + read("update_log.md")
+            + read("md/log/update_log.md")
         )
 
     def test_mixed_batch_sfx_scope_is_derived_from_kind_ordinals(self) -> None:
@@ -132,7 +132,7 @@ class JapaneseSFXScopeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         for marker in (
             "python3 -B scripts/test-v3364-japanese-sfx-scope-contract.py",

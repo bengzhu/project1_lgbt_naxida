@@ -37,7 +37,7 @@ class ImageOCRBlockStructureEditorContractTests(unittest.TestCase):
         cls.panel = read("AITRANS/Views/ImageTranslationViews.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
 
     def test_structure_mutations_are_terminal_and_fail_closed(self) -> None:
         gate = function_body(self.store, "var canEditImageTranslationStructure: Bool")

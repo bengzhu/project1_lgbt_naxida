@@ -101,8 +101,8 @@ class JapaneseLineCoverageSourceBoundaryContractTests(unittest.TestCase):
             read("md/flow/flow.md")
             + read("md/flow/flowchart.md")
             + read("md/test/test.md")
-            + read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-            + read("update_log.md")
+            + read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+            + read("md/log/update_log.md")
         )
 
     def test_detector_text_region_is_not_a_source_line_candidate(self) -> None:
@@ -210,7 +210,7 @@ class JapaneseLineCoverageSourceBoundaryContractTests(unittest.TestCase):
             self.assertNotIn(marker, contract)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         combined = self.workflow + self.docs
         for marker in (

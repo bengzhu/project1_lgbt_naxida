@@ -41,10 +41,10 @@ class JapaneseKindReconciliationContractTests(unittest.TestCase):
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
         cls.flow = read("md/flow/flow.md") + read("md/flow/flowchart.md")
-        cls.update_log = read("update_log.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.test_log = read("md/test/test.md")
 
     def test_automatic_recognition_exposes_kind_reconciliation_switch(self) -> None:
@@ -123,7 +123,7 @@ class JapaneseKindReconciliationContractTests(unittest.TestCase):
             self.assertIn(marker, combined)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
 
     def test_contract_and_product_sources_have_no_process_entry(self) -> None:

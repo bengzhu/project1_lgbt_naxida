@@ -36,7 +36,7 @@ class ImageTranslationSessionPersistenceContractTests(unittest.TestCase):
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
 
     def test_snapshot_is_versioned_and_carries_review_state(self) -> None:
         start = self.models.index("struct ImageTranslationPersistenceSnapshot:")

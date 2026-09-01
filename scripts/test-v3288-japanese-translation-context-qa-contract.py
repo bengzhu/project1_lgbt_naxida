@@ -48,8 +48,8 @@ class TranslationContextQAContractTests(unittest.TestCase):
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-        cls.update_log = read("update_log.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.contract_source = read("scripts/test-v3288-japanese-translation-context-qa-contract.py")
 
     def test_schema_and_fixture_are_strict_and_cover_context_kinds(self) -> None:
@@ -248,7 +248,7 @@ class TranslationContextQAContractTests(unittest.TestCase):
         self.assertIn("TranslationContextQuality.swift in Sources", self.project)
         self.assertIn("TranslationContextQuality.swift", self.project)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.389", "3.389"])
+        self.assertEqual(versions, ["3.390", "3.390"])
         self.assertIn("v3.288", self.route)
         self.assertIn("v3.288", self.update_log)
         for marker in (

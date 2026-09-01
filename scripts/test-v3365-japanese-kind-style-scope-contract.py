@@ -41,7 +41,7 @@ class JapaneseKindStyleScopeContractTests(unittest.TestCase):
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
         cls.docs = (
             read("README.md")
@@ -49,7 +49,7 @@ class JapaneseKindStyleScopeContractTests(unittest.TestCase):
             + read("md/flow/flowchart.md")
             + read("md/test/test.md")
             + cls.route
-            + read("update_log.md")
+            + read("md/log/update_log.md")
         )
 
     def test_each_kind_has_distinct_style_guidance(self) -> None:
@@ -140,7 +140,7 @@ class JapaneseKindStyleScopeContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         for marker in (
             "python3 -B scripts/test-v3365-japanese-kind-style-scope-contract.py",

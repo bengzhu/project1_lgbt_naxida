@@ -10938,3 +10938,11 @@ detector、crop/warp、OCR 请求预算、candidate/geometry/layout、翻译 tag
 ## v3.383：普通图片 Local GGUF standard fallback prompt 修复（已验证失败，继续前进）
 
 v3.382 的真实云端 test2 trace 已确认漫画批量 prompt 不再发生 context 超限，但 270M 模型返回整批原文/提示词回显；v3.383 让所有日语 standard 单块回退也使用 compact 只读 context，完整 context 仍只供 QA。精确 SHA `08a605303ae098be0c077ad74c809cb6f17970a2` 的云端运行 [33378259762](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33378259762) 已完成 `test/2.png` OCR（17 个非空日语块）并生成 350015-byte 结果截图，但翻译完整性失败：`translatedBlockCount=0/17`；probe 显示批量回显原文/提示词，单块第 4 块触发 `outputTooLong`。该截图仅作失败诊断，不作为翻译完成证据。新增合同 `scripts/test-v3383-japanese-standard-compact-context-contract.py`，本轮不合成样图或外推静态合同为通用质量证据。
+
+## v3.390：OCR 检测独立工作台（验证中）
+
+本轮新增独立的 OCR 检测入口：上传图片、拍照、粘贴图片，选择自动/日语/中文/英语与自动/横排/竖排/漫画竖排，展示原图识别框和逐块结果，支持点击定位、低置信度筛选、单块重新识别、手动编辑、复制全部、TXT/JSON 导出、取消与重试。OCR-only 状态树不进入图片翻译或 LLM；诊断保留总耗时、分阶段耗时、分辨率、块数、引擎/模型、原始 confidence、质量状态和块/字符速度。
+
+CI 继续复用既有 v3388 test2 overlay 产物，并输出 test2-ocr-full-overlay-v3388.png。候选分支 codeb/v3.390-ocr-detection-ui 的首个 exact push run [33478190505](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33478190505) 已通过 UI interaction contract 与 Xcode build，但因文档迁移后的历史 Japanese benchmark contract 仍读取旧路径并断言 3.389 而失败；本轮已将 CI 实际执行的 113 个合同同步到当前路径/3.390 版本，并完成本地 113/113 静态回归。exact-SHA full、test2 真实截图和合并结果待候选修复提交后核对。
+
+本轮不把静态合同、单张固定图或 v3388 历史截图外推为通用 OCR/CER/翻译质量证据；本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。

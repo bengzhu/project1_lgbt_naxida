@@ -94,10 +94,10 @@ class JapaneseVerticalCropRiskPriorityContractTests(unittest.TestCase):
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.flow = read("md/flow/flow.md") + read("md/flow/flowchart.md")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
         cls.test_log = read("md/test/test.md")
-        cls.update_log = read("update_log.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.crop_stage = function_body(
             cls.vision,
             "private static func recognizeJapaneseVerticalCrops(\n",
@@ -202,7 +202,7 @@ class JapaneseVerticalCropRiskPriorityContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_boundary_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         combined = self.workflow + self.flow + self.route + self.test_log + self.update_log
         for marker in (

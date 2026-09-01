@@ -69,9 +69,9 @@ class JapaneseVerticalTileRoundRobinContractTests(unittest.TestCase):
             + read("md/flow/flowchart.md")
             + read("md/test/test.md")
             + read(
-                "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+                "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
             )
-            + read("update_log.md")
+            + read("md/log/update_log.md")
         )
 
     def test_round_robin_reaches_other_columns_before_the_same_column_budget_is_spent(
@@ -177,7 +177,7 @@ class JapaneseVerticalTileRoundRobinContractTests(unittest.TestCase):
     def test_version_workflow_docs_and_static_only_contract_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         self.assertIn(
             "python3 -B scripts/test-v3340-image-japanese-line-coverage-source-boundary-contract.py",

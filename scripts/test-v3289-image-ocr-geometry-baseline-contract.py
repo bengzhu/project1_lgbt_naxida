@@ -19,7 +19,7 @@ class ImageOCRGeometryBaselineContractTests(unittest.TestCase):
         cls.editor = read("AITRANS/Views/ImageOCRGeometryEditor.swift")
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
 
     def test_block_keeps_a_codable_automatic_baseline(self) -> None:
         block_start = self.models.index("struct ImageTranslationBlock:")

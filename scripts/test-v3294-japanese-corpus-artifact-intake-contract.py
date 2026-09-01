@@ -48,8 +48,8 @@ class JapaneseCorpusArtifactIntakeContractTests(unittest.TestCase):
         cls.wrapper = read("scripts/run-japanese-corpus-readiness-cloud-smoke.sh")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-        cls.update_log = read("update_log.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.test_log = read("md/test/test.md")
 
     @classmethod
@@ -348,7 +348,7 @@ class JapaneseCorpusArtifactIntakeContractTests(unittest.TestCase):
         self.assertNotIn("MangaOverlayProbeService", self.source)
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
 
 

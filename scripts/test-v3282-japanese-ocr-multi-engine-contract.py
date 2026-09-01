@@ -46,7 +46,7 @@ class JapaneseOCRMultiEngineContractTests(unittest.TestCase):
         cls.example_readme = read("benchmarks/japanese_ocr/examples/multi_engine/README.md")
         cls.shell = read("scripts/run-japanese-ocr-multi-engine-cloud-smoke.sh")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
 
     def expect_error(self, payload: dict, needle: str) -> None:
@@ -177,7 +177,7 @@ class JapaneseOCRMultiEngineContractTests(unittest.TestCase):
         self.assertIn("not an OCR result", self.example_readme)
         self.assertIn("同一 crop 的多引擎结果", self.route)
         self.assertIn("禁止按数组下标拼不同 engine 的结果", self.route)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.389", "3.389"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.390", "3.390"])
 
 
 if __name__ == "__main__":

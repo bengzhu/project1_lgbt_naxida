@@ -22,7 +22,7 @@ class ImageOCRGeometryEditorContractTests(unittest.TestCase):
         cls.models = read("AITRANS/Models/TranscriptModels.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
 
     def test_editor_is_normalized_accessible_and_commit_only(self) -> None:
         for marker in (

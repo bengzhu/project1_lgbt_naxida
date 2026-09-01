@@ -43,8 +43,8 @@ class MaskArtifactReadinessContractTests(unittest.TestCase):
         cls.evaluator = load_evaluator()
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-        cls.update_log = read("update_log.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.readme = read("benchmarks/japanese_render/README.md")
 
     def test_manifest_and_report_schemas_are_strict_and_versioned(self) -> None:
@@ -143,7 +143,7 @@ class MaskArtifactReadinessContractTests(unittest.TestCase):
 
     def test_project_version_is_v3291_and_history_remains_currently_versioned(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.389", "3.389"])
+        self.assertEqual(versions, ["3.390", "3.390"])
         self.assertIn("v3.291", self.update_log)
 
 

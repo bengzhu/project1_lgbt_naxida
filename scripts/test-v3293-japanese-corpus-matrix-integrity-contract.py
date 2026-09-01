@@ -46,8 +46,8 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
         cls.source = read("scripts/evaluate-japanese-corpus-readiness.py")
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-        cls.update_log = read("update_log.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.test_log = read("md/test/test.md")
 
     @classmethod
@@ -169,7 +169,7 @@ class JapaneseCorpusMatrixIntegrityContractTests(unittest.TestCase):
             "canonical four-engine dev matrix",
         ):
             self.assertIn(marker, self.source + self.workflow + self.route + self.update_log + self.test_log)
-        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.389", "3.389"])
+        self.assertEqual(re.findall(r"MARKETING_VERSION = ([^;]+);", self.project), ["3.390", "3.390"])
 
 
 if __name__ == "__main__":

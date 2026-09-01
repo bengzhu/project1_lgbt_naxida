@@ -32,8 +32,8 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.workflow = read(".github/workflows/ci-results.yml")
-        cls.route = read("md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
-        cls.update_log = read("update_log.md")
+        cls.route = read("md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md")
+        cls.update_log = read("md/log/update_log.md")
         cls.schema = load_json("benchmarks/japanese_translation/schema/model-profile-manifest.schema.json")
         cls.manifest = load_json("benchmarks/japanese_translation/examples/model_profiles/manifest.json")
         cls.fixture = read("scripts/fixtures/v3286-local-gguf-chat-template-evaluator.swift")
@@ -167,7 +167,7 @@ class LocalGGUFChatTemplateContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, self.workflow)
         versions = re.findall(r"MARKETING_VERSION = ([^;]+);", self.project)
-        self.assertEqual(versions, ["3.389", "3.389"])
+        self.assertEqual(versions, ["3.390", "3.390"])
         self.assertIn("v3.286", self.route)
         self.assertIn("v3.286", self.update_log)
         for marker in (

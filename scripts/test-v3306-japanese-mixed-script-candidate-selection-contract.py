@@ -51,10 +51,10 @@ class JapaneseMixedScriptCandidateSelectionContractTests(unittest.TestCase):
         cls.workflow = read(".github/workflows/ci-results.yml")
         cls.flow = read("md/flow/flow.md") + read("md/flow/flowchart.md")
         cls.route = read(
-            "md/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
+            "md/人工空间/ultra分析/v3.279-AITRANS与Koharu-OCR翻译差距及优化路线.md"
         )
         cls.test_log = read("md/test/test.md")
-        cls.update_log = read("update_log.md")
+        cls.update_log = read("md/log/update_log.md")
 
     def test_mixed_signal_requires_japanese_and_ascii_word_characters(self) -> None:
         for marker in (
@@ -132,7 +132,7 @@ class JapaneseMixedScriptCandidateSelectionContractTests(unittest.TestCase):
     def test_version_workflow_and_docs_are_current(self) -> None:
         self.assertEqual(
             re.findall(r"MARKETING_VERSION = ([^;]+);", self.project),
-            ["3.389", "3.389"],
+            ["3.390", "3.390"],
         )
         for marker in (
             "scripts/test-v3306-japanese-mixed-script-candidate-selection-contract.py",
@@ -140,12 +140,9 @@ class JapaneseMixedScriptCandidateSelectionContractTests(unittest.TestCase):
             "japanese-benchmark-v3.306-",
         ):
             self.assertIn(marker, self.workflow)
-        for document in (
-            self.flow,
-            self.route,
-            self.test_log,
-            self.update_log,
-        ):
+        for document in (self.flow, self.test_log):
+            self.assertNotIn("v3.306", document)
+        for document in (self.route, self.update_log):
             self.assertIn("v3.306", document)
 
 
