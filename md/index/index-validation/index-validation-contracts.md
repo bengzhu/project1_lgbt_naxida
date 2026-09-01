@@ -31,6 +31,9 @@
 3. 出现 Core ML/llama.cpp/runtime 运行入口时默认交给 GitHub Actions；本机只做安全预扫和文本/语法检查。
 4. `test/2.png`、UI 截图、Koharu/GGUF、授权语料和目标设备属于显式可选证据，不随普通代码变更自动运行。
 5. 失败后按 failure summary 重跑修复集合；不以旧 artifact 或 fast 包替代当前 SHA 的 full evidence。
+6. v1.88 只在首页/文本翻译 UI 直接变化时运行，v1.89 只在粘贴/手动输入矩阵直接变化时运行；v3.390 OCR-only 默认不运行两者。
+7. `workflow_changed`、版本号相近、合同文件名相似或泛化 UI 标签都不是直接依赖；历史合同全量必须由显式 full-regression/nightly/release 或失败调查触发。
+8. OCR overlay、普通图片翻译和通用 UI 截图分别选择 runtime 入口；不要为了生成 OCR overlay 而启动 LLM 翻译或通用 UI evidence。
 
 ## 何时更新本索引
 
