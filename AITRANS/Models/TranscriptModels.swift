@@ -6419,19 +6419,6 @@ enum ImageOCRDetectionLanguage: String, CaseIterable, Identifiable, Codable, Sen
     }
 }
 
-enum ImageOCRDetectionLayout: String, CaseIterable, Identifiable, Codable, Sendable {
-    case automatic = "自动（推荐）"
-    case horizontal = "横排"
-    case vertical = "竖排"
-    case mangaVertical = "漫画竖排"
-
-    var id: String { rawValue }
-
-    var isVertical: Bool {
-        self == .vertical || self == .mangaVertical
-    }
-}
-
 /// User-facing OCR diagnostics. Engine-local raw confidence remains attached
 /// to each block; the summary is for review triage and never compares Vision
 /// and Manga OCR scores as if they were calibrated on one common scale.

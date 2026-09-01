@@ -22,6 +22,7 @@ class ImageOCRDetectionUIContractTests(unittest.TestCase):
         cls.store = read("AITRANS/Services/TranslationSessionStore.swift")
         cls.vision = read("AITRANS/Services/VisionOCRService.swift")
         cls.models = read("AITRANS/Models/TranscriptModels.swift")
+        cls.layout = read("AITRANS/Services/ImageOCRLayoutEngine.swift")
         cls.project = read("AITRANS.xcodeproj/project.pbxproj")
         cls.plist = read("AITRANS/Resources/Info.plist")
         cls.capture = read("scripts/capture-bundled-image-translation-ui.sh")
@@ -58,7 +59,7 @@ class ImageOCRDetectionUIContractTests(unittest.TestCase):
             "imageOCRDetectionDirectionRereadEnabled",
             "日语竖排会自动启用 90°/270° 方向复读",
         ):
-            self.assertIn(marker, self.view + self.store + self.models)
+            self.assertIn(marker, self.view + self.store + self.models + self.layout)
         self.assertIn("layoutPreference: ImageOCRDetectionLayout = .automatic", self.vision)
         self.assertIn("layoutPreference: layout", self.store)
         self.assertIn(

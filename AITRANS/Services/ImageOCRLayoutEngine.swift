@@ -2,6 +2,22 @@ import Foundation
 
 enum ImageOCRLayoutDirection: String, Sendable { case horizontal, vertical, unknown }
 
+/// Shared OCR layout preference. Keeping this beside the layout engine also
+/// lets the standalone OCR runtime harness compile without the app's larger
+/// transcript model graph.
+enum ImageOCRDetectionLayout: String, CaseIterable, Identifiable, Codable, Sendable {
+    case automatic = "自动（推荐）"
+    case horizontal = "横排"
+    case vertical = "竖排"
+    case mangaVertical = "漫画竖排"
+
+    var id: String { rawValue }
+
+    var isVertical: Bool {
+        self == .vertical || self == .mangaVertical
+    }
+}
+
 struct ImageOCRLayoutRect: Equatable, Codable, Sendable {
     var x: Double
     var y: Double
