@@ -8,17 +8,17 @@
 
 系统性优化 AITRANS 的 UI 与操作体验：建立高对比、功能可辨的统一视觉系统，收敛导航层级和重点页面操作密度；只改 View/视觉合同，保留 Store 与 OCR、Speech、翻译业务边界，并使用 task-scoped 精简 CI。
 
-### 规划小目标（完成 1/2）
+### 规划小目标（完成 2/2）
 
 | 小目标 | 状态 |
 | --- | --- |
 | v3.400 设计系统、功能 Hero、五入口手机导航与 iPad 分组 | 已完成 |
-| v3.401 重点页面操作减负、精简 CI、最终 UI evidence 与总体验收 | 进行中 |
+| v3.401 重点页面操作减负、精简 CI、最终 UI evidence 与总体验收 | 已完成 |
 
 ### 当前状态
 
-- 当前分支：`codeb/v3.401-focused-workspaces`，基于 v3.400 merge `44c70e011e4c4561e6e07844ba0bed0cdefc1812`。
+- 状态：`complete`；PR `#457` 合并后删除 `codeb/v3.401-focused-workspaces`，空闲分支恢复为 `main`、`smalldata_test`。
 - v3.400：PR `#456` 已合入，核心 full `33584670369` 通过，候选本地/远端分支已清理。
-- v3.401 changed-files：文本、音频、历史、设置 View，直接合同，CI route 与日志；不改 Store/Service/Model。
-- 验收：手机页面一次只呈现一个主任务；重复/低频操作进入 Menu 或 Disclosure；所有既有动作、确认与无障碍目标保留；visual-task CI 不再执行历史图片 runtime，仍保留 direct contracts + Xcode build。
-- 下一步：实现、直接验证、精简 full + 最终 `ui_evidence_mode=full`、PR 合并与总体验收。
+- v3.401：核心 SHA `53402a6a4d894e4ad18501f5fd3dc647e513f49e`；focused full `33586246425` 约 4 分钟通过，历史 UI runtime 大账本跳过，direct/Speech/Paste/Xcode 成功。
+- 最终 UI evidence `33586601191` 通过；14 张真实模拟器截图覆盖手机浅/深色、动态字体、Reduce Motion、键盘和 iPad 宽屏。人工复核无阻断性裁切或信息层级冲突。
+- 范围：文本、音频、历史、设置 View，直接合同、CI route、索引与日志；未改 Store/Service/Model，未执行 OCR/翻译/漫画质量探针。

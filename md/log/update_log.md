@@ -1,9 +1,10 @@
-## v3.401：重点页面操作减负与 visual-task CI（候选验证中）
+## v3.401：重点页面操作减负与 visual-task CI（已完成）
 
 - 文本页移除与译文区域重复的“最近翻译”，将会话控制收敛为主操作“新会话”和次级会话菜单；历史页将归档、导入、导出、清空收进保留破坏性确认的操作菜单。
 - 手机音频页通过实时/文件分段工作区一次只呈现一个主任务，常规宽度继续双栏；`test/` 音频入口只在开发模式显示，Speech 能力说明默认折叠。工作区切换动效响应 Reduce Motion。
 - 设置页将 Pro 能力说明和受保护的开发解锁归入“高级与开发”渐进展开区；工作设置、本地数据和既有开发导航重置边界不变。
-- 新增 `test-v3401-focused-workspaces-contract.py`；CI 对带该直接合同且不触及 Models/Services/Resources 的纯视觉候选走 focused UI 合同、Speech、Paste 和一次 Xcode build，不再串行回放历史图片/Koharu runtime。最终 exact-SHA CI、UI evidence、PR 与合并证据待候选完成后补充。
+- 新增 `test-v3401-focused-workspaces-contract.py`；CI 对严格 changed-files 白名单内的纯视觉候选走 focused UI 合同、Speech、Paste 和一次 Xcode build，不再串行回放历史图片/Koharu runtime。核心 SHA `53402a6a4d894e4ad18501f5fd3dc647e513f49e` 的 focused full run `33586246425` 在约 4 分钟通过；Xcode、Speech、focused UI 与 Paste 均成功，历史 UI 大账本按路由跳过。
+- 同一精确 SHA 的最终 UI evidence run `33586601191` 通过，artifact `aitrans-ci-v3.401-codeb-v3.401-focused-workspaces--53402a6a4d89-run33586601191-attempt1` 含 14 张真实模拟器截图，覆盖手机日/夜间、动态字体、Reduce Motion、键盘及 iPad 宽屏；OCR/翻译/漫画质量探针按本次 UI-only 边界跳过。PR `#457` 以 `smalldata_test` 为 base，合并与分支清理完成后以 GitHub 终态为准。
 
 ## v3.400：沉浸式功能视觉系统与导航重构（已完成）
 
