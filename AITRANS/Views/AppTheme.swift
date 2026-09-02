@@ -39,6 +39,7 @@ enum AppTheme {
         static let workspaceSplitWidth: CGFloat = 820
         static let inspectorWidth: CGFloat = 360
         static let minimumTarget: CGFloat = 44
+        static let pageHeaderHeight: CGFloat = 92
         static let floatingTabBarClearance: CGFloat = 48
     }
 

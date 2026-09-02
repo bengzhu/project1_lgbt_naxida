@@ -262,7 +262,11 @@ private struct LibraryHubView: View {
             .navigationDestination(for: LibraryDestination.self) { destination in
                 switch destination {
                 case .history: HistoryView(selectedTab: $selectedTab)
-                case .settings: SettingsView(selectedTab: $selectedTab)
+                case .settings:
+                    SettingsView(
+                        selectedTab: $selectedTab,
+                        isEmbeddedInNavigationStack: true
+                    )
                 }
             }
         }

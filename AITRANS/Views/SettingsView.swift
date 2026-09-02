@@ -9,42 +9,26 @@ private enum SettingsDestination: Hashable {
 struct SettingsView: View {
     @EnvironmentObject private var store: TranslationSessionStore
     @Binding var selectedTab: AppTab
+    let isEmbeddedInNavigationStack: Bool
     @State private var developerPassword = ""
     @State private var navigationPath = NavigationPath()
     @State private var advancedExpanded = false
 
-    var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
-                    AppPageHeader(
-                        title: "设置",
-                        subtitle: "模型、提示词与本地数据",
-                        systemImage: "gearshape.fill",
-                        status: store.isProUnlocked ? "Pro 已解锁" : "免费模式",
-                        statusTone: store.isProUnlocked ? .success : .locked,
-                        feature: .settings
-                    )
+    init(
+        selectedTab: Binding<AppTab>,
+        isEmbeddedInNavigationStack: Bool = false
+    ) {
+        _selectedTab = selectedTab
+        self.isEmbeddedInNavigationStack = isEmbeddedInNavigationStack
+    }
 
-                    AppearanceSection()
-                    ProAccessPanel()
-                    SettingsNavigationSection()
-                    SettingsAdvancedSection(
-                        password: $developerPassword,
-                        isExpanded: $advancedExpanded
-                    )
-                    DataSafetySection(selectedTab: $selectedTab)
-                }
-                .enterprisePageFrame()
-                .padding(.vertical, AppTheme.Spacing.section)
-                .padding(.bottom, 72)
-            }
-            .background(Color.appCanvas)
-            .navigationDestination(for: SettingsDestination.self) { destination in
-                switch destination {
-                case .prompts: PromptLibraryView()
-                case .model: ModelManagementView()
-                case .developer: DeveloperConsoleView()
+    var body: some View {
+        Group {
+            if isEmbeddedInNavigationStack {
+                settingsContent
+            } else {
+                NavigationStack(path: $navigationPath) {
+                    settingsContent
                 }
             }
         }
@@ -56,6 +40,41 @@ struct SettingsView: View {
         .onChange(of: store.isDeveloperModeEnabled) { _, isEnabled in
             if !isEnabled {
                 navigationPath = NavigationPath()
+            }
+        }
+    }
+
+    private var settingsContent: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                AppPageHeader(
+                    title: "设置",
+                    subtitle: "模型、提示词与本地数据",
+                    systemImage: "gearshape.fill",
+                    status: store.isProUnlocked ? "Pro 已解锁" : "免费模式",
+                    statusTone: store.isProUnlocked ? .success : .locked,
+                    feature: .settings
+                )
+
+                AppearanceSection()
+                ProAccessPanel()
+                SettingsNavigationSection()
+                SettingsAdvancedSection(
+                    password: $developerPassword,
+                    isExpanded: $advancedExpanded
+                )
+                DataSafetySection(selectedTab: $selectedTab)
+            }
+            .enterprisePageFrame()
+            .padding(.vertical, AppTheme.Spacing.section)
+            .padding(.bottom, 72)
+        }
+        .background(Color.appCanvas)
+        .navigationDestination(for: SettingsDestination.self) { destination in
+            switch destination {
+            case .prompts: PromptLibraryView()
+            case .model: ModelManagementView()
+            case .developer: DeveloperConsoleView()
             }
         }
     }

@@ -6,19 +6,18 @@
 
 ### 当前总目标
 
-系统性优化 AITRANS 的 UI 与操作体验：建立高对比、功能可辨的统一视觉系统，收敛导航层级和重点页面操作密度；只改 View/视觉合同，保留 Store 与 OCR、Speech、翻译业务边界，并使用 task-scoped 精简 CI。
+参考 `f1e65c` 的紧凑横向格式，统一文本、图片、OCR 检测、音频、资料库五个主界面的顶部栏高度与填充布局，同时保留并细化当前功能色、材质、动效和无障碍质感；修复“资料库 → 设置”因嵌套导航容器导致的黑屏/自动退出，并让 UI-only 云端 CI 只跑直接合同与一次必要编译。
 
-### 规划小目标（完成 2/2）
+### 规划小目标（完成 0/1）
 
 | 小目标 | 状态 |
 | --- | --- |
-| v3.400 设计系统、功能 Hero、五入口手机导航与 iPad 分组 | 已完成 |
-| v3.401 重点页面操作减负、精简 CI、最终 UI evidence 与总体验收 | 已完成 |
+| v3.402 紧凑统一顶栏、设置导航修复与 focused UI CI | 进行中 |
 
 ### 当前状态
 
-- 状态：`complete`；PR `#457` 合并后删除 `codeb/v3.401-focused-workspaces`，空闲分支恢复为 `main`、`smalldata_test`。
-- v3.400：PR `#456` 已合入，核心 full `33584670369` 通过，候选本地/远端分支已清理。
-- v3.401：核心 SHA `53402a6a4d894e4ad18501f5fd3dc647e513f49e`；focused full `33586246425` 约 4 分钟通过，历史 UI runtime 大账本跳过，direct/Speech/Paste/Xcode 成功。
-- 最终 UI evidence `33586601191` 通过；14 张真实模拟器截图覆盖手机浅/深色、动态字体、Reduce Motion、键盘和 iPad 宽屏。人工复核无阻断性裁切或信息层级冲突。
-- 范围：文本、音频、历史、设置 View，直接合同、CI route、索引与日志；未改 Store/Service/Model，未执行 OCR/翻译/漫画质量探针。
+- 当前分支：`codeb/v3.402-compact-headers-settings`，基于 `smalldata_test@8e1b742f`。
+- 范围：共享顶栏、五个主界面布局、资料库/设置导航所有权、直接静态合同、focused UI CI 路由、UI 索引与更新日志。
+- 非目标：Store、OCR/Speech/翻译业务链路、模型参数、默认模型和质量指标。
+- 验收：五个主界面标准字号下使用同一紧凑顶栏高度且横向填满内容宽度；动态字体不裁切；资料库可稳定进入设置及设置子页；exact-SHA task-scoped full 只跑直接 UI 合同与一次 iOS build，必要时补 UI evidence。
+- 已知工作树：`AITRANS.xcodeproj/xcshareddata/` 为开始前已有未跟踪内容，本轮保留且不纳入提交。

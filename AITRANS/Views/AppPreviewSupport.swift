@@ -13,6 +13,7 @@ enum AppPreviewScenario: String {
     case audioRecognizing
     case audioTranslating
     case audioFailure
+    case library
     case history
     case promptLibrary
     case proLocked
@@ -27,7 +28,7 @@ enum AppPreviewScenario: String {
         case .imageEmpty, .imageSuccess: .image
         case .ocrEmpty, .ocrSuccess: .ocr
         case .audioRecognizing, .audioTranslating, .audioFailure: .audio
-        case .history: .library
+        case .library, .history: .library
         case .promptLibrary, .proLocked, .proUnlocked, .developerConsole, .localMissing, .localReady: .library
         }
     }
@@ -166,7 +167,7 @@ enum AppPreviewScenario: String {
             store.audioRecognitionState = .failed
             store.audioRecognitionMessage = "设备未安装当前语言的本机识别资源"
             store.speechRecognitionRunSummary = Self.audioSummary(isFinal: true, failureMessage: store.audioRecognitionMessage)
-        case .history:
+        case .library, .history:
             store.history = [Self.sampleRecord, Self.sampleRecordTwo]
         case .promptLibrary:
             store.selectedPromptID = PromptTemplate.translatorID

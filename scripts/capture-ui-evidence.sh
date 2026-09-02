@@ -121,6 +121,8 @@ capture() {
 
 capture "$small_id" "compact-iPhone" empty large portrait text-empty-compact-day.png false 日间
 capture "$small_id" "compact-iPhone" imageEmpty large portrait image-empty-compact-night.png false 夜间
+capture "$small_id" "compact-iPhone" ocrEmpty large portrait ocr-empty-compact-day.png false 日间
+capture "$small_id" "compact-iPhone" library large portrait library-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" history large portrait history-data-compact-day.png false 日间
 capture "$small_id" "compact-iPhone" proLocked large portrait settings-pro-locked-compact-night.png false 夜间
 
@@ -167,12 +169,12 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
-if len(items) != 14:
-    raise SystemExit(f"Expected 14 screenshots (12 compact iPhone + 2 wide iPad), received {len(items)}")
+if len(items) != 16:
+    raise SystemExit(f"Expected 16 screenshots (14 compact iPhone + 2 wide iPad), received {len(items)}")
 compact = [item for item in items if item["device"] == "compact-iPhone"]
 wide = [item for item in items if item["device"] == "wide-iPad"]
-if len(compact) != 12:
-    raise SystemExit(f"Expected 12 compact-iPhone screenshots, received {len(compact)}")
+if len(compact) != 14:
+    raise SystemExit(f"Expected 14 compact-iPhone screenshots, received {len(compact)}")
 if len(wide) != 2:
     raise SystemExit(f"Expected 2 wide-iPad screenshots, received {len(wide)}")
 if any(item["orientation"] != "portrait" for item in compact):

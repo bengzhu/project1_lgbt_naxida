@@ -27,9 +27,9 @@ View action / accessibility action
   -> View updates focus/preview/filter
 ```
 
-iPhone 一级导航固定为文本、图片、OCR、音频、资料库五项；历史与设置从资料库的两个大入口进入。iPad 侧栏直接按“创作 / 工具 / 资料”分组。两种布局只改变导航层级，不合并图片翻译与 OCR-only 工作台的业务边界。
+iPhone 一级导航固定为文本、图片、OCR、音频、资料库五项；历史与设置从资料库的两个大入口进入。资料库拥有手机端下钻导航栈，设置作为 destination 复用该导航上下文，不再嵌套第二个 `NavigationStack`；设置独立展示时仍自带导航容器。iPad 侧栏直接按“创作 / 工具 / 资料”分组。两种布局只改变导航层级，不合并图片翻译与 OCR-only 工作台的业务边界。
 
-六个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。页面 Hero 入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
+六个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。共享页面顶栏采用标准字号下 92pt 的紧凑横向基线并填满页面内容宽度，动态字体可按内容向下扩展以避免裁切；入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
 
 重点页面采用渐进呈现：文本页只保留输入、译文和会话工具条，不重复展示最近翻译；手机音频页通过分段选择一次显示实时或文件工作区，iPad 保留双栏；历史导入/导出/清理归入操作菜单；设置的 Pro 能力说明和开发解锁归入“高级与开发”折叠区。低频入口收起时不得移除原有 Store action、破坏确认流程或仅靠颜色表达状态。
 
@@ -48,7 +48,7 @@ OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进�
 ## 相关测试
 
 - [`test-v187-ui-interaction-contract.py`](../../../scripts/test-v187-ui-interaction-contract.py)、[`test-v188-home-ui-contract.py`](../../../scripts/test-v188-home-ui-contract.py)：全 App 交互/首页。
-- [`test-v3400-immersive-ui-contract.py`](../../../scripts/test-v3400-immersive-ui-contract.py)、[`test-v3401-focused-workspaces-contract.py`](../../../scripts/test-v3401-focused-workspaces-contract.py)：功能视觉身份、聚焦工作区和 visual-task CI 路由。
+- [`test-v3400-immersive-ui-contract.py`](../../../scripts/test-v3400-immersive-ui-contract.py)、[`test-v3401-focused-workspaces-contract.py`](../../../scripts/test-v3401-focused-workspaces-contract.py)、[`test-v3402-compact-header-settings-contract.py`](../../../scripts/test-v3402-compact-header-settings-contract.py)：功能视觉身份、聚焦工作区、紧凑顶栏、资料库/设置导航所有权和 visual-task CI 路由。
 - [`test-v313-image-block-focus-contract.py`](../../../scripts/test-v313-image-block-focus-contract.py)、[`test-v3150-image-focus-restore-action-contract.py`](../../../scripts/test-v3150-image-focus-restore-action-contract.py)：图片焦点和恢复动作。
 - [`test-v3247-image-ocr-rerecognition-review-focus-contract.py`](../../../scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py)、[`test-v3248-image-ocr-rerecognition-failure-focus-contract.py`](../../../scripts/test-v3248-image-ocr-rerecognition-failure-focus-contract.py)：重识别完成/失败焦点。
 - [`test-v3289-image-ocr-block-structure-editor-contract.py`](../../../scripts/test-v3289-image-ocr-block-structure-editor-contract.py)、[`test-v3289-image-ocr-geometry-editor-contract.py`](../../../scripts/test-v3289-image-ocr-geometry-editor-contract.py)：结构/几何编辑。
