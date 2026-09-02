@@ -8,18 +8,17 @@
 
 系统性优化 AITRANS 的 UI 与操作体验：建立高对比、功能可辨的统一视觉系统，收敛导航层级和重点页面操作密度；只改 View/视觉合同，保留 Store 与 OCR、Speech、翻译业务边界，并使用 task-scoped 精简 CI。
 
-### 规划小目标（完成 0/2）
+### 规划小目标（完成 1/2）
 
 | 小目标 | 状态 |
 | --- | --- |
-| v3.400 设计系统、功能 Hero、五入口手机导航与 iPad 分组 | 候选已验证 |
-| v3.401 重点页面操作减负、最终 UI evidence 与总体验收 | 待开始 |
+| v3.400 设计系统、功能 Hero、五入口手机导航与 iPad 分组 | 已完成 |
+| v3.401 重点页面操作减负、精简 CI、最终 UI evidence 与总体验收 | 进行中 |
 
 ### 当前状态
 
-- 当前分支：`codeb/v3.400-immersive-ui`，核心候选 SHA `02ce27fa43356a4651ddb36033cca3cd01f97937`。
-- changed-files 预期：`AITRANS/Views/AppTheme.swift`、`AppComponents.swift`、`ContentView.swift`、顶级页面 View、`AppPreviewSupport.swift`、直接 UI 合同、`md/log/`。
-- 验收：手机一级导航不超过 5 项；iPad 侧栏分组；六大功能具备非纯色的独立视觉身份；Reduce Motion/Increase Contrast/Dynamic Type 保持；现有动作接线不变。
-- 验证：本地 diff/Swift parse、v3.400 `5/5`、v1.87 `12/12`、v1.88 `7/7`、v1.89 `4/4` 通过；六组功能色对比度最小 5.36:1。exact-SHA full run `33584670369`、artifact `aitrans-ci-v3.400-codeb-v3.400-immersive-ui--02ce27fa4335-run33584670369-attempt1` 与 Xcode simulator build 通过；OCR/翻译、Koharu、UI evidence 跳过。
-- 已识别 CI route gap：纯 UI 候选仍执行约 9 分钟历史图片 runtime 合同；v3.401 将加入有界 visual-task route，只保留直接 UI 合同与一次 build。
-- 下一步：v3.400 PR 合并与清理；随后从新基线创建 v3.401。
+- 当前分支：`codeb/v3.401-focused-workspaces`，基于 v3.400 merge `44c70e011e4c4561e6e07844ba0bed0cdefc1812`。
+- v3.400：PR `#456` 已合入，核心 full `33584670369` 通过，候选本地/远端分支已清理。
+- v3.401 changed-files：文本、音频、历史、设置 View，直接合同，CI route 与日志；不改 Store/Service/Model。
+- 验收：手机页面一次只呈现一个主任务；重复/低频操作进入 Menu 或 Disclosure；所有既有动作、确认与无障碍目标保留；visual-task CI 不再执行历史图片 runtime，仍保留 direct contracts + Xcode build。
+- 下一步：实现、直接验证、精简 full + 最终 `ui_evidence_mode=full`、PR 合并与总体验收。

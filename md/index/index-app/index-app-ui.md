@@ -8,13 +8,13 @@
 | --- | --- | --- |
 | 根路由、tab、Phone/iPad | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `ContentView`、`PhoneRootView`、`TabletRootView`、`AppTabRouter`、`LibraryHubView` |
 | 视觉系统与共享组件 | [`AppTheme.swift`](../../../AITRANS/Views/AppTheme.swift)、[`AppComponents.swift`](../../../AITRANS/Views/AppComponents.swift) | `AppFeature`、`AppPageHeader`、`AppCanvasBackground`、`appSurface` |
-| 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane` |
+| 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane`、`TextSessionUtilityBar` |
 | 图片翻译主屏 | [`AITRANS/Views/ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | `ImageTranslationView`、`ImageTranslationPanel`、`ImageTranslationPreview` |
 | OCR 检测工作台 | [`AITRANS/Views/ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift) | `ImageOCRDetectionView`、`ImageOCRDetectionCanvas`、`ImageOCRDetectionResultRow`、`OCRDetectionDiagnostics` |
 | 图片结果行/局部预览/编辑 | 同上 | `ImageTranslationBlockRow`、`ImageTranslationFocusPreview`、`ImageOCRCorrectionSheet` |
 | 图片 overlay/竖排显示 | 同上 | `ImageTranslationOverlayBlock`、`ImageTranslationVerticalText` |
 | 图片结构/几何编辑 | [`ImageOCRBlockStructureEditor.swift`](../../../AITRANS/Views/ImageOCRBlockStructureEditor.swift)、[`ImageOCRGeometryEditor.swift`](../../../AITRANS/Views/ImageOCRGeometryEditor.swift) | editor Views |
-| 音频、历史、设置 | [`AudioTranslationView.swift`](../../../AITRANS/Views/AudioTranslationView.swift)、[`HistoryView.swift`](../../../AITRANS/Views/HistoryView.swift)、[`SettingsView.swift`](../../../AITRANS/Views/SettingsView.swift) | screen Views |
+| 音频、历史、设置 | [`AudioTranslationView.swift`](../../../AITRANS/Views/AudioTranslationView.swift)、[`HistoryView.swift`](../../../AITRANS/Views/HistoryView.swift)、[`SettingsView.swift`](../../../AITRANS/Views/SettingsView.swift) | `AudioWorkspaceMode`、`SpeechCapabilityDisclosure`、历史操作 `Menu`、`SettingsAdvancedSection` |
 | Prompt/模型/Developer Console | [`PromptLibraryView.swift`](../../../AITRANS/Views/PromptLibraryView.swift)、[`ModelManagementView.swift`](../../../AITRANS/Views/ModelManagementView.swift)、[`DeveloperConsoleView.swift`](../../../AITRANS/Views/DeveloperConsoleView.swift) | settings destinations |
 | UI evidence fixtures | [`AITRANS/Views/AppPreviewSupport.swift`](../../../AITRANS/Views/AppPreviewSupport.swift) | `AppPreviewScenario` |
 
@@ -31,6 +31,8 @@ iPhone 一级导航固定为文本、图片、OCR、音频、资料库五项；�
 
 六个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。页面 Hero 入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
 
+重点页面采用渐进呈现：文本页只保留输入、译文和会话工具条，不重复展示最近翻译；手机音频页通过分段选择一次显示实时或文件工作区，iPad 保留双栏；历史导入/导出/清理归入操作菜单；设置的 Pro 能力说明和开发解锁归入“高级与开发”折叠区。低频入口收起时不得移除原有 Store action、破坏确认流程或仅靠颜色表达状态。
+
 OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进入 OCR，原图显示编号框和质量颜色，结果行点击后高亮对应区域；语言与版式分开选择，显式日语竖排才开启 90°/270° 方向复读。取消/重试、单块复读、手动编辑、复制全部和 TXT/JSON 导出都只作用于 OCR 检测状态。
 
 图片复查的入口有结果行、完整 overlay 和局部 focus preview 三类；编辑、恢复 Vision、单块重识别、重译、忽略、review 和前后导航必须回到发起来源或明确的下一结果。焦点 ID、筛选集合和局部预览生命周期属于 View；block 内容、review progress、failure generation 属于 Store。
@@ -46,6 +48,7 @@ OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进�
 ## 相关测试
 
 - [`test-v187-ui-interaction-contract.py`](../../../scripts/test-v187-ui-interaction-contract.py)、[`test-v188-home-ui-contract.py`](../../../scripts/test-v188-home-ui-contract.py)：全 App 交互/首页。
+- [`test-v3400-immersive-ui-contract.py`](../../../scripts/test-v3400-immersive-ui-contract.py)、[`test-v3401-focused-workspaces-contract.py`](../../../scripts/test-v3401-focused-workspaces-contract.py)：功能视觉身份、聚焦工作区和 visual-task CI 路由。
 - [`test-v313-image-block-focus-contract.py`](../../../scripts/test-v313-image-block-focus-contract.py)、[`test-v3150-image-focus-restore-action-contract.py`](../../../scripts/test-v3150-image-focus-restore-action-contract.py)：图片焦点和恢复动作。
 - [`test-v3247-image-ocr-rerecognition-review-focus-contract.py`](../../../scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py)、[`test-v3248-image-ocr-rerecognition-failure-focus-contract.py`](../../../scripts/test-v3248-image-ocr-rerecognition-failure-focus-contract.py)：重识别完成/失败焦点。
 - [`test-v3289-image-ocr-block-structure-editor-contract.py`](../../../scripts/test-v3289-image-ocr-block-structure-editor-contract.py)、[`test-v3289-image-ocr-geometry-editor-contract.py`](../../../scripts/test-v3289-image-ocr-geometry-editor-contract.py)：结构/几何编辑。

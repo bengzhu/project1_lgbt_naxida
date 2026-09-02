@@ -88,7 +88,7 @@ struct HistoryView: View {
     }
 
     private var commandBar: some View {
-        VStack(spacing: AppTheme.Spacing.control) {
+        HStack(spacing: AppTheme.Spacing.control) {
             TextField("搜索历史", text: $query)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, AppTheme.Spacing.control)
@@ -96,19 +96,22 @@ struct HistoryView: View {
                 .background(Color.appSurface, in: .rect(cornerRadius: AppTheme.Radius.control))
                 .overlay { RoundedRectangle(cornerRadius: AppTheme.Radius.control).stroke(Color.appBorder) }
 
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: AppTheme.Spacing.control) { commands }
-                VStack(spacing: AppTheme.Spacing.control) { commands }
+            Menu("历史操作", systemImage: "ellipsis.circle") {
+                Button("归档当前", systemImage: "tray.and.arrow.down", action: store.archiveCurrentSession)
+                Button("导入", systemImage: "square.and.arrow.down") { showImporter = true }
+                Button("导出", systemImage: "square.and.arrow.up", action: prepareExport)
+                Divider()
+                Button("清空", systemImage: "trash", role: .destructive) { showClearConfirmation = true }
+                    .disabled(store.history.isEmpty)
             }
+            .labelStyle(.iconOnly)
+            .font(.title3.bold())
+            .foregroundStyle(Color.appTextPrimary)
+            .frame(width: AppTheme.Layout.minimumTarget, height: AppTheme.Layout.minimumTarget)
+            .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.control))
+            .overlay { RoundedRectangle(cornerRadius: AppTheme.Radius.control).stroke(Color.appBorder) }
+            .accessibilityLabel("历史操作")
         }
-    }
-
-    @ViewBuilder private var commands: some View {
-        AppSecondaryButton(title: "归档当前", systemImage: "tray.and.arrow.down", action: store.archiveCurrentSession)
-        AppSecondaryButton(title: "导入", systemImage: "square.and.arrow.down") { showImporter = true }
-        AppSecondaryButton(title: "导出", systemImage: "square.and.arrow.up", action: prepareExport)
-        AppSecondaryButton(title: "清空", systemImage: "trash", tone: .danger) { showClearConfirmation = true }
-            .disabled(store.history.isEmpty)
     }
 
     private var deletionPresented: Binding<Bool> {

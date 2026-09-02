@@ -1,9 +1,20 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum AudioWorkspaceMode: String, CaseIterable, Identifiable {
+    case live = "实时"
+    case file = "文件"
+
+    var id: Self { self }
+}
+
 struct AudioTranslationView: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotionOverride) private var reduceMotionOverride
     @State private var showAudioImporter = false
+    @State private var workspaceMode = AudioWorkspaceMode.live
 
     var body: some View {
         ScrollView {
@@ -17,26 +28,43 @@ struct AudioTranslationView: View {
                     feature: .audio
                 )
 
-                ViewThatFits(in: .horizontal) {
+                if horizontalSizeClass == .regular {
                     HStack(alignment: .top, spacing: AppTheme.Spacing.section) {
                         LiveSpeechPanel().frame(minWidth: 360)
                         AudioFilePanel(openImporter: { showAudioImporter = true }).frame(minWidth: 360)
                     }
-                    VStack(spacing: AppTheme.Spacing.section) {
+                } else {
+                    Picker("音频输入方式", selection: $workspaceMode) {
+                        ForEach(AudioWorkspaceMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityValue(workspaceMode.rawValue)
+
+                    if workspaceMode == .live {
                         LiveSpeechPanel()
+                            .transition(.opacity.combined(with: .move(edge: .leading)))
+                    } else {
                         AudioFilePanel(openImporter: { showAudioImporter = true })
+                            .transition(.opacity.combined(with: .move(edge: .trailing)))
                     }
                 }
 
                 SpeechRecognitionRunSummaryPanel()
-                SpeechCapabilityPanel()
+                SpeechCapabilityDisclosure()
             }
             .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
             .padding(.vertical, AppTheme.Spacing.section)
             .padding(.bottom, 72)
         }
         .background(Color.appCanvas)
+        .animation(shouldReduceMotion ? nil : AppTheme.Motion.standard, value: workspaceMode)
         .fileImporter(isPresented: $showAudioImporter, allowedContentTypes: [.audio], onCompletion: handleImport)
+    }
+
+    private var shouldReduceMotion: Bool {
+        reduceMotion || reduceMotionOverride
     }
 
     private var statusTitle: String {
@@ -189,8 +217,10 @@ private struct AudioFilePanel: View {
         }
         AppPrimaryButton(title: "选择音频", systemImage: "folder", action: openImporter)
             .disabled(isRunning)
-        AppSecondaryButton(title: "运行 test/ 音频", systemImage: "testtube.2", action: store.runBundledAudioTest)
-            .disabled(isRunning)
+        if store.isDeveloperModeEnabled {
+            AppSecondaryButton(title: "运行 test/ 音频", systemImage: "testtube.2", action: store.runBundledAudioTest)
+                .disabled(isRunning)
+        }
     }
 
     private var isRunning: Bool {
@@ -205,6 +235,22 @@ private struct AudioFilePanel: View {
         case .checking, .recognizing, .translating: true
         case .idle, .translated, .failed: false
         }
+    }
+}
+
+private struct SpeechCapabilityDisclosure: View {
+    @State private var isExpanded = false
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            SpeechCapabilityPanel()
+                .padding(.top, AppTheme.Spacing.section)
+        } label: {
+            Label("设备识别能力", systemImage: "iphone.gen3.radiowaves.left.and.right")
+                .font(.headline)
+                .foregroundStyle(Color.appTextPrimary)
+        }
+        .appSurface()
     }
 }
 

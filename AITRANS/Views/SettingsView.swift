@@ -11,6 +11,7 @@ struct SettingsView: View {
     @Binding var selectedTab: AppTab
     @State private var developerPassword = ""
     @State private var navigationPath = NavigationPath()
+    @State private var advancedExpanded = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -28,8 +29,10 @@ struct SettingsView: View {
                     AppearanceSection()
                     ProAccessPanel()
                     SettingsNavigationSection()
-                    ProFeatureGrid()
-                    DeveloperAccessSection(password: $developerPassword)
+                    SettingsAdvancedSection(
+                        password: $developerPassword,
+                        isExpanded: $advancedExpanded
+                    )
                     DataSafetySection(selectedTab: $selectedTab)
                 }
                 .enterprisePageFrame()
@@ -63,6 +66,32 @@ struct SettingsView: View {
 #else
         false
 #endif
+    }
+}
+
+private struct SettingsAdvancedSection: View {
+    @Binding var password: String
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        DisclosureGroup(isExpanded: $isExpanded) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                ProFeatureGrid()
+                Divider().overlay(Color.appBorder)
+                DeveloperAccessSection(password: $password)
+            }
+            .padding(.top, AppTheme.Spacing.section)
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Label("高级与开发", systemImage: "ellipsis.rectangle")
+                    .font(.headline)
+                    .foregroundStyle(Color.appTextPrimary)
+                Text("Pro 能力说明与受保护的诊断入口")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.appTextSecondary)
+            }
+        }
+        .appSurface()
     }
 }
 
@@ -160,7 +189,6 @@ private struct DeveloperAccessSection: View {
                 Text(store.developerModeMessage).font(.subheadline).foregroundStyle(Color.appTextSecondary)
             }
         }
-        .appSurface()
     }
 }
 
