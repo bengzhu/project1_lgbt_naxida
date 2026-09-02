@@ -1,9 +1,29 @@
 import SwiftUI
 
 struct AppCanvasBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        Color.appCanvas
-            .ignoresSafeArea()
+        ZStack {
+            Color.appCanvas
+            LinearGradient(
+                colors: [
+                    AppFeature.text.accent(for: colorScheme).opacity(colorScheme == .dark ? 0.12 : 0.07),
+                    Color.clear,
+                    AppFeature.image.accent(for: colorScheme).opacity(colorScheme == .dark ? 0.08 : 0.04)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            RadialGradient(
+                colors: [AppFeature.ocr.accent(for: colorScheme).opacity(0.07), .clear],
+                center: .topTrailing,
+                startRadius: 0,
+                endRadius: 520
+            )
+        }
+        .ignoresSafeArea()
+        .accessibilityHidden(true)
     }
 }
 
@@ -24,44 +44,87 @@ struct BrandMark: View {
 }
 
 struct AppPageHeader: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.appReduceMotionOverride) private var reduceMotionOverride
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
+
     let title: String
     let subtitle: String
     let systemImage: String
     var status: String?
     var statusTone: AppStatusTone = .neutral
+    var feature: AppFeature = .system
+    @State private var isRevealed = false
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .center, spacing: AppTheme.Spacing.control) {
-                headerIdentity
-                Spacer(minLength: AppTheme.Spacing.control)
-                if let status {
-                    AppStatusLabel(text: status, tone: statusTone)
+        ZStack(alignment: .topTrailing) {
+            Text(feature.index)
+                .font(.system(size: 92, weight: .black, design: .rounded))
+                .foregroundStyle(accent.opacity(colorScheme == .dark ? 0.12 : 0.08))
+                .offset(x: 8, y: -24)
+                .accessibilityHidden(true)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: AppTheme.Spacing.section) {
+                    headerIdentity
+                    Spacer(minLength: AppTheme.Spacing.control)
+                    statusLabel
+                }
+
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+                    headerIdentity
+                    statusLabel
                 }
             }
-
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
-                headerIdentity
-                if let status {
-                    AppStatusLabel(text: status, tone: statusTone)
-                }
+        }
+        .padding(AppTheme.Spacing.page)
+        .background(
+            LinearGradient(
+                colors: [accent.opacity(colorScheme == .dark ? 0.20 : 0.12), Color.appSurface],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            ),
+            in: .rect(cornerRadius: AppTheme.Radius.hero)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: AppTheme.Radius.hero)
+                .stroke(contrast == .increased ? accent : accent.opacity(0.38), lineWidth: contrast == .increased ? 2 : 1)
+        }
+        .shadow(color: accent.opacity(colorScheme == .dark ? 0.12 : 0.10), radius: 24, y: 12)
+        .opacity(isRevealed ? 1 : 0)
+        .offset(y: isRevealed ? 0 : 12)
+        .onAppear {
+            if shouldReduceMotion {
+                isRevealed = true
+            } else {
+                withAnimation(AppTheme.Motion.reveal) { isRevealed = true }
             }
         }
         .accessibilityElement(children: .combine)
     }
 
     private var headerIdentity: some View {
-        HStack(spacing: AppTheme.Spacing.control) {
+        HStack(spacing: AppTheme.Spacing.section) {
             Image(systemName: systemImage)
-                .font(.headline)
-                .foregroundStyle(Color.appAccent)
-                .frame(width: 44, height: 44)
-                .background(Color.appSurfaceRaised, in: .rect(cornerRadius: AppTheme.Radius.surface))
+                .font(.title2.bold())
+                .foregroundStyle(accent)
+                .frame(width: 58, height: 58)
+                .background(accent.opacity(0.14), in: .rect(cornerRadius: AppTheme.Radius.surface))
+                .overlay {
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
+                        .stroke(accent.opacity(0.45), lineWidth: 1)
+                }
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(feature.eyebrow)
+                    .font(.caption2.monospaced().bold())
+                    .tracking(1.2)
+                    .foregroundStyle(accent)
                 Text(title)
-                    .font(.title2.bold())
+                    .font(.largeTitle.weight(.black))
+                    .fontDesign(.rounded)
                     .foregroundStyle(Color.appTextPrimary)
                 Text(subtitle)
                     .font(.subheadline)
@@ -69,6 +132,19 @@ struct AppPageHeader: View {
             }
         }
     }
+
+    @ViewBuilder private var statusLabel: some View {
+        if let status {
+            AppStatusLabel(text: status, tone: statusTone)
+                .padding(.horizontal, AppTheme.Spacing.control)
+                .padding(.vertical, AppTheme.Spacing.compact)
+                .background(statusTone.color.opacity(0.12), in: .capsule)
+                .overlay { Capsule().stroke(statusTone.color.opacity(0.40), lineWidth: 1) }
+        }
+    }
+
+    private var accent: Color { feature.accent(for: colorScheme) }
+    private var shouldReduceMotion: Bool { reduceMotion || reduceMotionOverride }
 }
 
 struct AppSectionHeader: View {
@@ -159,6 +235,7 @@ struct AppStatusRow: View {
 }
 
 struct AppPrimaryButton: View {
+    @Environment(\.colorScheme) private var colorScheme
     let title: String
     let systemImage: String
     var isWorking = false
@@ -174,6 +251,7 @@ struct AppPrimaryButton: View {
         .buttonStyle(.plain)
         .foregroundStyle(Color.appCanvas)
         .background(Color.appAccent, in: .rect(cornerRadius: AppTheme.Radius.control))
+        .shadow(color: Color.appAccent.opacity(colorScheme == .dark ? 0.12 : 0.20), radius: 10, y: 5)
     }
 }
 
@@ -277,14 +355,15 @@ extension View {
         modifier(EnterprisePageFrame(maxWidth: maxWidth))
     }
 
-    func appSurface(padded: Bool = true) -> some View {
-        modifier(AppSurfaceModifier(padded: padded))
+    func appSurface(padded: Bool = true, accent: Color? = nil) -> some View {
+        modifier(AppSurfaceModifier(padded: padded, accent: accent))
     }
 }
 
 private struct AppSurfaceModifier: ViewModifier {
     @Environment(\.colorSchemeContrast) private var contrast
     let padded: Bool
+    let accent: Color?
 
     func body(content: Content) -> some View {
         content
@@ -294,5 +373,15 @@ private struct AppSurfaceModifier: ViewModifier {
                 RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
                     .stroke(contrast == .increased ? Color.appTextSecondary : Color.appBorder, lineWidth: 1)
             }
+            .overlay(alignment: .leading) {
+                if let accent {
+                    Capsule()
+                        .fill(accent)
+                        .frame(width: 4)
+                        .padding(.vertical, AppTheme.Spacing.section)
+                        .accessibilityHidden(true)
+                }
+            }
+            .shadow(color: Color.black.opacity(0.06), radius: 14, y: 7)
     }
 }

@@ -13,7 +13,8 @@ struct AudioTranslationView: View {
                     subtitle: "Apple Speech 本机识别",
                     systemImage: "waveform.and.mic",
                     status: statusTitle,
-                    statusTone: statusTone
+                    statusTone: statusTone,
+                    feature: .audio
                 )
 
                 ViewThatFits(in: .horizontal) {

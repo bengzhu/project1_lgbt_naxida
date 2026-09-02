@@ -10977,3 +10977,9 @@ v3.382 的真实云端 test2 trace 已确认漫画批量 prompt 不再发生 con
 CI 继续复用既有 v3388 test2 overlay 产物，并输出 test2-ocr-full-overlay-v3388.png。候选分支 codeb/v3.390-ocr-detection-ui 的首个 exact push run [33478190505](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33478190505) 已通过 UI interaction contract 与 Xcode build，但因文档迁移后的历史 Japanese benchmark contract 仍读取旧路径并断言 3.389 而失败；本轮已将 CI 实际执行的 113 个合同同步到当前路径/3.390 版本，并完成本地 113/113 静态回归。exact-SHA full、test2 真实截图和合并结果待候选修复提交后核对。
 
 本轮不把静态合同、单张固定图或 v3388 历史截图外推为通用 OCR/CER/翻译质量证据；本地未运行 Xcode、Swift、Core ML、App runtime、Rust/Cargo 或 GGUF。
+
+## v3.400：沉浸式设计系统与分组导航（候选已验证）
+
+本轮先建立 UI 重构底座：新增 `AppFeature`，让文本、图片、OCR、音频、资料库、设置同时通过编号、英文眉题、SF Symbol、浅/深色功能色和 Hero 形态建立非纯色视觉身份；共享页面 Hero 使用高对比渐变、状态胶囊、Increase Contrast 描边与遵循 Reduce Motion 的一次性弹簧入场。共享 surface 改为大圆角、轻层级阴影与可选功能色导轨，文本输入/译文卡片获得明确分区。
+
+iPhone 一级导航从 6 个同级入口收敛为文本、图片、OCR、音频、资料库 5 项，资料库以两个大卡片分流历史和设置；iPad 侧栏直接按“创作 / 工具 / 资料”分组。图片翻译与 OCR-only 工作台仍是独立路由，View 继续只读 Store 投影并调用公开动作。本地 `git diff --check`、Swift parse、v3.400 新合同 `5/5`、v1.87 `12/12`、v1.88 `7/7`、v1.89 `4/4` 通过；六组功能色对比度最低为 5.36:1。核心候选 SHA `02ce27fa43356a4651ddb36033cca3cd01f97937` 的 exact-SHA full [33584670369](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33584670369) 与 Xcode simulator build 通过，未加密 artifact 已核对 branch/SHA/run/profile；真实 OCR/翻译、Koharu、通用 UI evidence 均按 task-scoped 边界跳过，不据静态合同声称真机视觉质量。

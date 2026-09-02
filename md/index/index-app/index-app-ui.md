@@ -6,7 +6,8 @@
 
 | 屏幕/主题 | 文件 | 关键符号 |
 | --- | --- | --- |
-| 根路由、tab、Phone/iPad | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `ContentView`、`PhoneRootView`、`TabletRootView`、`AppTabRouter` |
+| 根路由、tab、Phone/iPad | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `ContentView`、`PhoneRootView`、`TabletRootView`、`AppTabRouter`、`LibraryHubView` |
+| 视觉系统与共享组件 | [`AppTheme.swift`](../../../AITRANS/Views/AppTheme.swift)、[`AppComponents.swift`](../../../AITRANS/Views/AppComponents.swift) | `AppFeature`、`AppPageHeader`、`AppCanvasBackground`、`appSurface` |
 | 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane` |
 | 图片翻译主屏 | [`AITRANS/Views/ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | `ImageTranslationView`、`ImageTranslationPanel`、`ImageTranslationPreview` |
 | OCR 检测工作台 | [`AITRANS/Views/ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift) | `ImageOCRDetectionView`、`ImageOCRDetectionCanvas`、`ImageOCRDetectionResultRow`、`OCRDetectionDiagnostics` |
@@ -25,6 +26,10 @@ View action / accessibility action
   -> @Published state + focus generation
   -> View updates focus/preview/filter
 ```
+
+iPhone 一级导航固定为文本、图片、OCR、音频、资料库五项；历史与设置从资料库的两个大入口进入。iPad 侧栏直接按“创作 / 工具 / 资料”分组。两种布局只改变导航层级，不合并图片翻译与 OCR-only 工作台的业务边界。
+
+六个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。页面 Hero 入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
 
 OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进入 OCR，原图显示编号框和质量颜色，结果行点击后高亮对应区域；语言与版式分开选择，显式日语竖排才开启 90°/270° 方向复读。取消/重试、单块复读、手动编辑、复制全部和 TXT/JSON 导出都只作用于 OCR 检测状态。
 
