@@ -100,15 +100,21 @@ capture() {
   local image_height
   local image_bytes=0
   local attempt
+  local settle_seconds=3
+  if [ "$device_label" = "wide-iPad" ]; then
+    # iPad cold launches can outlast the compact-phone settle window and
+    # otherwise produce an all-white first frame before SwiftUI mounts.
+    settle_seconds=8
+  fi
   for attempt in 1 2 3; do
     xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true
     SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO="$scenario" \
       SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE="$appearance" \
       xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id"
-    if [ "$attempt" -eq 1 ]; then sleep 3; else sleep 5; fi
+    if [ "$attempt" -eq 1 ]; then sleep "$settle_seconds"; else sleep 8; fi
     xcrun simctl io "$device_id" screenshot "$output_dir/$filename"
     image_bytes="$(stat -f '%z' "$output_dir/$filename")"
-    if [ "$image_bytes" -ge 50000 ]; then break; fi
+    if [ "$image_bytes" -ge 100000 ]; then break; fi
     echo "Screenshot attempt $attempt appears blank (${image_bytes} bytes); restarting App"
   done
 
@@ -122,7 +128,7 @@ capture() {
     echo "Expected landscape screenshot but received ${image_width}x${image_height}: $filename" >&2
     exit 1
   fi
-  if [ "$image_bytes" -lt 50000 ]; then
+  if [ "$image_bytes" -lt 100000 ]; then
     echo "Screenshot appears blank (${image_bytes} bytes): $filename" >&2
     exit 1
   fi
