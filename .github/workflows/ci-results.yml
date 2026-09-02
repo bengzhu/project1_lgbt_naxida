@@ -615,6 +615,14 @@ jobs:
             && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AITRANS/Views/(AppComponents|AppTheme|AppPreviewSupport|ContentView|TextTranslationView|ImageTranslationViews|ImageOCRDetectionView|AudioTranslationView|HistoryView|SettingsView)\.swift|scripts/(capture-ui-evidence\.sh|test-v189-paste-manual-matrix-contract\.py|test-v318-image-review-progress-evidence-contract\.py|test-v3401-focused-workspaces-contract\.py|test-v3402-compact-header-settings-contract\.py)|md/(index/index-app/index-app-ui|log/(update_log|work))\.md)$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             visual_task_scoped=true
           fi
+          # Evidence-only maintenance is still a focused UI task. Keep the
+          # historical interaction ledger out when the capture harness changes
+          # without a product View change.
+          if [ "$visual_task_scoped" = "false" ] \
+            && grep -Fx 'scripts/capture-ui-evidence.sh' "$RESULT_ROOT/changed-files.txt" >/dev/null \
+            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|scripts/(capture-ui-evidence\.sh|test-v189-paste-manual-matrix-contract\.py|test-v318-image-review-progress-evidence-contract\.py|test-v3401-focused-workspaces-contract\.py|test-v3402-compact-header-settings-contract\.py)|md/(index/index-app/index-app-ui|log/(update_log|work))\.md)$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            visual_task_scoped=true
+          fi
           if grep -E '^(AITRANS/Services/(TranslationSessionStore|SpeechQualityEvaluator|SpeechQualityProbeService)\.swift|AITRANS/Models/(TranscriptModels|SpeechQualityModels)\.swift|AITRANS/Views/(AudioTranslationView|ProViews|DeveloperConsoleView)\.swift|scripts/(test-speech-recognition-contract|test-speech-quality-contract|test-speech-quality-evaluator)\.(py|swift)|scripts/validate-speech-corpus\.py|test/speech_corpus/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             speech_contract_required=true
           fi
