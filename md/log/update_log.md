@@ -1,8 +1,10 @@
-## v3.402：紧凑统一顶栏与设置导航修复（待云端验收）
+## v3.402：紧凑统一顶栏与设置导航修复（已完成）
 
 - 参考 `f1e65c` 的横向紧凑格式，将共享功能 Hero 收敛为标准字号下 92pt 的全宽顶部栏：文本、图片、OCR 检测、音频、资料库统一高度和边距；保留功能编号、眉题、图标、浅深色功能色、渐变材质、Increase Contrast 描边和 Reduce Motion 入场，并允许无障碍大字按内容增高而不裁切。
 - 修复资料库下钻设置时再次创建 `NavigationStack` 的所有权冲突：资料库 destination 改为复用父导航上下文，设置独立入口仍保留自己的 path 与开发模式重置逻辑；设置内部提示词、模型和开发诊断 destination 不变。
 - UI evidence 矩阵增加 OCR 与资料库主界面，覆盖五个主顶栏；新增 `test-v3402-compact-header-settings-contract.py`。focused UI CI 仅保留直接 UI 合同与一次必要 Xcode build，明确跳过无关 Speech、Paste、历史 UI runtime、Koharu 和质量探针。
+- 本地合同 6/6、`git diff --check`、YAML/shell 解析通过；scoped push [33636787029](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33636787029) 的静态检查、Home 合同与 Xcode build 成功，历史 UI interaction、Speech、Paste、Koharu 均按边界跳过。
+- 精确候选 SHA `4cb313cee722ed08b3edde612f38cc0e9b21bd6c` 的 full UI evidence [33638036977](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33638036977) 成功；未加密 artifact `aitrans-ci-v3.402-codeb-v3.402-compact-headers-settings--4cb313cee722-run33638036977-attempt1` 的 manifest 为 16 张（14 compact iPhone + 2 wide iPad），截图全部通过非空检查，关键五页顶栏与设置内容经视觉复核；新增 iPad 冷启动等待与 100KB 空白帧闸门。
 
 ## v3.401：重点页面操作减负与 visual-task CI（已完成）
 
