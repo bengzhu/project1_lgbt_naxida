@@ -602,11 +602,16 @@ jobs:
           paste_matrix_contract_required=false
           koharu_contract_required=false
           workflow_changed=false
+          visual_task_scoped=false
           if grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/fixtures/v3214-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness\.swift$|scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness\.swift$|scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness\.swift$|scripts/fixtures/v3254-japanese-region-diagnostic-harness\.swift$|scripts/test-v3214-image-japanese-manga-ocr-runtime\.sh$|scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime\.sh$|scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime\.sh$|scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime\.sh$|scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime\.sh$|scripts/test-v3254-image-japanese-region-diagnostic-runtime\.sh$|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             app_build_changed=true
           fi
           if grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             workflow_changed=true
+          fi
+          if grep -Fx 'scripts/test-v3401-focused-workspaces-contract.py' "$RESULT_ROOT/changed-files.txt" >/dev/null \
+            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AITRANS/Views/(TextTranslationView|AudioTranslationView|HistoryView|SettingsView)\.swift|scripts/test-v3401-focused-workspaces-contract\.py|md/(index/index-app/index-app-ui|log/(update_log|work))\.md)$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            visual_task_scoped=true
           fi
           if grep -E '^(AITRANS/Services/(TranslationSessionStore|SpeechQualityEvaluator|SpeechQualityProbeService)\.swift|AITRANS/Models/(TranscriptModels|SpeechQualityModels)\.swift|AITRANS/Views/(AudioTranslationView|ProViews|DeveloperConsoleView)\.swift|scripts/(test-speech-recognition-contract|test-speech-quality-contract|test-speech-quality-evaluator)\.(py|swift)|scripts/validate-speech-corpus\.py|test/speech_corpus/)' "$RESULT_ROOT/changed-files.txt" >/dev/null || [ "$workflow_changed" = "true" ]; then
             speech_contract_required=true
@@ -1121,6 +1126,15 @@ jobs:
             paste_matrix_contract_required=true
           fi
 
+          # Pure presentation tasks use the focused UI suite below instead of replaying
+          # the historical image/Koharu runtime ledger in UI interaction contract.
+          if [ "$visual_task_scoped" = "true" ]; then
+            ui_interaction_contract_required=false
+            home_ui_contract_required=true
+            paste_matrix_contract_required=true
+            koharu_contract_required=false
+          fi
+
           xcode_build_required=false
           xcode_build_skip_reason="non_app_build_related_full_validation"
           if [ "$requested_probe_mode" != "skip" ] || [ "$koharu_artifact_requested" = "true" ]; then
@@ -1157,6 +1171,7 @@ jobs:
             echo "smalldata_incremental_metadata_only=$smalldata_incremental_metadata_only"
             echo "smalldata_metadata_requires_full_validation=$smalldata_metadata_requires_full_validation"
             echo "receipt_propagation_allowed=$receipt_propagation_allowed"
+            echo "visual_task_scoped=$visual_task_scoped"
             echo "speech_contract_required=$speech_contract_required"
             echo "ui_interaction_contract_required=$ui_interaction_contract_required"
             echo "home_ui_contract_required=$home_ui_contract_required"
@@ -1190,6 +1205,7 @@ jobs:
           echo "reused_full_validation_sha=$reused_full_validation_sha"
           echo "reused_full_validation_state=$reused_full_validation_state"
           echo "ui_evidence_required=$ui_evidence_required"
+          echo "visual_task_scoped=$visual_task_scoped"
           echo "koharu_validator_extended_required=$koharu_validator_extended_required"
 
       - name: Restore GGUF model cache
@@ -1928,7 +1944,12 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          python3 -B scripts/test-v188-home-ui-contract.py 2>&1 | tee "$RESULT_ROOT/v188-home-ui-contract.log"
+          {
+            python3 -B scripts/test-v187-ui-interaction-contract.py
+            python3 -B scripts/test-v188-home-ui-contract.py
+            python3 -B scripts/test-v3400-immersive-ui-contract.py
+            python3 -B scripts/test-v3401-focused-workspaces-contract.py
+          } 2>&1 | tee "$RESULT_ROOT/v188-home-ui-contract.log"
 
       - name: v1.89 paste manual matrix contract
         id: v189_paste_matrix_contract

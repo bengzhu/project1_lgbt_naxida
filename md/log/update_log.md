@@ -1,3 +1,17 @@
+## v3.401：重点页面操作减负与 visual-task CI（已完成）
+
+- 文本页移除与译文区域重复的“最近翻译”，将会话控制收敛为主操作“新会话”和次级会话菜单；历史页将归档、导入、导出、清空收进保留破坏性确认的操作菜单。
+- 手机音频页通过实时/文件分段工作区一次只呈现一个主任务，常规宽度继续双栏；`test/` 音频入口只在开发模式显示，Speech 能力说明默认折叠。工作区切换动效响应 Reduce Motion。
+- 设置页将 Pro 能力说明和受保护的开发解锁归入“高级与开发”渐进展开区；工作设置、本地数据和既有开发导航重置边界不变。
+- 新增 `test-v3401-focused-workspaces-contract.py`；CI 对严格 changed-files 白名单内的纯视觉候选走 focused UI 合同、Speech、Paste 和一次 Xcode build，不再串行回放历史图片/Koharu runtime。核心 SHA `53402a6a4d894e4ad18501f5fd3dc647e513f49e` 的 focused full run `33586246425` 在约 4 分钟通过；Xcode、Speech、focused UI 与 Paste 均成功，历史 UI 大账本按路由跳过。
+- 同一精确 SHA 的最终 UI evidence run `33586601191` 通过，artifact `aitrans-ci-v3.401-codeb-v3.401-focused-workspaces--53402a6a4d89-run33586601191-attempt1` 含 14 张真实模拟器截图，覆盖手机日/夜间、动态字体、Reduce Motion、键盘及 iPad 宽屏；OCR/翻译/漫画质量探针按本次 UI-only 边界跳过。PR `#457` 以 `smalldata_test` 为 base，合并与分支清理完成后以 GitHub 终态为准。
+
+## v3.400：沉浸式功能视觉系统与导航重构（已完成）
+
+- 建立 `AppFeature` 视觉身份、功能色 Hero、分层画布和高对比 surface；功能以编号、英文眉题、图标和颜色共同识别，并响应 Reduce Motion / Increase Contrast。浅色功能色对比度为 `5.36:1` 至 `7.70:1`，深色均高于 `8.15:1`。
+- iPhone 一级导航收敛为文本、图片、OCR、音频、资料库五项，历史与设置进入资料库；iPad 侧栏按创作、工具、资料分组。普通图片翻译与 OCR-only 工作台仍保持独立业务边界。
+- 候选 SHA `02ce27fa43356a4651ddb36033cca3cd01f97937` 的 full run `33584670369` 通过；PR `#456` 已以 merge SHA `44c70e011e4c4561e6e07844ba0bed0cdefc1812` 合入 `smalldata_test`，候选分支已清理。UI evidence 按本阶段计划留到 v3.401 最终候选统一执行。
+
 ## CI task-scoped 范围复盘（2026-09-01）
 
 复盘 v3.390 OCR 候选与 test2 运行后确认：有测试范围浪费，但 v1.88/v1.89 不是主要耗时，它们本身约 1 秒。候选 full [33483510941](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33483510941) 共 15m57s，其中 UI interaction 合同 8m33s，串行执行 306 个命令（286 个 Python 合同、20 个 runtime），Xcode build 4m43s，静态检查 1m34s；test2 [33485166409](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33485166409) 共 17m12s，除 test2 自身构建 4m58s、OCR/翻译运行 6m02s 外，聚合 CI 又执行 UI 合同 7m22s、重复 Xcode build 3m22s 和通用 UI 截图 5m，截图还因键盘截图空白失败。

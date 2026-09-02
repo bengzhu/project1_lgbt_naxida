@@ -27,8 +27,7 @@ struct TextTranslationView: View {
                         }
                     }
 
-                    SessionCommandBar(startNewSession: startNewSession)
-                    RecentTranslationList()
+                    TextSessionUtilityBar(startNewSession: startNewSession)
                 }
                 .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
                 .padding(.vertical, AppTheme.Spacing.section)
@@ -85,22 +84,30 @@ struct TextTranslationView: View {
     }
 }
 
-private struct SessionCommandBar: View {
+private struct TextSessionUtilityBar: View {
     @EnvironmentObject private var store: TranslationSessionStore
     let startNewSession: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: AppTheme.Spacing.control) { actions }
-            VStack(spacing: AppTheme.Spacing.control) { actions }
-        }
-    }
+        HStack(spacing: AppTheme.Spacing.control) {
+            Button("新会话", systemImage: "plus", action: startNewSession)
+                .font(.subheadline.bold())
+                .foregroundStyle(Color.appTextPrimary)
 
-    @ViewBuilder private var actions: some View {
-        AppSecondaryButton(title: "新会话", systemImage: "plus.rectangle.on.rectangle", action: startNewSession)
-        AppSecondaryButton(title: "归档当前", systemImage: "tray.and.arrow.down") {
-            store.archiveCurrentSession()
+            Spacer(minLength: AppTheme.Spacing.control)
+
+            Menu("会话操作", systemImage: "ellipsis.circle") {
+                Button("归档当前", systemImage: "tray.and.arrow.down") {
+                    store.archiveCurrentSession()
+                }
+            }
+            .font(.subheadline.bold())
         }
+        .frame(minHeight: AppTheme.Layout.minimumTarget)
+        .padding(.horizontal, AppTheme.Spacing.control)
+        .background(Color.appSurface.opacity(0.84), in: .capsule)
+        .overlay { Capsule().stroke(Color.appBorder, lineWidth: 1) }
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -398,50 +405,5 @@ private struct TranslationOutputPane: View {
         if store.isProcessing { return .active }
         if store.lastGenerationLabel.localizedStandardContains("失败") { return .danger }
         return latestLine == nil ? .neutral : .success
-    }
-}
-
-private struct RecentTranslationList: View {
-    @EnvironmentObject private var store: TranslationSessionStore
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.Spacing.control) {
-            AppSectionHeader(
-                title: "最近翻译",
-                subtitle: "\(store.transcript.count) 条",
-                systemImage: "clock.arrow.circlepath"
-            )
-
-            if store.transcript.isEmpty {
-                AppEmptyState(
-                    title: "暂无记录",
-                    detail: "完成一次翻译后，最近结果会显示在这里。",
-                    systemImage: "text.bubble"
-                )
-            } else {
-                LazyVStack(spacing: 0) {
-                    ForEach(store.transcript.prefix(4)) { line in
-                        HStack(alignment: .top, spacing: AppTheme.Spacing.control) {
-                            VStack(alignment: .leading, spacing: AppTheme.Spacing.compact) {
-                                Text(line.translation)
-                                    .font(.body.bold())
-                                    .foregroundStyle(Color.appTextPrimary)
-                                    .lineLimit(3)
-                                Text(line.original)
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color.appTextSecondary)
-                                    .lineLimit(2)
-                            }
-                            Spacer(minLength: 0)
-                            Text(line.time)
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(Color.appTextSecondary)
-                        }
-                        .padding(.vertical, AppTheme.Spacing.control)
-                        .overlay(alignment: .bottom) { Divider().overlay(Color.appBorder) }
-                    }
-                }
-            }
-        }
     }
 }
