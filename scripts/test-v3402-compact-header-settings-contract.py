@@ -86,6 +86,9 @@ class CompactHeaderSettingsContractTests(unittest.TestCase):
         )
         self.assertTrue({"empty", "imageEmpty", "ocrEmpty", "audioTranslating", "library"}.issubset(scenarios))
         self.assertIn("Expected 16 screenshots (14 compact iPhone + 2 wide iPad)", capture)
+        self.assertIn("for attempt in 1 2 3", capture)
+        self.assertIn("restarting App", capture)
+        self.assertIn("Warming the compact App", capture)
 
     def test_ui_only_ci_skips_unrelated_suites_but_keeps_build(self) -> None:
         route = re.search(
