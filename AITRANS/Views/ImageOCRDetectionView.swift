@@ -54,7 +54,7 @@ struct ImageOCRDetectionView: View {
                     diagnosticsSection
                 }
             }
-            .padding(.vertical, AppTheme.Spacing.page)
+            .padding(.vertical, AppTheme.Spacing.section)
         }
         .scrollIndicators(.hidden)
         .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)

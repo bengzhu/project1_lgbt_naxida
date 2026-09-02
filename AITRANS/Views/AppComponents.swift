@@ -58,42 +58,44 @@ struct AppPageHeader: View {
     @State private var isRevealed = false
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .trailing) {
             Text(feature.index)
-                .font(.system(size: 92, weight: .black, design: .rounded))
-                .foregroundStyle(accent.opacity(colorScheme == .dark ? 0.12 : 0.08))
-                .offset(x: 8, y: -24)
+                .font(.system(size: 68, weight: .black, design: .rounded))
+                .foregroundStyle(accent.opacity(colorScheme == .dark ? 0.10 : 0.07))
+                .padding(.trailing, AppTheme.Spacing.control)
                 .accessibilityHidden(true)
 
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: AppTheme.Spacing.section) {
-                    headerIdentity
-                    Spacer(minLength: AppTheme.Spacing.control)
-                    statusLabel
-                }
-
-                VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
-                    headerIdentity
-                    statusLabel
-                }
+            HStack(alignment: .center, spacing: AppTheme.Spacing.control) {
+                headerIdentity
+                Spacer(minLength: AppTheme.Spacing.compact)
+                statusLabel
             }
         }
-        .padding(AppTheme.Spacing.page)
+        .padding(.horizontal, AppTheme.Spacing.section)
+        .padding(.vertical, AppTheme.Spacing.control)
+        .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.pageHeaderHeight, alignment: .leading)
         .background(
             LinearGradient(
-                colors: [accent.opacity(colorScheme == .dark ? 0.20 : 0.12), Color.appSurface],
+                colors: [accent.opacity(colorScheme == .dark ? 0.20 : 0.11), Color.appSurface.opacity(0.98)],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             ),
-            in: .rect(cornerRadius: AppTheme.Radius.hero)
+            in: .rect(cornerRadius: AppTheme.Radius.surface)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: AppTheme.Radius.hero)
+            RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
                 .stroke(contrast == .increased ? accent : accent.opacity(0.38), lineWidth: contrast == .increased ? 2 : 1)
         }
-        .shadow(color: accent.opacity(colorScheme == .dark ? 0.12 : 0.10), radius: 24, y: 12)
+        .overlay(alignment: .leading) {
+            Capsule()
+                .fill(accent)
+                .frame(width: 4, height: 46)
+                .padding(.leading, 1)
+                .accessibilityHidden(true)
+        }
+        .shadow(color: accent.opacity(colorScheme == .dark ? 0.10 : 0.08), radius: 14, y: 7)
         .opacity(isRevealed ? 1 : 0)
-        .offset(y: isRevealed ? 0 : 12)
+        .offset(y: isRevealed ? 0 : 8)
         .onAppear {
             if shouldReduceMotion {
                 isRevealed = true
@@ -105,41 +107,50 @@ struct AppPageHeader: View {
     }
 
     private var headerIdentity: some View {
-        HStack(spacing: AppTheme.Spacing.section) {
+        HStack(spacing: AppTheme.Spacing.control) {
             Image(systemName: systemImage)
-                .font(.title2.bold())
+                .font(.headline.bold())
                 .foregroundStyle(accent)
-                .frame(width: 58, height: 58)
-                .background(accent.opacity(0.14), in: .rect(cornerRadius: AppTheme.Radius.surface))
+                .frame(width: 48, height: 48)
+                .background(accent.opacity(0.14), in: .rect(cornerRadius: AppTheme.Radius.control))
                 .overlay {
-                    RoundedRectangle(cornerRadius: AppTheme.Radius.surface)
+                    RoundedRectangle(cornerRadius: AppTheme.Radius.control)
                         .stroke(accent.opacity(0.45), lineWidth: 1)
                 }
                 .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(feature.eyebrow)
                     .font(.caption2.monospaced().bold())
-                    .tracking(1.2)
+                    .tracking(0.9)
                     .foregroundStyle(accent)
+                    .lineLimit(1)
                 Text(title)
-                    .font(.largeTitle.weight(.black))
+                    .font(.title2.weight(.black))
                     .fontDesign(.rounded)
                     .foregroundStyle(Color.appTextPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(Color.appTextSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
             }
         }
+        .frame(minWidth: 0, alignment: .leading)
     }
 
     @ViewBuilder private var statusLabel: some View {
         if let status {
-            AppStatusLabel(text: status, tone: statusTone)
-                .padding(.horizontal, AppTheme.Spacing.control)
-                .padding(.vertical, AppTheme.Spacing.compact)
+            AppStatusLabel(text: status, tone: statusTone, textStyle: .caption.bold())
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
                 .background(statusTone.color.opacity(0.12), in: .capsule)
                 .overlay { Capsule().stroke(statusTone.color.opacity(0.40), lineWidth: 1) }
+                .layoutPriority(1)
         }
     }
 
@@ -191,10 +202,11 @@ struct AppSectionHeader: View {
 struct AppStatusLabel: View {
     let text: String
     let tone: AppStatusTone
+    var textStyle: Font = .subheadline.bold()
 
     var body: some View {
         Label(text, systemImage: tone.symbol)
-            .font(.subheadline.bold())
+            .font(textStyle)
             .foregroundStyle(tone.color)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityLabel("状态：\(text)")

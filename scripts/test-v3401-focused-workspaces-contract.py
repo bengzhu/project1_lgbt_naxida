@@ -68,16 +68,18 @@ class FocusedWorkspaceContractTests(unittest.TestCase):
             "visual_task_scoped=false",
             "visual_task_scoped=true",
             "grep -Ev",
-            "AITRANS/Views/(TextTranslationView|AudioTranslationView|HistoryView|SettingsView)",
+            "AITRANS/Views/(AppComponents|AppTheme|AppPreviewSupport|ContentView|TextTranslationView|ImageTranslationViews|ImageOCRDetectionView|AudioTranslationView|HistoryView|SettingsView)",
             'if [ "$visual_task_scoped" = "true" ]; then',
             "ui_interaction_contract_required=false",
             "home_ui_contract_required=true",
-            "paste_matrix_contract_required=true",
+            "paste_matrix_contract_required=false",
+            "speech_contract_required=false",
             "koharu_contract_required=false",
             "scripts/test-v187-ui-interaction-contract.py",
             "scripts/test-v188-home-ui-contract.py",
             "scripts/test-v3400-immersive-ui-contract.py",
             "scripts/test-v3401-focused-workspaces-contract.py",
+            "scripts/test-v3402-compact-header-settings-contract.py",
         ):
             self.assertIn(token, self.workflow)
 

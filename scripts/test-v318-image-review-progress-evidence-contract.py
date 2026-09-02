@@ -53,8 +53,8 @@ class V318ImageReviewProgressEvidenceContractTests(unittest.TestCase):
 
     def test_evidence_matrix_requires_two_wide_scenarios(self) -> None:
         capture = read("scripts/capture-ui-evidence.sh")
-        self.assertIn("Expected 14 screenshots (12 compact iPhone + 2 wide iPad)", capture)
-        self.assertIn('if len(compact) != 12:', capture)
+        self.assertIn("Expected 16 screenshots (14 compact iPhone + 2 wide iPad)", capture)
+        self.assertIn('if len(compact) != 14:', capture)
         self.assertIn('if len(wide) != 2:', capture)
         self.assertIn('{item["scenario"] for item in wide} != {"empty", "imageSuccess"}', capture)
         self.assertIn('item["orientation"] != "portrait" for item in wide', capture)

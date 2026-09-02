@@ -77,6 +77,12 @@ xcrun simctl bootstatus "$small_id" -b
 xcrun simctl install "$small_id" "$app_path"
 xcrun simctl ui "$small_id" appearance dark
 xcrun simctl spawn "$small_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+echo "Warming the compact App and waiting for post-boot system banners to clear"
+SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO=empty \
+  SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE=日间 \
+  xcrun simctl launch --terminate-running-process "$small_id" "$bundle_id" >/dev/null
+sleep 8
+xcrun simctl terminate "$small_id" "$bundle_id" >/dev/null 2>&1 || true
 
 capture() {
   local device_id="$1"
@@ -90,19 +96,30 @@ capture() {
 
   echo "Capturing $filename ($device_label, $orientation, $content_size, $appearance)"
   xcrun simctl ui "$device_id" content_size "$content_size"
-  xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true
-  SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO="$scenario" \
-    SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE="$appearance" \
-    xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id"
-  sleep 3
-  xcrun simctl io "$device_id" screenshot "$output_dir/$filename"
-
   local image_width
   local image_height
-  local image_bytes
+  local image_bytes=0
+  local attempt
+  local settle_seconds=3
+  if [ "$device_label" = "wide-iPad" ]; then
+    # iPad cold launches can outlast the compact-phone settle window and
+    # otherwise produce an all-white first frame before SwiftUI mounts.
+    settle_seconds=8
+  fi
+  for attempt in 1 2 3; do
+    xcrun simctl terminate "$device_id" "$bundle_id" >/dev/null 2>&1 || true
+    SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO="$scenario" \
+      SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE="$appearance" \
+      xcrun simctl launch --terminate-running-process "$device_id" "$bundle_id"
+    if [ "$attempt" -eq 1 ]; then sleep "$settle_seconds"; else sleep 8; fi
+    xcrun simctl io "$device_id" screenshot "$output_dir/$filename"
+    image_bytes="$(stat -f '%z' "$output_dir/$filename")"
+    if [ "$image_bytes" -ge 100000 ]; then break; fi
+    echo "Screenshot attempt $attempt appears blank (${image_bytes} bytes); restarting App"
+  done
+
   image_width="$(sips -g pixelWidth "$output_dir/$filename" | awk '/pixelWidth/ {print $2}')"
   image_height="$(sips -g pixelHeight "$output_dir/$filename" | awk '/pixelHeight/ {print $2}')"
-  image_bytes="$(stat -f '%z' "$output_dir/$filename")"
   if [ "$orientation" = "portrait" ] && [ "$image_height" -le "$image_width" ]; then
     echo "Expected portrait screenshot but received ${image_width}x${image_height}: $filename" >&2
     exit 1
@@ -111,7 +128,7 @@ capture() {
     echo "Expected landscape screenshot but received ${image_width}x${image_height}: $filename" >&2
     exit 1
   fi
-  if [ "$image_bytes" -lt 50000 ]; then
+  if [ "$image_bytes" -lt 100000 ]; then
     echo "Screenshot appears blank (${image_bytes} bytes): $filename" >&2
     exit 1
   fi
@@ -121,6 +138,8 @@ capture() {
 
 capture "$small_id" "compact-iPhone" empty large portrait text-empty-compact-day.png false 日间
 capture "$small_id" "compact-iPhone" imageEmpty large portrait image-empty-compact-night.png false 夜间
+capture "$small_id" "compact-iPhone" ocrEmpty large portrait ocr-empty-compact-day.png false 日间
+capture "$small_id" "compact-iPhone" library large portrait library-compact-night.png false 夜间
 capture "$small_id" "compact-iPhone" history large portrait history-data-compact-day.png false 日间
 capture "$small_id" "compact-iPhone" proLocked large portrait settings-pro-locked-compact-night.png false 夜间
 
@@ -144,6 +163,12 @@ xcrun simctl bootstatus "$wide_id" -b
 xcrun simctl install "$wide_id" "$app_path"
 xcrun simctl ui "$wide_id" appearance light
 xcrun simctl spawn "$wide_id" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+echo "Warming the wide App and waiting for post-boot system banners to clear"
+SIMCTL_CHILD_AITRANS_UI_EVIDENCE_SCENARIO=empty \
+  SIMCTL_CHILD_AITRANS_UI_EVIDENCE_APPEARANCE=日间 \
+  xcrun simctl launch --terminate-running-process "$wide_id" "$bundle_id" >/dev/null
+sleep 8
+xcrun simctl terminate "$wide_id" "$bundle_id" >/dev/null 2>&1 || true
 capture "$wide_id" "wide-iPad" empty large portrait text-empty-wide-ipad-day.png false 日间
 capture "$wide_id" "wide-iPad" imageSuccess large portrait image-success-wide-ipad-day.png false 日间
 
@@ -167,12 +192,12 @@ for line in source.read_text(encoding="utf-8").splitlines():
         "appearance": appearance,
         "commitSha": commit_sha,
     })
-if len(items) != 14:
-    raise SystemExit(f"Expected 14 screenshots (12 compact iPhone + 2 wide iPad), received {len(items)}")
+if len(items) != 16:
+    raise SystemExit(f"Expected 16 screenshots (14 compact iPhone + 2 wide iPad), received {len(items)}")
 compact = [item for item in items if item["device"] == "compact-iPhone"]
 wide = [item for item in items if item["device"] == "wide-iPad"]
-if len(compact) != 12:
-    raise SystemExit(f"Expected 12 compact-iPhone screenshots, received {len(compact)}")
+if len(compact) != 14:
+    raise SystemExit(f"Expected 14 compact-iPhone screenshots, received {len(compact)}")
 if len(wide) != 2:
     raise SystemExit(f"Expected 2 wide-iPad screenshots, received {len(wide)}")
 if any(item["orientation"] != "portrait" for item in compact):
