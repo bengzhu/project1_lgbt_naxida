@@ -15,3 +15,4 @@ image.png
 reference
 test/experience/latest/*
 !test/experience/latest/.gitkeep
+md/人工空间/提示词.md
