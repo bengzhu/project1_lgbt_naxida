@@ -2,23 +2,23 @@
 
 > 仅供 Agent X `/goal` 全自动托管使用。这里保存当前事实，不追加历史；长期结论写入 `update_log.md`。
 
-## 2026/09/01
+## 2026/09/02
 
 ### 当前总目标
 
-完成 v3.390 独立 OCR 检测工作台：图片输入、OCR 框选与逐块复查，接入既有 v3388 overlay 产物命名，并合入 `smalldata_test`。
+系统性优化 AITRANS 的 UI 与操作体验：建立高对比、功能可辨的统一视觉系统，收敛导航层级和重点页面操作密度；只改 View/视觉合同，保留 Store 与 OCR、Speech、翻译业务边界，并使用 task-scoped 精简 CI。
 
-### 规划小目标（完成 1/1）
+### 规划小目标（完成 0/2）
 
 | 小目标 | 状态 |
 | --- | --- |
-| v3.390 OCR 检测页面、Store/服务接线、CI 产物与合并收口 | 已完成 |
+| v3.400 设计系统、功能 Hero、五入口手机导航与 iPad 分组 | 进行中 |
+| v3.401 重点页面操作减负、最终 UI evidence 与总体验收 | 待开始 |
 
 ### 当前状态
 
-- 当前分支：`smalldata_test`；目标已合入，文档证据已收口。
-- 候选精确 SHA `7f992e9268e0ce8292adcf50a2140234d33f8197` 的 full run `33483510941` 通过；PR [#455](https://github.com/bengzhu/project1_lgbt_naxida/pull/455) 已以 merge SHA `bb10a5f72729c5910ec5ee6334f25d53780f595d` 合入 `smalldata_test`，候选远端分支已删除。
-- 合并后 exact SHA test2 run `33485166409` 生成 artifact `aitrans-test2-image-translation-ui-33485166409` 中的 `test2-ocr-full-overlay-v3388.png`；图片为 750×1334、365403 bytes，SHA-256 `bb187cfeab7bd6bc8574350418f02608f846bb9addaaf2d2d04071982a270aa6`。
-- test2 的 OCR 原文 17/17 块均保留并生成 overlay；同一运行的旧 270M 日语翻译门禁为 0/17，运行步骤失败，但不影响本轮 OCR-only 页面、框选和 artifact 产出，不据此声称翻译质量。
-- 本地轻量合同：v3.390 UI `7/7`、v1.89 `4/4`、相关 v3.276 `1/1`，`git diff --check` 通过；本机未跑 Xcode/App/Core ML，候选与合并后的云端 Xcode build 通过。
-- 下一步：无；状态：`complete`。
+- 当前分支：`codeb/v3.400-immersive-ui`，基于 `f1e65c96e1cc6e1fcb6bd86508ebca79359428cf`。
+- changed-files 预期：`AITRANS/Views/AppTheme.swift`、`AppComponents.swift`、`ContentView.swift`、顶级页面 View、`AppPreviewSupport.swift`、直接 UI 合同、`md/log/`。
+- 验收：手机一级导航不超过 5 项；iPad 侧栏分组；六大功能具备非纯色的独立视觉身份；Reduce Motion/Increase Contrast/Dynamic Type 保持；现有动作接线不变。
+- 验证：`git diff --check` + v1.87/v1.88 与新增 v3.400 视觉合同 + 候选 SHA 一次云端 simulator build；跳过 OCR/Speech/模型质量探针。
+- 下一步：完成 v3.400 实现、独立复核、精简 full CI、PR 合并与分支清理。

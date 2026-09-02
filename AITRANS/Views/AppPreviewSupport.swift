@@ -27,8 +27,8 @@ enum AppPreviewScenario: String {
         case .imageEmpty, .imageSuccess: .image
         case .ocrEmpty, .ocrSuccess: .ocr
         case .audioRecognizing, .audioTranslating, .audioFailure: .audio
-        case .history: .history
-        case .promptLibrary, .proLocked, .proUnlocked, .developerConsole, .localMissing, .localReady: .settings
+        case .history: .library
+        case .promptLibrary, .proLocked, .proUnlocked, .developerConsole, .localMissing, .localReady: .library
         }
     }
 
@@ -43,6 +43,10 @@ enum AppPreviewScenario: String {
     var presentsModelDirectly: Bool {
         self == .localMissing || self == .localReady
     }
+
+    var presentsHistoryDirectly: Bool { self == .history }
+
+    var presentsSettingsDirectly: Bool { self == .proLocked || self == .proUnlocked }
 
     func makeStore() -> TranslationSessionStore {
         let store = TranslationSessionStore(
@@ -303,11 +307,11 @@ private struct PreviewContainer<Content: View>: View {
 }
 
 #Preview("History · Data", traits: .fixedLayout(width: 430, height: 932)) {
-    PreviewContainer(scenario: .history) { HistoryView(selectedTab: .constant(.history)) }
+    PreviewContainer(scenario: .history) { HistoryView(selectedTab: .constant(.library)) }
 }
 
 #Preview("Settings · Pro Unlocked", traits: .fixedLayout(width: 834, height: 1_112)) {
-    PreviewContainer(scenario: .proUnlocked) { SettingsView(selectedTab: .constant(.settings)) }
+    PreviewContainer(scenario: .proUnlocked) { SettingsView(selectedTab: .constant(.library)) }
 }
 
 #Preview("Model · Local Missing", traits: .fixedLayout(width: 430, height: 932)) {

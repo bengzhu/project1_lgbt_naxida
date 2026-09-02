@@ -15,7 +15,8 @@ struct PromptLibraryView: View {
                     subtitle: "当前：\(store.selectedPrompt.title)",
                     systemImage: "text.badge.star",
                     status: "\(store.prompts.count) 个模板",
-                    statusTone: .neutral
+                    statusTone: .neutral,
+                    feature: .settings
                 )
 
                 Picker("翻译方向", selection: $selectedDirection) {

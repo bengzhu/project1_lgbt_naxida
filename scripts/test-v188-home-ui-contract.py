@@ -132,7 +132,7 @@ class V188HomeUIContractTests(unittest.TestCase):
             "store.selectTargetLanguage(language)",
             "store.startNewSession()",
             "store.archiveCurrentSession()",
-            "selectedTab = .settings",
+            "selectedTab = .library",
         ]:
             with self.subTest(action=needle):
                 self.assertIn(needle, source)

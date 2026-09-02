@@ -100,7 +100,8 @@ struct ImageTranslationView: View {
                         subtitle: "Vision OCR 与本地翻译",
                         systemImage: "photo.on.rectangle",
                         status: statusTitle,
-                        statusTone: statusTone
+                        statusTone: statusTone,
+                        feature: .image
                     )
                     ImageTranslationPanel(
                         revealPreview: {

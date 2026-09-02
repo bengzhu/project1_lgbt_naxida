@@ -11,7 +11,8 @@ struct DeveloperConsoleView: View {
                     subtitle: "原始模型输入、输出与探针",
                     systemImage: "hammer.fill",
                     status: store.isRunningDeveloperProbe ? "运行中" : "已开启",
-                    statusTone: store.isRunningDeveloperProbe ? .active : .warning
+                    statusTone: store.isRunningDeveloperProbe ? .active : .warning,
+                    feature: .settings
                 )
                 DeveloperTestSection()
                 RawProbeSection()

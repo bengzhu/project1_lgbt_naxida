@@ -21,7 +21,8 @@ struct SettingsView: View {
                         subtitle: "模型、提示词与本地数据",
                         systemImage: "gearshape.fill",
                         status: store.isProUnlocked ? "Pro 已解锁" : "免费模式",
-                        statusTone: store.isProUnlocked ? .success : .locked
+                        statusTone: store.isProUnlocked ? .success : .locked,
+                        feature: .settings
                     )
 
                     AppearanceSection()
@@ -171,7 +172,7 @@ private struct DataSafetySection: View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
             AppSectionHeader(title: "本地数据", subtitle: store.persistedLocationDisplay, systemImage: "externaldrive.fill")
             AppStatusRow(title: store.storageSummary, detail: store.dataTransferMessage, tone: .neutral)
-            AppSecondaryButton(title: "前往历史管理", systemImage: "clock.arrow.circlepath") { selectedTab = .history }
+            AppSecondaryButton(title: "返回资料库", systemImage: "square.grid.2x2.fill") { selectedTab = .library }
         }
     }
 }

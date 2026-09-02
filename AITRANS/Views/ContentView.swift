@@ -5,6 +5,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
     case image
     case ocr
     case audio
+    case library
     case history
     case settings
 
@@ -16,6 +17,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         case .image: "图片"
         case .ocr: "OCR 检测"
         case .audio: "音频"
+        case .library: "资料库"
         case .history: "历史"
         case .settings: "设置"
         }
@@ -27,14 +29,34 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         case .image: "photo.on.rectangle"
         case .ocr: "text.viewfinder"
         case .audio: "waveform.and.mic"
+        case .library: "square.grid.2x2.fill"
         case .history: "clock.arrow.circlepath"
         case .settings: "gearshape.fill"
         }
     }
+
+    var feature: AppFeature {
+        switch self {
+        case .text: .text
+        case .image: .image
+        case .ocr: .ocr
+        case .audio: .audio
+        case .library, .history: .library
+        case .settings: .settings
+        }
+    }
+
+    static let phoneTabs: [AppTab] = [.text, .image, .ocr, .audio, .library]
+    static let tabletSections: [(title: String, tabs: [AppTab])] = [
+        ("创作", [.text, .image, .audio]),
+        ("工具", [.ocr]),
+        ("资料", [.history, .settings])
+    ]
 }
 
 struct ContentView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.colorScheme) private var colorScheme
     @AppStorage("aitrans.ui.appearance") private var appearanceRawValue = AppAppearance.system.rawValue
     @State private var selectedTab: AppTab
 
@@ -74,6 +96,10 @@ struct ContentView: View {
                 DeveloperConsoleView()
             } else if evidenceScenario?.presentsModelDirectly == true {
                 ModelManagementView()
+            } else if evidenceScenario?.presentsHistoryDirectly == true {
+                HistoryView(selectedTab: $selectedTab)
+            } else if evidenceScenario?.presentsSettingsDirectly == true {
+                SettingsView(selectedTab: $selectedTab)
             } else if horizontalSizeClass == .regular {
                 TabletRootView(selectedTab: $selectedTab)
             } else {
@@ -81,6 +107,7 @@ struct ContentView: View {
             }
         }
         .preferredColorScheme(appearance.colorScheme)
+        .tint(selectedTab.feature.accent(for: colorScheme))
         .environment(\.appReduceMotionOverride, evidenceScenario == .audioRecognizing)
     }
 
@@ -101,42 +128,53 @@ private struct PhoneRootView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            ForEach(AppTab.allCases) { tab in
+            ForEach(AppTab.phoneTabs) { tab in
                 AppTabRouter(tab: tab, selectedTab: $selectedTab)
                     .tag(tab)
                     .tabItem {
                         Label(tab.title, systemImage: tab.systemImage)
                     }
                     .accessibilityLabel(tab.title)
-            }
+                }
         }
-        .tint(Color.appAccent)
+        .onAppear(perform: normalizeSelection)
+        .onChange(of: selectedTab) { _, _ in normalizeSelection() }
+    }
+
+    private func normalizeSelection() {
+        guard !AppTab.phoneTabs.contains(selectedTab) else { return }
+        selectedTab = .library
     }
 }
 
 private struct TabletRootView: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: AppTab
 
     var body: some View {
         NavigationSplitView {
             List {
-                Section {
-                    ForEach(AppTab.allCases) { tab in
-                        Button {
-                            selectedTab = tab
-                        } label: {
-                            Label(tab.title, systemImage: tab.systemImage)
-                                .font(selectedTab == tab ? .body.bold() : .body)
-                                .foregroundStyle(selectedTab == tab ? Color.appAccent : Color.appTextPrimary)
-                                .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget, alignment: .leading)
-                                .contentShape(.rect)
+                ForEach(AppTab.tabletSections, id: \.title) { section in
+                    Section(section.title) {
+                        ForEach(section.tabs) { tab in
+                            Button {
+                                selectedTab = tab
+                            } label: {
+                                Label(tab.title, systemImage: tab.systemImage)
+                                    .font(selectedTab == tab ? .body.bold() : .body)
+                                    .foregroundStyle(selectedTab == tab ? tab.feature.accent(for: colorScheme) : Color.appTextPrimary)
+                                    .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget, alignment: .leading)
+                                    .contentShape(.rect)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowBackground(selectedTab == tab ? tab.feature.accent(for: colorScheme).opacity(0.12) : Color.clear)
+                            .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
                         }
-                        .buttonStyle(.plain)
-                        .listRowBackground(selectedTab == tab ? Color.appSurfaceRaised : Color.clear)
-                        .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
                     }
-                } header: {
+                }
+
+                Section {
                     HStack(spacing: AppTheme.Spacing.control) {
                         BrandMark()
                         VStack(alignment: .leading, spacing: 2) {
@@ -147,8 +185,8 @@ private struct TabletRootView: View {
                                 .foregroundStyle(Color.appTextSecondary)
                         }
                     }
-                    .textCase(nil)
                     .padding(.vertical, AppTheme.Spacing.control)
+                    .listRowBackground(Color.clear)
                 }
             }
             .listStyle(.sidebar)
@@ -161,7 +199,6 @@ private struct TabletRootView: View {
                 .navigationBarTitleDisplayMode(.inline)
         }
         .navigationSplitViewStyle(.balanced)
-        .tint(Color.appAccent)
     }
 }
 
@@ -179,11 +216,117 @@ private struct AppTabRouter: View {
             ImageOCRDetectionView()
         case .audio:
             AudioTranslationView()
+        case .library:
+            LibraryHubView(selectedTab: $selectedTab)
         case .history:
             HistoryView(selectedTab: $selectedTab)
         case .settings:
             SettingsView(selectedTab: $selectedTab)
         }
+    }
+}
+
+private enum LibraryDestination: Hashable {
+    case history
+    case settings
+}
+
+private struct LibraryHubView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.colorScheme) private var colorScheme
+    @Binding var selectedTab: AppTab
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                    AppPageHeader(
+                        title: "资料库",
+                        subtitle: "回看成果，调整你的本地工作空间",
+                        systemImage: AppFeature.library.symbol,
+                        status: "\(store.totalSessionCount) 个会话",
+                        statusTone: .neutral,
+                        feature: .library
+                    )
+
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: AppTheme.Spacing.section) { destinationCards }
+                        VStack(spacing: AppTheme.Spacing.section) { destinationCards }
+                    }
+                }
+                .enterprisePageFrame()
+                .padding(.vertical, AppTheme.Spacing.section)
+                .padding(.bottom, 72)
+            }
+            .background { AppCanvasBackground() }
+            .navigationDestination(for: LibraryDestination.self) { destination in
+                switch destination {
+                case .history: HistoryView(selectedTab: $selectedTab)
+                case .settings: SettingsView(selectedTab: $selectedTab)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder private var destinationCards: some View {
+        LibraryDestinationCard(
+            title: "历史",
+            detail: "继续会话、检索译文与管理导入导出",
+            metric: "\(store.totalSessionCount) 个会话",
+            systemImage: "clock.arrow.circlepath",
+            accent: AppFeature.library.accent(for: colorScheme),
+            destination: .history
+        )
+        LibraryDestinationCard(
+            title: "设置",
+            detail: "模型、提示词、外观与本地数据控制",
+            metric: store.modelStatus.title,
+            systemImage: "slider.horizontal.3",
+            accent: AppFeature.settings.accent(for: colorScheme),
+            destination: .settings
+        )
+    }
+}
+
+private struct LibraryDestinationCard: View {
+    let title: String
+    let detail: String
+    let metric: String
+    let systemImage: String
+    let accent: Color
+    let destination: LibraryDestination
+
+    var body: some View {
+        NavigationLink(value: destination) {
+            VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+                HStack {
+                    Image(systemName: systemImage)
+                        .font(.title.bold())
+                        .foregroundStyle(accent)
+                        .frame(width: 56, height: 56)
+                        .background(accent.opacity(0.14), in: .rect(cornerRadius: AppTheme.Radius.surface))
+                    Spacer()
+                    Image(systemName: "arrow.up.right")
+                        .font(.headline.bold())
+                        .foregroundStyle(accent)
+                }
+                Text(title)
+                    .font(.title.bold())
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.appTextPrimary)
+                Text(detail)
+                    .font(.body)
+                    .foregroundStyle(Color.appTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(metric)
+                    .font(.caption.monospaced().bold())
+                    .foregroundStyle(accent)
+            }
+            .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
+            .appSurface(accent: accent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("打开\(title)")
     }
 }
 

@@ -27,8 +27,10 @@ enum AppTheme {
     }
 
     enum Radius {
-        static let control: CGFloat = 6
-        static let surface: CGFloat = 8
+        static let control: CGFloat = 12
+        static let surface: CGFloat = 20
+        static let hero: CGFloat = 28
+        static let pill: CGFloat = 999
     }
 
     enum Layout {
@@ -43,6 +45,7 @@ enum AppTheme {
     enum Motion {
         static let quick = Animation.easeOut(duration: 0.16)
         static let standard = Animation.easeInOut(duration: 0.22)
+        static let reveal = Animation.spring(response: 0.48, dampingFraction: 0.84)
     }
 
     enum TextWorkspace {
@@ -52,6 +55,70 @@ enum AppTheme {
         static let paste = Color.appSuccess
         static let prompt = Color.appWarning
         static let swap = Color(red: 0.78, green: 0.24, blue: 0.58)
+    }
+}
+
+enum AppFeature: String, CaseIterable {
+    case text
+    case image
+    case ocr
+    case audio
+    case library
+    case settings
+    case system
+
+    var eyebrow: String {
+        switch self {
+        case .text: "WRITE / TRANSLATE"
+        case .image: "SEE / TRANSLATE"
+        case .ocr: "SCAN / INSPECT"
+        case .audio: "LISTEN / TRANSLATE"
+        case .library: "RECALL / ORGANIZE"
+        case .settings: "TUNE / CONTROL"
+        case .system: "PRIVATE AI WORKSPACE"
+        }
+    }
+
+    var index: String {
+        switch self {
+        case .text: "01"
+        case .image: "02"
+        case .ocr: "03"
+        case .audio: "04"
+        case .library: "05"
+        case .settings: "06"
+        case .system: "AI"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .text: "text.bubble.fill"
+        case .image: "photo.on.rectangle.angled"
+        case .ocr: "text.viewfinder"
+        case .audio: "waveform.and.mic"
+        case .library: "square.grid.2x2.fill"
+        case .settings: "slider.horizontal.3"
+        case .system: "bolt.horizontal.circle.fill"
+        }
+    }
+
+    func accent(for colorScheme: ColorScheme) -> Color {
+        switch (self, colorScheme) {
+        case (.text, .dark): Color(red: 0.55, green: 0.78, blue: 1.00)
+        case (.text, _): Color(red: 0.00, green: 0.34, blue: 0.78)
+        case (.image, .dark): Color(red: 1.00, green: 0.57, blue: 0.75)
+        case (.image, _): Color(red: 0.72, green: 0.08, blue: 0.42)
+        case (.ocr, .dark): Color(red: 1.00, green: 0.71, blue: 0.30)
+        case (.ocr, _): Color(red: 0.67, green: 0.31, blue: 0.00)
+        case (.audio, .dark): Color(red: 0.35, green: 0.88, blue: 0.67)
+        case (.audio, _): Color(red: 0.00, green: 0.48, blue: 0.31)
+        case (.library, .dark): Color(red: 0.77, green: 0.67, blue: 1.00)
+        case (.library, _): Color(red: 0.40, green: 0.20, blue: 0.72)
+        case (.settings, .dark): Color(red: 0.53, green: 0.81, blue: 0.88)
+        case (.settings, _): Color(red: 0.04, green: 0.42, blue: 0.53)
+        case (.system, _): Color.appAccent
+        }
     }
 }
 

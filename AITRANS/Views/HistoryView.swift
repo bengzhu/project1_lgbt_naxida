@@ -33,7 +33,8 @@ struct HistoryView: View {
                     subtitle: store.storageSummary,
                     systemImage: "clock.arrow.circlepath",
                     status: "\(store.totalSessionCount) 个会话",
-                    statusTone: .neutral
+                    statusTone: .neutral,
+                    feature: .library
                 )
                 commandBar
 

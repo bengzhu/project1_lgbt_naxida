@@ -57,7 +57,8 @@ struct TextTranslationView: View {
                 subtitle: "本地处理",
                 systemImage: "bolt.horizontal.circle.fill",
                 status: store.modelStatus.title,
-                statusTone: store.modelStatus.isReady ? .success : .warning
+                statusTone: store.modelStatus.isReady ? .success : .warning,
+                feature: .text
             )
             .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
             .padding(.vertical, AppTheme.Spacing.section)
@@ -186,6 +187,7 @@ private struct LanguageControlBar: View {
 
 private struct TranslationInputPane: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var selectedTab: AppTab
     let inputFocused: FocusState<Bool>.Binding
 
@@ -216,7 +218,7 @@ private struct TranslationInputPane: View {
                 inputFocused: inputFocused
             )
         }
-        .appSurface()
+        .appSurface(accent: AppFeature.text.accent(for: colorScheme))
         .task {
 #if DEBUG
             inputFocused.wrappedValue = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"] == AppPreviewScenario.textKeyboard.rawValue
@@ -325,7 +327,7 @@ private struct TranslationInputToolBar: View {
 
     private func openPromptLibrary() {
         inputFocused.wrappedValue = false
-        selectedTab = .settings
+        selectedTab = .library
     }
 
     private func submitTranslation() {
@@ -336,6 +338,7 @@ private struct TranslationInputToolBar: View {
 
 private struct TranslationOutputPane: View {
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(\.colorScheme) private var colorScheme
 
     private var latestLine: TranscriptLine? { store.transcript.first }
 
@@ -388,7 +391,7 @@ private struct TranslationOutputPane: View {
                 tone: statusTone
             )
         }
-        .appSurface()
+        .appSurface(accent: AppFeature.image.accent(for: colorScheme))
     }
 
     private var statusTone: AppStatusTone {

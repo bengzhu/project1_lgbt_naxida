@@ -15,7 +15,8 @@ struct ModelManagementView: View {
                     subtitle: "运行引擎与生成参数",
                     systemImage: "cpu.fill",
                     status: store.modelStatus.title,
-                    statusTone: store.modelStatus.isReady ? .success : .warning
+                    statusTone: store.modelStatus.isReady ? .success : .warning,
+                    feature: .settings
                 )
                 EngineSection()
                 ModelFileSection(

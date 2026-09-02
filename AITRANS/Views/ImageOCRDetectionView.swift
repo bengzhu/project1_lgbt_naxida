@@ -24,7 +24,8 @@ struct ImageOCRDetectionView: View {
                     subtitle: "上传图片，查看识别框、原文和质量状态",
                     systemImage: "text.viewfinder",
                     status: headerStatus,
-                    statusTone: headerStatusTone
+                    statusTone: headerStatusTone,
+                    feature: .ocr
                 )
 
                 inputSection
