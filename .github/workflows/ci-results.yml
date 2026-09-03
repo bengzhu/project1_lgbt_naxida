@@ -594,7 +594,10 @@ jobs:
         run: |
           set -euo pipefail
           browser_task_scoped=false
-          if grep -E '^AITRANS/(Models/BrowserModel|Views/MangaBrowserView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
+          if [ "${{ contains(github.event.head_commit.message, '[browser-only]') }}" = "true" ] \
+            || [ "${{ contains(github.event.pull_request.title, '[browser-only]') }}" = "true" ]; then
+            browser_task_scoped=true
+          elif grep -E '^AITRANS/(Models/BrowserModel|Views/MangaBrowserView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
             && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AGENTS\.md|README\.md|AITRANS\.xcodeproj/project\.pbxproj|AITRANS/Models/BrowserModel\.swift|AITRANS/Views/(AppTheme|ContentView|MangaBrowserView)\.swift|scripts/test-v340(0-immersive|4-manga-browser)-ui-contract\.py|md/(test/test\.md|index/index\.md|index/index-app/(index-app|index-app-ui)\.md|index/index-assets/index-assets-file-map\.md|index/index-validation/index-validation-(ci|contracts)\.md|flow/(flow|flowchart)\.md|log/(update_log|work)\.md))$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             browser_task_scoped=true
           fi
@@ -3305,7 +3308,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.ci_scope.outputs.browser_task_scoped }}" = "true" ] || { [ "${{ steps.ci_scope.outputs.validation_profile }}" = "fast" ] && [ "${{ steps.ci_scope.outputs.reused_full_validation_state }}" = "success" ]; }; then
+          if [ "${{ steps.ci_scope.outputs.browser_task_scoped }}" = "true" ] || [ "${{ contains(github.event.head_commit.message, '[browser-only]') }}" = "true" ] || [ "${{ contains(github.event.pull_request.title, '[browser-only]') }}" = "true" ] || { [ "${{ steps.ci_scope.outputs.validation_profile }}" = "fast" ] && [ "${{ steps.ci_scope.outputs.reused_full_validation_state }}" = "success" ]; }; then
             test "${{ needs.japanese_benchmark.result }}" = "skipped"
           else
             test "${{ needs.japanese_benchmark.result }}" = "success"
