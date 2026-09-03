@@ -63,6 +63,20 @@ class CompactHeaderSettingsContractTests(unittest.TestCase):
         ocr = read("AITRANS/Views/ImageOCRDetectionView.swift")
         self.assertIn(".padding(.vertical, AppTheme.Spacing.section)", ocr)
 
+    def test_text_header_scrolls_with_the_workspace(self) -> None:
+        text = read("AITRANS/Views/TextTranslationView.swift")
+        scroll_body = text[text.index("ScrollView {"):text.index(".scrollDismissesKeyboard")]
+        self.assertLess(scroll_body.index("AppPageHeader("), scroll_body.index("LanguageControlBar()"))
+        self.assertNotIn(".safeAreaInset(edge: .top", text)
+
+    def test_library_destination_cards_use_compact_module_rows(self) -> None:
+        self.assertIn(
+            ".frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)",
+            self.content,
+        )
+        self.assertIn(".appSurface(padded: false, accent: accent)", self.content)
+        self.assertNotIn(".frame(maxWidth: .infinity, minHeight: 220", self.content)
+
     def test_library_settings_reuses_the_parent_navigation_stack(self) -> None:
         self.assertIn(
             """case .settings:

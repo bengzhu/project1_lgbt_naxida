@@ -302,32 +302,44 @@ private struct LibraryDestinationCard: View {
 
     var body: some View {
         NavigationLink(value: destination) {
-            VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
-                HStack {
-                    Image(systemName: systemImage)
-                        .font(.title.bold())
+            HStack(spacing: AppTheme.Spacing.control) {
+                Image(systemName: systemImage)
+                    .font(.headline.bold())
+                    .foregroundStyle(accent)
+                    .frame(width: 40, height: 40)
+                    .background(accent.opacity(0.14), in: .rect(cornerRadius: AppTheme.Radius.control))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body.bold())
+                        .fontDesign(.rounded)
+                        .foregroundStyle(Color.appTextPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(Color.appTextSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.78)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(metric)
+                        .font(.caption.monospaced().bold())
                         .foregroundStyle(accent)
-                        .frame(width: 56, height: 56)
-                        .background(accent.opacity(0.14), in: .rect(cornerRadius: AppTheme.Radius.surface))
-                    Spacer()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.76)
                     Image(systemName: "arrow.up.right")
                         .font(.headline.bold())
                         .foregroundStyle(accent)
+                        .accessibilityHidden(true)
                 }
-                Text(title)
-                    .font(.title.bold())
-                    .fontDesign(.rounded)
-                    .foregroundStyle(Color.appTextPrimary)
-                Text(detail)
-                    .font(.body)
-                    .foregroundStyle(Color.appTextSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(metric)
-                    .font(.caption.monospaced().bold())
-                    .foregroundStyle(accent)
             }
-            .frame(maxWidth: .infinity, minHeight: 220, alignment: .leading)
-            .appSurface(accent: accent)
+            .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
+            .padding(.horizontal, AppTheme.Spacing.section)
+            .padding(.vertical, AppTheme.Spacing.compact)
+            .appSurface(padded: false, accent: accent)
         }
         .buttonStyle(.plain)
         .accessibilityHint("打开\(title)")

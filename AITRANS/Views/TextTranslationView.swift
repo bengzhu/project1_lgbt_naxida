@@ -11,6 +11,15 @@ struct TextTranslationView: View {
         VStack(spacing: 0) {
             ScrollView {
                 VStack(alignment: .leading, spacing: AppTheme.Spacing.page) {
+                    AppPageHeader(
+                        title: "秒译",
+                        subtitle: "本地处理",
+                        systemImage: "bolt.horizontal.circle.fill",
+                        status: store.modelStatus.title,
+                        statusTone: store.modelStatus.isReady ? .success : .warning,
+                        feature: .text
+                    )
+
                     LanguageControlBar()
 
                     ViewThatFits(in: .horizontal) {
@@ -48,22 +57,6 @@ struct TextTranslationView: View {
                 Button("完成", action: dismissKeyboard)
                     .bold()
                     .accessibilityLabel("完成输入并收起键盘")
-            }
-        }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            AppPageHeader(
-                title: "秒译",
-                subtitle: "本地处理",
-                systemImage: "bolt.horizontal.circle.fill",
-                status: store.modelStatus.title,
-                statusTone: store.modelStatus.isReady ? .success : .warning,
-                feature: .text
-            )
-            .enterprisePageFrame(maxWidth: AppTheme.Layout.workspaceMaxWidth)
-            .padding(.vertical, AppTheme.Spacing.section)
-            .background(Color.appCanvas)
-            .overlay(alignment: .bottom) {
-                Divider().overlay(Color.appBorder)
             }
         }
         .background { TextWorkspaceBackground().ignoresSafeArea() }
