@@ -1142,11 +1142,7 @@ final class BrowserModel {
           };
         })();
         """
-        let value: Any? = await withCheckedContinuation { continuation in
-            webView.evaluateJavaScript(script) { result, _ in
-                continuation.resume(returning: result)
-            }
-        }
+        let value = try? await webView.evaluateJavaScript(script)
         guard let dictionary = value as? [String: Any] else {
             return PageMetrics(
                 offsetX: Double(max(0, webView.scrollView.contentOffset.x)),
@@ -1199,19 +1195,23 @@ final class BrowserModel {
 
     private func normalizedPageURL(_ url: URL?) -> String {
         guard let url else { return "about:blank" }
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        components?.scheme = components?.scheme?.lowercased()
-        components?.host = components?.host?.lowercased()
-        if components?.scheme == "http", components?.port == 80 {
-            components?.port = nil
-        } else if components?.scheme == "https", components?.port == 443 {
-            components?.port = nil
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return url.absoluteString
         }
-        if components?.path.isEmpty == true {
-            components?.path = "/"
+        let scheme = components.scheme?.lowercased()
+        let host = components.host?.lowercased()
+        components.scheme = scheme
+        components.host = host
+        if scheme == "http", components.port == 80 {
+            components.port = nil
+        } else if scheme == "https", components.port == 443 {
+            components.port = nil
         }
-        components?.fragment = nil
-        return components?.string ?? url.absoluteString
+        if components.path.isEmpty {
+            components.path = "/"
+        }
+        components.fragment = nil
+        return components.string ?? url.absoluteString
     }
 
     private static func loadBookmarks() -> [BrowserBookmark] {

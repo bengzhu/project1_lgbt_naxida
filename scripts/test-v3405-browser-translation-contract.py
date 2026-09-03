@@ -37,8 +37,8 @@ class BrowserTranslationContractTests(unittest.TestCase):
             "JavaScript and restoration can scroll without UIScrollView's drag",
             "Task.sleep(for: .milliseconds(240))",
             "Commit a fresh document UUID only after the",
-            "components?.port = nil",
-            "components?.path = \"/\"",
+            "components.port = nil",
+            "components.path = \"/\"",
             "boundedThumbnail",
             "maximumDimension: CGFloat = 480",
         ):
