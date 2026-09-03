@@ -74,6 +74,8 @@ class MangaBrowserUIContractTests(unittest.TestCase):
             "webViewWebContentProcessDidTerminate",
             "decidePolicyFor navigationAction",
             "decidePolicyFor navigationResponse",
+            "@escaping @MainActor @Sendable (WKNavigationActionPolicy) -> Void",
+            "@escaping @MainActor @Sendable (WKNavigationResponsePolicy) -> Void",
             "navigationAction.targetFrame == nil",
             "scrollViewDidScroll",
         ):
