@@ -143,6 +143,8 @@ class MangaBrowserUIContractTests(unittest.TestCase):
             "paste_matrix_contract_required=false",
             "koharu_contract_required=false",
             "[browser-only]",
+            'steps.ci_scope.outputs.validation_profile }}" = "fast"',
+            'steps.ci_scope.outputs.reused_full_validation_state }}" = "success"',
         ):
             self.assertIn(needle, self.workflow)
 
