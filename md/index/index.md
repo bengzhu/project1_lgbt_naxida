@@ -39,7 +39,7 @@
 | 任务关键词 | 先读 |
 | --- | --- |
 | 文本首页、图片页、复查、焦点、VoiceOver、导出 | [`应用/UI`](index-app/index-app-ui.md)、[`应用状态`](index-app/index-app-state.md) |
-| 漫画浏览器、WKWebView、地址栏、网页失败、翻译悬浮球 | [`应用/UI`](index-app/index-app-ui.md) |
+| 漫画浏览器、WKWebView、地址栏、多标签、网页失败、翻译悬浮球 | [`应用/UI`](index-app/index-app-ui.md) |
 | `test/2.png`、普通图片 OCR、竖排日语、Vision、Manga OCR、bbox/quad | [`OCR 主路径`](index-image/index-image-ocr.md)、[`布局与融合`](index-image/index-image-layout.md) |
 | OCR block 合并、owner、reading order、confidence、重复文本 | [`布局与融合`](index-image/index-image-layout.md) |
 | 翻译 prompt、GGUF、chat template、raw completion、模型下载 | [`模型运行时`](index-translation/index-translation-runtime.md) |
@@ -54,7 +54,7 @@
 ```text
 AITRANSApp
   -> ContentView / AppTabRouter
-  -> 漫画浏览器：MangaBrowserView -> BrowserModel -> WKWebView（不进入翻译/持久化）
+  -> 漫画浏览器：MangaBrowserView -> BrowserModel tabs/activeTabID -> 当前 WKWebView（不进入翻译/持久化）
   -> TranslationSessionStore（唯一运行时状态与调度边界）
      -> OCR 检测：ImageOCRDetectionView
         -> 图片/相册/拍照/粘贴 -> VisionOCRService

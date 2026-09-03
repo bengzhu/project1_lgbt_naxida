@@ -7,7 +7,7 @@
 | 层 | 主要职责 | 关键入口 |
 | --- | --- | --- |
 | App/UI | 页面、用户输入、状态展示和无障碍语义 | `AITRANSApp`、`ContentView`、`Views/` |
-| 网页浏览状态 | 漫画页阶段、URL、加载进度、导航能力与 WKWebView 意图 | `BrowserModel`、`MangaBrowserView` |
+| 网页浏览状态 | tabs/activeTabID、漫画页阶段、URL、内存缩略图、滚动位置、导航能力与 WKWebView 意图 | `BrowserModel`、`MangaBrowserView` |
 | 状态与调度 | 唯一业务状态、异步任务、持久化、导出和服务编排 | `TranslationSessionStore` |
 | OCR 与布局 | Vision OCR、漫画区域、Manga OCR、几何融合和阅读顺序 | `VisionOCRService`、`ComicTextBubbleDetectorService`、`MangaOCRService`、`ImageOCRLayoutEngine` |
 | 翻译模型 | Mock、本地 GGUF、prompt、采样、输出清洗和 QA | `MockGemmaService`、`GemmaLocalService`、`LlamaRuntime` |
@@ -30,20 +30,23 @@
 
 UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业务结果、历史或任务生命周期的动作必须调用 Store。
 
-漫画浏览器例外地把非业务网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新与重试意图，WKWebView Coordinator 只回写页面阶段、URL、进度与导航能力。地址编辑、菜单展开和拖拽偏移是 View 私有展示状态；浏览器不保存最近阅读、收藏、球位置或站点偏好。
+漫画浏览器例外地把非业务网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新、重试与标签操作意图，WKWebView Coordinator 只回写当前标签的页面阶段、URL、进度、滚动与导航能力。`activeTabID` 是唯一活动源；切换前抓取缩略图并保存 URL/滚动位置，后台标签只留值快照且释放 WKWebView，切回才重建。地址编辑、菜单展开和球拖拽是 View 私有展示状态；浏览器仍不做磁盘持久化。
 
 ## 3. 漫画网页浏览
 
 ```text
-地址输入 -> BrowserModel 规范化 http(s) URL -> WKWebView
-  -> WKNavigation/UI delegate + KVO -> BrowserModel 页面/进度/导航状态
-  -> WebView 上层悬浮工具栏 + 翻译球占位 UI
+标签选择 -> BrowserModel.activeTabID -> 唯一活动 WKWebView
+  -> 地址输入与 http(s) 规范化 -> WKNavigation/UI/scroll delegate + KVO
+  -> 当前标签页面/进度/滚动/导航状态
+  -> 切换前缩略图 + URL + scrollOffset，后台释放 WebView
+  -> WebView 上层 Safari 胶囊 + 标签切换器 + 翻译球占位 UI
 ```
 
 - 无 scheme 自动补 `https://`；ATS 保持系统默认，HTTP 被拦截时显示明确原因。
 - `_blank` 在当前页加载；非 http(s) 与 App Store 链接尝试交系统，无法处理和下载响应显示提示。
 - 加载失败与网页内容进程终止各有独立恢复 UI；只有成功加载后显示翻译球。
-- 工具栏和翻译球随滚动方向一起滑入/滑出，不改变 WebView 尺寸。
+- WKWebView 白色浅色背景铺满屏幕，顶部 content inset 避开状态栏；主 TabView 在漫画页隐藏。
+- 下滑将三胶囊收成域名小胶囊并同步收起退出按钮/翻译球，上滑或回到顶部 spring 恢复，不改变 WebView 尺寸。
 
 ## 4. 文本翻译
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused static contract for the v3.404 manga browser shell."""
+"""Focused static contract for the manga browser shell and tab lifecycle."""
 
 from pathlib import Path
 import unittest
@@ -26,7 +26,7 @@ class MangaBrowserUIContractTests(unittest.TestCase):
         self.assertIn("case manga", self.content)
         self.assertIn('case .manga: "漫画"', self.content)
         self.assertIn(".text, .image, .manga", self.content)
-        self.assertIn("case .manga:\n            MangaBrowserView()", self.content)
+        self.assertIn("case .manga:\n            MangaBrowserView(selectedTab: $selectedTab)", self.content)
         self.assertIn("case manga", self.theme)
 
     def test_browser_model_owns_required_page_state_and_intents(self) -> None:
@@ -38,10 +38,10 @@ class MangaBrowserUIContractTests(unittest.TestCase):
             "case loaded",
             "case failed(String)",
             "case webContentProcessTerminated",
-            "private(set) var currentURL",
-            "private(set) var loadingProgress",
-            "private(set) var canGoBack",
-            "private(set) var canGoForward",
+            "var currentURL: URL?",
+            "var loadingProgress: Double",
+            "var canGoBack: Bool",
+            "var canGoForward: Bool",
             "func load(address rawAddress: String)",
             "func goBack()",
             "func goForward()",
@@ -81,13 +81,71 @@ class MangaBrowserUIContractTests(unittest.TestCase):
         ):
             self.assertIn(needle, self.view)
 
+    def test_webview_uses_safe_top_inset_and_safari_light_page_surface(self) -> None:
+        for needle in (
+            ".ignoresSafeArea(.container, edges: .all)",
+            "topSafeAreaInset: proxy.safeAreaInsets.top",
+            "webView.scrollView.contentInset.top = topInset",
+            "webView.backgroundColor = .white",
+            "webView.underPageBackgroundColor = .white",
+            "webView.scrollView.backgroundColor = .white",
+            "webView.overrideUserInterfaceStyle = .light",
+            ".preferredColorScheme(.light)",
+        ):
+            self.assertIn(needle, self.view)
+
+    def test_safari_capsules_compact_to_host_only_and_hide_root_tab_bar(self) -> None:
+        for needle in (
+            "case expanded",
+            "case compact",
+            "chromeMode = isScrollingDown ? .compact : .expanded",
+            "private let compactToolbarHeight: CGFloat = 36",
+            "expandedBrowserControls",
+            "compactAddressCapsule",
+            "model.displayHost",
+            'Image(systemName: "square.on.square")',
+            '.toolbar(.hidden, for: .tabBar)',
+            'accessibilityLabel("退出漫画浏览器")',
+        ):
+            source = self.model if needle in self.model else self.view
+            self.assertIn(needle, source)
+
+    def test_tabs_keep_value_snapshots_while_only_active_tab_owns_webview(self) -> None:
+        for needle in (
+            "struct BrowserTab: Identifiable",
+            "private(set) var tabs: [BrowserTab]",
+            "private(set) var activeTabID: UUID",
+            "var scrollOffsetY: CGFloat",
+            "var thumbnail: UIImage?",
+            "@ObservationIgnored private weak var webView: WKWebView?",
+            "func activateTab(_ tabID: UUID)",
+            "func newTab()",
+            "func closeTab(_ tabID: UUID)",
+            "takeSnapshot(of: webView",
+            "captureSessionState(from: webView",
+        ):
+            self.assertIn(needle, self.model)
+        self.assertNotIn("var webView: WKWebView", self.model.split("struct BrowserTab", 1)[1].split("private(set) var tabs", 1)[0])
+        self.assertIn(".id(model.activeTabID)", self.view)
+
+    def test_tab_switcher_is_two_column_grid_with_new_switch_and_close_actions(self) -> None:
+        for needle in (
+            "isTabSwitcherPresented",
+            "LazyVGrid(columns: columns",
+            "GridItem(.flexible(), spacing: 14)",
+            'Label("新建标签", systemImage: "plus")',
+            "model.activateTab(tab.id)",
+            "model.closeTab(tab.id)",
+            "model.newTab()",
+        ):
+            self.assertIn(needle, self.view)
+
     def test_floating_chrome_and_translation_placeholder_match_scope(self) -> None:
         for needle in (
             ".ultraThinMaterial",
-            "private let toolbarHeight: CGFloat = 80",
             "private let translationBallSize: CGFloat = 48",
             "lineWidth: 2",
-            "model.phase == .loaded && model.isChromeVisible",
+            "model.phase == .loaded && model.showsExpandedChrome",
             'Button("翻译本页") {}',
             'Text("暂无任务")',
             'Text("日  →  中")',

@@ -41,7 +41,7 @@
 | --- | --- | --- | --- |
 | `AGENTS.md`、`README.md`、`md/` | diff、Markdown 链接和路径 | 必要的 JSON/YAML/代码块 smoke | Xcode、App、探针 |
 | SwiftUI、Store、App 入口 | diff、云端 iOS simulator build | 修改界面/状态边界对应的 UI/accessibility 合同 | 历史 UI 全量、无关截图、OCR/Speech |
-| 漫画浏览器 `BrowserModel`/WKWebView/UI | diff、云端 iOS simulator build | 漫画浏览器合同 + 根导航共享合同 | 其余历史 UI、日语 benchmark、OCR/Speech/Koharu、GGUF、截图与探针 |
+| 漫画浏览器 `BrowserModel`/WKWebView/UI | diff、云端 iOS simulator build | 漫画浏览器合同（含 tabs/单 WebView/safe-area/Safari chrome）+ 根导航共享合同 | 其余历史 UI、日语 benchmark、OCR/Speech/Koharu、GGUF、截图与探针 |
 | Vision OCR、Manga OCR、detector、layout | diff、云端 iOS simulator build | 修改符号对应的 OCR/geometry/reading-order 合同；OCR 页按需加 overlay runtime | 翻译、Speech、全部历史 Koharu、v1.88/v1.89 |
 | 翻译、prompt、GGUF、llama runtime | diff、云端 iOS simulator build | translation/context/QA/runtime 合同 | OCR、Speech；真实模型仅按需 |
 | Speech 源码或质量算法 | diff、云端 iOS simulator build | Speech run-id/取消合同、质量 evaluator、corpus validator | 无语料的 WER/CER、截图 |

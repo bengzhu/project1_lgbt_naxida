@@ -11,9 +11,9 @@ flowchart TD
   NAV -->|"iPad"| SPLIT["NavigationSplitView"]
   TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 漫画 / OCR / 音频 / 资料库"]
   SPLIT --> B
-  B --> BROWSER["MangaBrowserView<br/>悬浮地址栏 / 翻译球占位"]
-  BROWSER --> BMODEL["BrowserModel<br/>页面阶段 / URL / 进度 / 导航"]
-  BMODEL --> WEB["WKWebView<br/>默认 ATS / 不持久化"]
+  B --> BROWSER["MangaBrowserView<br/>Safari 胶囊 / 标签切换 / 翻译球占位"]
+  BROWSER --> BMODEL["BrowserModel<br/>tabs / activeTabID / 页面快照"]
+  BMODEL --> WEB["唯一活动 WKWebView<br/>后台标签释放 / 不持久化"]
   DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
   TWB["TextWorkspaceBackground<br/>静态网格 / 导向线路 / 文本页专属"] --> B
   SH["文本页顶部 safe-area inset<br/>页头 + 模型状态"] --> B
@@ -214,7 +214,7 @@ flowchart TD
 flowchart TD
   APP["AITRANSApp"] --> UI["SwiftUI Views\n七个功能入口"]
   UI --> STORE["TranslationSessionStore\n唯一翻译业务状态与调度中心"]
-  UI --> BROWSER2["MangaBrowserView\nBrowserModel -> WKWebView"]
+  UI --> BROWSER2["MangaBrowserView\nBrowserModel tabs -> 当前 WKWebView"]
   BROWSER2 -. "不进入翻译 / OCR / 持久化" .-> END_BROWSER["网页浏览与纯 UI 翻译占位"]
 
   STORE --> TEXT["文本翻译"]
