@@ -1,11 +1,12 @@
 # AITRANS
 
-AITRANS 是一个面向 iPhone 和 iPad 的本地 AI 翻译原型。它把文本翻译、图片 OCR 翻译、独立 OCR 检测、Apple Speech 音频识别和本地 GGUF 推理放在同一个 SwiftUI App 中，尽量让内容留在设备内处理。
+AITRANS 是一个面向 iPhone 和 iPad 的本地 AI 翻译原型。它把文本翻译、图片 OCR 翻译、独立 OCR 检测、漫画网页阅读、Apple Speech 音频识别和本地 GGUF 推理放在同一个 SwiftUI App 中，尽量让内容留在设备内处理。
 
 ## 主要功能
 
 - 文本翻译：输入或粘贴文本，使用 Mock 或本地 GGUF 模型生成译文与摘要。
 - 图片翻译：从照片、相机、文件或剪贴板导入图片，识别文字块、逐块翻译、复查 OCR，并生成旁贴或覆盖效果。
+- 漫画浏览器：使用内嵌 WKWebView 阅读网页，提供地址、前进/后退/刷新、失败恢复和翻译悬浮 UI；当前不执行翻译，也不保存阅读数据。
 - OCR 检测：只执行文字检测与识别，支持块定位、筛选、编辑、复制以及 TXT/JSON 导出，不调用翻译模型。
 - 日语漫画 OCR：Apple Vision OCR 负责通用识别，漫画文字检测器和随包 Manga OCR Core ML 模型补充日语漫画、竖排和局部文字区域，再由布局引擎融合与排序。
 - 音频翻译：通过 Apple Speech 识别麦克风或音频文件，再把最终文本交给当前翻译引擎。
@@ -15,6 +16,7 @@ AITRANS 是一个面向 iPhone 和 iPad 的本地 AI 翻译原型。它把文本
 
 ```text
 SwiftUI Views
+  -> BrowserModel -> WKWebView（网页导航状态，不持久化）
   -> TranslationSessionStore
      -> VisionOCRService
         -> Apple Vision OCR
@@ -26,6 +28,7 @@ SwiftUI Views
 ```
 
 - `TranslationSessionStore` 是唯一业务状态与调度中心。
+- `BrowserModel` 独立拥有漫画浏览器的网页阶段、地址、进度和导航状态，不进入翻译或持久化链路。
 - `VisionOCRService` 统一普通图片 OCR；日语场景按需调用检测器和 Manga OCR。
 - `ImageOCRLayoutEngine` 负责文字块几何、融合、阅读顺序和复查风险。
 - `MangaOverlayProbeService` 是开发诊断链路，不等同普通图片产品路径。
@@ -81,7 +84,7 @@ bash Tools/build-llama-ios-xcframework.sh
 
 ## 快速上手
 
-1. 首次启动可先保留 Mock 引擎，确认文本、图片和历史数据流。
+1. 首次启动可先保留 Mock 引擎，确认文本、图片和历史数据流；“漫画”可直接输入 HTTPS 网址验证网页浏览。
 2. 需要真实本地翻译时，在“模型”页下载内置 Gemma 或导入兼容 GGUF，再切换到 Local。
 3. 图片页适合 OCR 后直接翻译和覆盖；“OCR 检测”页适合只检查文字块、原文与几何。
 4. 音频页选择实时录音或音频文件；识别完成后才进入翻译。

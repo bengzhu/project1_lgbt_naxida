@@ -7,20 +7,22 @@
 | 层 | 主要职责 | 关键入口 |
 | --- | --- | --- |
 | App/UI | 页面、用户输入、状态展示和无障碍语义 | `AITRANSApp`、`ContentView`、`Views/` |
+| 网页浏览状态 | 漫画页阶段、URL、加载进度、导航能力与 WKWebView 意图 | `BrowserModel`、`MangaBrowserView` |
 | 状态与调度 | 唯一业务状态、异步任务、持久化、导出和服务编排 | `TranslationSessionStore` |
 | OCR 与布局 | Vision OCR、漫画区域、Manga OCR、几何融合和阅读顺序 | `VisionOCRService`、`ComicTextBubbleDetectorService`、`MangaOCRService`、`ImageOCRLayoutEngine` |
 | 翻译模型 | Mock、本地 GGUF、prompt、采样、输出清洗和 QA | `MockGemmaService`、`GemmaLocalService`、`LlamaRuntime` |
 | Speech | 授权、录音/文件识别、取消隔离和事后质量评估 | Store、`SpeechQualityProbeService`、`SpeechQualityEvaluator` |
 | 诊断与验证 | 漫画覆盖探针、benchmark、合同和机器可读报告 | `MangaOverlayProbeService`、`scripts/`、`benchmarks/`、`output/` |
 
-`TranslationSessionStore` 是唯一业务中心。View 不直接调用模型、OCR、Speech 或持久化；服务不直接拥有 SwiftUI 页面状态。
+`TranslationSessionStore` 是唯一翻译业务中心。View 不直接调用模型、OCR、Speech 或持久化；服务不直接拥有 SwiftUI 页面状态。漫画浏览器不属于翻译业务链路，由非持久化 `BrowserModel` 独立持有网页状态。
 
 ## 2. App 入口与界面
 
-`AITRANSApp` 创建一个 Store 并注入 SwiftUI 环境。`ContentView` 根据设备宽度使用 `TabView` 或 `NavigationSplitView`，路由到六个功能入口：
+`AITRANSApp` 创建一个 Store 并注入 SwiftUI 环境。`ContentView` 根据设备宽度使用 `TabView` 或 `NavigationSplitView`，路由到七个功能入口：
 
 - 文本：输入、粘贴、翻译和摘要。
 - 图片：OCR、逐块翻译、复查、定位、修正和导出。
+- 漫画：内嵌 WKWebView、网页导航与纯 UI 翻译悬浮球，不调用翻译链路。
 - OCR 检测：OCR-only 工作台，不进入翻译或 LLM。
 - 音频：Apple Speech 实时/文件识别和后续翻译。
 - 历史：查看和恢复已保存会话。
@@ -28,7 +30,22 @@
 
 UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业务结果、历史或任务生命周期的动作必须调用 Store。
 
-## 3. 文本翻译
+漫画浏览器例外地把非业务网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新与重试意图，WKWebView Coordinator 只回写页面阶段、URL、进度与导航能力。地址编辑、菜单展开和拖拽偏移是 View 私有展示状态；浏览器不保存最近阅读、收藏、球位置或站点偏好。
+
+## 3. 漫画网页浏览
+
+```text
+地址输入 -> BrowserModel 规范化 http(s) URL -> WKWebView
+  -> WKNavigation/UI delegate + KVO -> BrowserModel 页面/进度/导航状态
+  -> WebView 上层悬浮工具栏 + 翻译球占位 UI
+```
+
+- 无 scheme 自动补 `https://`；ATS 保持系统默认，HTTP 被拦截时显示明确原因。
+- `_blank` 在当前页加载；非 http(s) 与 App Store 链接尝试交系统，无法处理和下载响应显示提示。
+- 加载失败与网页内容进程终止各有独立恢复 UI；只有成功加载后显示翻译球。
+- 工具栏和翻译球随滚动方向一起滑入/滑出，不改变 WebView 尺寸。
+
+## 4. 文本翻译
 
 ```text
 用户输入
@@ -44,7 +61,7 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
 - 模型缺失、模板不支持、上下文超限、分词/decode 失败都在服务边界返回错误，不能伪造成功。
 - 用户翻译使用产品采样策略；确定性解码只用于明确的诊断和对照。
 
-## 4. 普通图片翻译
+## 5. 普通图片翻译
 
 ```text
 照片 / 相机 / 文件 / 剪贴板
@@ -69,7 +86,7 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
 - 新图片、重试、取消、修正和导出都绑定 task/revision identity；旧回调和旧文件不能覆盖当前图片。
 - renderer 只消费有效的单位坐标几何；无效或过期框不显示、不定位、不绘制。
 
-## 5. OCR 检测工作台
+## 6. OCR 检测工作台
 
 ```text
 图片输入
@@ -81,7 +98,7 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
 
 该入口复用 OCR 服务但拥有独立 Store 状态树。它不创建图片翻译会话、不调用 LLM、不生成译文，也不把人工编辑反向写入普通图片任务。
 
-## 6. 音频识别与翻译
+## 7. 音频识别与翻译
 
 ```text
 麦克风或音频文件
@@ -97,7 +114,7 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
 - 质量探针是独立事后评估：Apple Speech 返回最终文本后，参考 transcript 才进入 evaluator。
 - Speech 语料和报告规则见 [`md/test/test.md`](../test/test.md)。
 
-## 7. 漫画覆盖诊断
+## 8. 漫画覆盖诊断
 
 `MangaOverlayProbeService` 固定读取测试素材，执行内容裁切、OCR/漫画候选、文字块融合、逐块翻译、质量判定、覆盖绘制和报告生成。
 
@@ -116,7 +133,7 @@ test/1.png
 
 ground truth 只用于事后匹配和统计。失败块、未匹配块、原始 OCR 和失败原因必须保留，不能静默删除。
 
-## 8. 持久化与产物
+## 9. 持久化与产物
 
 - App 状态：`Application Support/AITRANS/state.json`。
 - 本地模型：`Application Support/Models/Gemma-1.5B/model.gguf`。
@@ -127,7 +144,7 @@ ground truth 只用于事后匹配和统计。失败块、未匹配块、原始 
 
 持久化和导出只由 Store/对应服务管理。清理必须限定在已验证的 ownership 根目录，拒绝路径逃逸、符号链接和未知文件类型。
 
-## 9. 并发与状态约束
+## 10. 并发与状态约束
 
 - 文本、图片、OCR-only、Speech、模型下载和导出各自使用明确 identity；开始新任务会使旧任务失效。
 - UI 只提交意图，异步结果必须在 Store 再次核对 identity 后才能写入。
@@ -135,7 +152,7 @@ ground truth 只用于事后匹配和统计。失败块、未匹配块、原始 
 - Preview 和 UI evidence 场景使用隔离存储，不恢复或污染生产状态。
 - 开发模式关闭后，开发页面导航和可操作状态必须同步失效。
 
-## 10. 不允许破坏的边界
+## 11. 不允许破坏的边界
 
 - 不创建第二套 Store 或在 View 直接写持久化。
 - 不用 ground truth、参考 transcript、fixture 或人工理想框参与生产候选决策。
@@ -144,7 +161,7 @@ ground truth 只用于事后匹配和统计。失败块、未匹配块、原始 
 - 不把内置小模型、单张固定图片或静态合同当作通用质量证明。
 - 不提交 GGUF、用户数据、临时构建目录或运行期沙盒产物。
 
-## 11. 文档维护
+## 12. 文档维护
 
 - 本文只在模块职责、主数据流、ownership 或长期边界变化时更新。
 - 小功能、版本行为、CI 结论、commit/PR/run 和指标写入 [`md/log/update_log.md`](../log/update_log.md)，不追加到本文。

@@ -41,6 +41,7 @@
 | --- | --- | --- | --- |
 | `AGENTS.md`、`README.md`、`md/` | diff、Markdown 链接和路径 | 必要的 JSON/YAML/代码块 smoke | Xcode、App、探针 |
 | SwiftUI、Store、App 入口 | diff、云端 iOS simulator build | 修改界面/状态边界对应的 UI/accessibility 合同 | 历史 UI 全量、无关截图、OCR/Speech |
+| 漫画浏览器 `BrowserModel`/WKWebView/UI | diff、云端 iOS simulator build | 漫画浏览器合同 + 根导航共享合同 | 其余历史 UI、日语 benchmark、OCR/Speech/Koharu、GGUF、截图与探针 |
 | Vision OCR、Manga OCR、detector、layout | diff、云端 iOS simulator build | 修改符号对应的 OCR/geometry/reading-order 合同；OCR 页按需加 overlay runtime | 翻译、Speech、全部历史 Koharu、v1.88/v1.89 |
 | 翻译、prompt、GGUF、llama runtime | diff、云端 iOS simulator build | translation/context/QA/runtime 合同 | OCR、Speech；真实模型仅按需 |
 | Speech 源码或质量算法 | diff、云端 iOS simulator build | Speech run-id/取消合同、质量 evaluator、corpus validator | 无语料的 WER/CER、截图 |
@@ -110,6 +111,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer xcodebuild \
 ## 6. 云端验证
 
 - 候选核心 SHA 使用 task-scoped `full`：基础静态检查、直接合同，以及 App 相关变更的 iOS build；这里的 `full` 不运行历史合同全集。
+- 纯漫画浏览器 scope 使用 `[browser-only]` 候选提交和 PR 标记，CI 只执行浏览器直接合同与必要 iOS build，并跳过无依赖的日语 OCR/翻译 benchmark job；scope 出现其它业务文件时不得使用该标记。
 - PR/merge `fast` 只做路由和轻量检查，并复用已核对的候选 full receipt；它不是新的编译证据。
 - 候选实现变化后，旧 SHA 的 receipt 和 artifact 失效。
 - `probe_mode` 与 `ui_evidence_mode` 默认关闭；需要漫画输出、真实模型或视觉证据时单独触发，且不得互相充当代理证据。

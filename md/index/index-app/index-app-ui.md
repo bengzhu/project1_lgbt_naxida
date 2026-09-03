@@ -10,6 +10,7 @@
 | 视觉系统与共享组件 | [`AppTheme.swift`](../../../AITRANS/Views/AppTheme.swift)、[`AppComponents.swift`](../../../AITRANS/Views/AppComponents.swift) | `AppFeature`、`AppPageHeader`、`AppCanvasBackground`、`appSurface` |
 | 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane`、`TextSessionUtilityBar` |
 | 图片翻译主屏 | [`AITRANS/Views/ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | `ImageTranslationView`、`ImageTranslationPanel`、`ImageTranslationPreview` |
+| 漫画内嵌浏览器 | [`AITRANS/Views/MangaBrowserView.swift`](../../../AITRANS/Views/MangaBrowserView.swift)、[`AITRANS/Models/BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift) | `MangaBrowserView`、`BrowserWebView`、`BrowserModel` |
 | OCR 检测工作台 | [`AITRANS/Views/ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift) | `ImageOCRDetectionView`、`ImageOCRDetectionCanvas`、`ImageOCRDetectionResultRow`、`OCRDetectionDiagnostics` |
 | 图片结果行/局部预览/编辑 | 同上 | `ImageTranslationBlockRow`、`ImageTranslationFocusPreview`、`ImageOCRCorrectionSheet` |
 | 图片 overlay/竖排显示 | 同上 | `ImageTranslationOverlayBlock`、`ImageTranslationVerticalText` |
@@ -27,9 +28,11 @@ View action / accessibility action
   -> View updates focus/preview/filter
 ```
 
-iPhone 一级导航固定为文本、图片、OCR、音频、资料库五项；历史与设置从资料库的两个大入口进入。资料库拥有手机端下钻导航栈，设置作为 destination 复用该导航上下文，不再嵌套第二个 `NavigationStack`；设置独立展示时仍自带导航容器。iPad 侧栏直接按“创作 / 工具 / 资料”分组。两种布局只改变导航层级，不合并图片翻译与 OCR-only 工作台的业务边界。
+iPhone `TabView` 增加“漫画”，一级项为文本、图片、漫画、OCR、音频、资料库；紧凑宽度下由系统承载超出五项的 More 导航。历史与设置从资料库的两个大入口进入。资料库拥有手机端下钻导航栈，设置作为 destination 复用该导航上下文，不再嵌套第二个 `NavigationStack`；设置独立展示时仍自带导航容器。iPad 侧栏把漫画归入“创作”，OCR 保持独立“工具”。这些布局不合并图片翻译、OCR-only 工作台或网页浏览边界。
 
-六个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。共享页面顶栏采用标准字号下 92pt 的紧凑横向基线并填满页面内容宽度，动态字体可按内容向下扩展以避免裁切；入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
+七个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。共享页面顶栏采用标准字号下 92pt 的紧凑横向基线并填满页面内容宽度，动态字体可按内容向下扩展以避免裁切；入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
+
+漫画浏览器的 WKWebView 通铺页面，地址/导航栏和 48pt 翻译球是覆盖层，不参与网页布局。`BrowserModel` 持有网页阶段、URL、加载进度和导航能力；Coordinator 处理 WKNavigation/UI/scroll delegate 与 KVO 回写。工具栏滚动隐藏不改变 WebView 尺寸，地址编辑禁用 auto-hide；翻译菜单与拖拽仅是非持久化展示状态，不接翻译链路。
 
 重点页面采用渐进呈现：文本页只保留输入、译文和会话工具条，不重复展示最近翻译；手机音频页通过分段选择一次显示实时或文件工作区，iPad 保留双栏；历史导入/导出/清理归入操作菜单；设置的 Pro 能力说明和开发解锁归入“高级与开发”折叠区。低频入口收起时不得移除原有 Store action、破坏确认流程或仅靠颜色表达状态。
 
@@ -40,6 +43,7 @@ OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进�
 ## 禁止路径与风险
 
 - View 不直接操作 `TranslationSessionStore.persistenceURL`、模型 runtime 或探针报告。
+- 漫画浏览器非 http(s) 链接只交系统或显示不支持提示；下载响应不得静默失败，`target=_blank` 必须回到当前 WebView。
 - “取消重新识别此文字块”只能调用 scoped block cancel；整图取消按钮才调用 `cancelImageTranslation()`。
 - `ImageTranslationOverlayBlock` 的竖排绘制必须保持与 OCR `sourceDirection`/overlay mode 的边界，不把显示方向改成 OCR 方向事实。
 - OCR 检测页不得调用图片翻译或 LLM；其模型原始 confidence 只用于同引擎复查门控，不能把 Vision 与 Manga OCR 当成同一标尺。
@@ -49,6 +53,7 @@ OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进�
 
 - [`test-v187-ui-interaction-contract.py`](../../../scripts/test-v187-ui-interaction-contract.py)、[`test-v188-home-ui-contract.py`](../../../scripts/test-v188-home-ui-contract.py)：全 App 交互/首页。
 - [`test-v3400-immersive-ui-contract.py`](../../../scripts/test-v3400-immersive-ui-contract.py)、[`test-v3401-focused-workspaces-contract.py`](../../../scripts/test-v3401-focused-workspaces-contract.py)、[`test-v3402-compact-header-settings-contract.py`](../../../scripts/test-v3402-compact-header-settings-contract.py)：功能视觉身份、聚焦工作区、紧凑顶栏、资料库/设置导航所有权和 visual-task CI 路由。
+- [`test-v3404-manga-browser-ui-contract.py`](../../../scripts/test-v3404-manga-browser-ui-contract.py)：漫画 tab、BrowserModel ownership、WKWebView delegate、失败 UI、悬浮工具栏与翻译占位菜单的直接静态合同。
 - [`test-v313-image-block-focus-contract.py`](../../../scripts/test-v313-image-block-focus-contract.py)、[`test-v3150-image-focus-restore-action-contract.py`](../../../scripts/test-v3150-image-focus-restore-action-contract.py)：图片焦点和恢复动作。
 - [`test-v3247-image-ocr-rerecognition-review-focus-contract.py`](../../../scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py)、[`test-v3248-image-ocr-rerecognition-failure-focus-contract.py`](../../../scripts/test-v3248-image-ocr-rerecognition-failure-focus-contract.py)：重识别完成/失败焦点。
 - [`test-v3289-image-ocr-block-structure-editor-contract.py`](../../../scripts/test-v3289-image-ocr-block-structure-editor-contract.py)、[`test-v3289-image-ocr-geometry-editor-contract.py`](../../../scripts/test-v3289-image-ocr-geometry-editor-contract.py)：结构/几何编辑。

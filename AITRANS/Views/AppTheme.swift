@@ -62,6 +62,7 @@ enum AppTheme {
 enum AppFeature: String, CaseIterable {
     case text
     case image
+    case manga
     case ocr
     case audio
     case library
@@ -72,6 +73,7 @@ enum AppFeature: String, CaseIterable {
         switch self {
         case .text: "WRITE / TRANSLATE"
         case .image: "SEE / TRANSLATE"
+        case .manga: "READ / BROWSE"
         case .ocr: "SCAN / INSPECT"
         case .audio: "LISTEN / TRANSLATE"
         case .library: "RECALL / ORGANIZE"
@@ -84,10 +86,11 @@ enum AppFeature: String, CaseIterable {
         switch self {
         case .text: "01"
         case .image: "02"
-        case .ocr: "03"
-        case .audio: "04"
-        case .library: "05"
-        case .settings: "06"
+        case .manga: "03"
+        case .ocr: "04"
+        case .audio: "05"
+        case .library: "06"
+        case .settings: "07"
         case .system: "AI"
         }
     }
@@ -96,6 +99,7 @@ enum AppFeature: String, CaseIterable {
         switch self {
         case .text: "text.bubble.fill"
         case .image: "photo.on.rectangle.angled"
+        case .manga: "book.pages.fill"
         case .ocr: "text.viewfinder"
         case .audio: "waveform.and.mic"
         case .library: "square.grid.2x2.fill"
@@ -110,6 +114,8 @@ enum AppFeature: String, CaseIterable {
         case (.text, _): Color(red: 0.00, green: 0.34, blue: 0.78)
         case (.image, .dark): Color(red: 1.00, green: 0.57, blue: 0.75)
         case (.image, _): Color(red: 0.72, green: 0.08, blue: 0.42)
+        case (.manga, .dark): Color(red: 0.56, green: 0.76, blue: 1.00)
+        case (.manga, _): Color(red: 0.22, green: 0.36, blue: 0.78)
         case (.ocr, .dark): Color(red: 1.00, green: 0.71, blue: 0.30)
         case (.ocr, _): Color(red: 0.67, green: 0.31, blue: 0.00)
         case (.audio, .dark): Color(red: 0.35, green: 0.88, blue: 0.67)

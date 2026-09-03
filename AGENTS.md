@@ -15,8 +15,9 @@ AITRANS 的核心协作入口。这里只保留长期有效的项目事实、迭
 
 ## 1. 项目核心事实
 
-- AITRANS 是 iOS 17+、SwiftUI、Swift 6 的本地 AI 翻译原型，包含文本、图片、OCR 检测、音频、历史和设置六个入口。
+- AITRANS 是 iOS 17+、SwiftUI、Swift 6 的本地 AI 翻译原型，包含文本、图片、漫画浏览器、OCR 检测、音频、历史和设置七个入口。
 - `TranslationSessionStore` 是运行状态、任务调度、模型选择和持久化的唯一业务中心；View 只读取 Store 投影并调用公开方法。
+- `BrowserModel` 只拥有漫画浏览器的网页阶段、地址、进度与导航状态；该模块不进入 `TranslationSessionStore`、翻译、OCR、LLM 或持久化。
 - 普通图片识别以 Apple Vision OCR 为基础；日语漫画和竖排场景可结合漫画文字检测器与随包 Core ML Manga OCR，再由布局引擎融合、排序和复查。
 - `OCR 检测` 是 OCR-only 工作台，不进入翻译或 LLM；`MangaOverlayProbeService` 是独立诊断链路，不等同普通图片产品路径。
 - 本地翻译通过 `GemmaLocalService`、`LlamaRuntime` 和 `llama.cpp` 加载 GGUF；`MockGemmaService` 用于 UI/数据流冒烟。内置 Gemma 270M 只用于下载、加载和接口验证，不作为翻译质量基准。
@@ -60,6 +61,7 @@ AITRANS 的核心协作入口。这里只保留长期有效的项目事实、迭
 
 - 普通图片 OCR：`VisionOCRService`、`MangaOCRService`、`ComicTextBubbleDetectorService`、`ImageOCRLayoutEngine`。
 - 状态与 UI：`TranslationSessionStore` 和对应 SwiftUI View。
+- 漫画浏览器：`BrowserModel`、`MangaBrowserView` 和其中的 `BrowserWebView`。
 - 本地翻译：`GemmaLocalService`、`LlamaRuntime`、`LocalModelPromptProfile`。
 - 漫画探针：`MangaOverlayProbeService`、`test/1.png`、当前 `output/`。
 - Speech：`SpeechQualityProbeService`、`SpeechQualityEvaluator`、`test/speech_corpus/`。
