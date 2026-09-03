@@ -145,6 +145,8 @@ class MangaBrowserUIContractTests(unittest.TestCase):
             "[browser-only]",
             'steps.ci_scope.outputs.validation_profile }}" = "fast"',
             'steps.ci_scope.outputs.reused_full_validation_state }}" = "success"',
+            "contains(github.event.head_commit.message, '[browser-only]')",
+            "contains(github.event.pull_request.title, '[browser-only]')",
         ):
             self.assertIn(needle, self.workflow)
 

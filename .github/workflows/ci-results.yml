@@ -3305,7 +3305,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          if [ "${{ steps.ci_scope.outputs.browser_task_scoped }}" = "true" ] || { [ "${{ steps.ci_scope.outputs.validation_profile }}" = "fast" ] && [ "${{ steps.ci_scope.outputs.reused_full_validation_state }}" = "success" ]; }; then
+          if [ "${{ steps.ci_scope.outputs.browser_task_scoped }}" = "true" ] || [ "${{ contains(github.event.head_commit.message, '[browser-only]') }}" = "true" ] || [ "${{ contains(github.event.pull_request.title, '[browser-only]') }}" = "true" ] || { [ "${{ steps.ci_scope.outputs.validation_profile }}" = "fast" ] && [ "${{ steps.ci_scope.outputs.reused_full_validation_state }}" = "success" ]; }; then
             test "${{ needs.japanese_benchmark.result }}" = "skipped"
           else
             test "${{ needs.japanese_benchmark.result }}" = "success"
