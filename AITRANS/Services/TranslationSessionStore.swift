@@ -178,7 +178,7 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageTranslationData: Data?
     @Published var imageTranslationFilename = ""
     @Published var imageTranslationRevision = 0
-    @Published var imageOverlayMode: ImageTranslationOverlayMode = .adjacent
+    @Published var imageOverlayMode: ImageTranslationOverlayMode = .replace
     @Published private(set) var imageTranslationExportURL: URL?
     @Published private(set) var imageTranslationShareState: ImageTranslationShareState = .idle
     @Published private(set) var imageTranslationExportRenderState: ImageTranslationExportRenderState = .idle
@@ -1638,7 +1638,7 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         imageTranslationBlocks = translatedBlocks
-        let renderedMode = imageOverlayMode
+        let renderedMode = imageOverlayMode.normalizedForImageTranslation
         let renderID = UUID()
         imageOverlayRenderID = renderID
         let stagedExportURL = try? await Self.renderImageTranslationOverlay(
@@ -1657,7 +1657,7 @@ final class TranslationSessionStore: ObservableObject {
             throw CancellationError()
         }
         if imageOverlayRenderID == renderID,
-           imageOverlayMode == renderedMode,
+           imageOverlayMode.normalizedForImageTranslation == renderedMode,
            let stagedExportURL {
             defer {
                 removeImageTranslationStagingFile(
@@ -1688,7 +1688,7 @@ final class TranslationSessionStore: ObservableObject {
         appendImageTranslationTranscript(blocks: translatedBlocks)
         isProcessing = false
         imageTranslationTask = nil
-        if imageOverlayMode != renderedMode {
+        if imageOverlayMode.normalizedForImageTranslation != renderedMode {
             rerenderImageTranslationExport()
         }
         persist()
@@ -2372,6 +2372,7 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     func setImageOverlayMode(_ mode: ImageTranslationOverlayMode) {
+        let mode = mode.normalizedForImageTranslation
         guard imageTranslationExportRenderState != .rendering,
               imageOverlayMode != mode else { return }
         imageOverlayMode = mode
@@ -2399,7 +2400,7 @@ final class TranslationSessionStore: ObservableObject {
         guard imageTranslationState == .translated else { return nil }
         return ImageTranslationRenderSafety.analyze(
             blocks: imageTranslationBlocks,
-            overlayMode: imageOverlayMode
+            overlayMode: imageOverlayMode.normalizedForImageTranslation
         )
     }
 
@@ -2998,7 +2999,7 @@ final class TranslationSessionStore: ObservableObject {
         imageOverlayRenderTask?.cancel()
         let renderID = UUID()
         let contentTaskID = imageTranslationTaskID
-        let mode = imageOverlayMode
+        let mode = imageOverlayMode.normalizedForImageTranslation
         let blocks = imageTranslationBlocks
         let filename = imageTranslationFilename
         let directory = imageTranslationDirectory
@@ -3024,7 +3025,8 @@ final class TranslationSessionStore: ObservableObject {
                 try Task.checkCancellation()
                 guard self.imageOverlayRenderID == renderID,
                       self.imageTranslationTaskID == contentTaskID,
-                      self.imageOverlayMode == mode else {
+                      (self.imageOverlayMode == mode
+                          || self.imageOverlayMode.normalizedForImageTranslation == mode) else {
                     self.removeImageTranslationStagingFile(stagedURL, directory: directory)
                     return
                 }
@@ -28397,42 +28399,42 @@ final class TranslationSessionStore: ObservableObject {
                     guard !overlayRect.isEmpty else { continue }
 
                     let context = rendererContext.cgContext
-                    context.setFillColor(
-                        mode == .adjacent
-                            ? UIColor.black.withAlphaComponent(0.88).cgColor
-                            : UIColor.systemTeal.withAlphaComponent(0.94).cgColor
-                    )
+                    context.saveGState()
+                    context.clip(to: overlayRect)
+                    context.setFillColor(UIColor.white.withAlphaComponent(0.97).cgColor)
                     context.fill(overlayRect)
-                    context.setStrokeColor(UIColor.systemTeal.cgColor)
-                    context.setLineWidth(max(canvas.width * 0.002, 2))
-                    context.stroke(overlayRect)
 
                     let translation = (block.translation.isEmpty ? block.original : block.translation)
                         .trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !translation.isEmpty else { continue }
-                    let text = mode == .adjacent && translation != block.original
-                        ? "\(translation)\n\(block.original)"
-                        : translation
+                    guard !translation.isEmpty else {
+                        context.restoreGState()
+                        continue
+                    }
                     let usesVerticalWriting = mode == .replace && block.prefersVerticalWriting
-                    let fontSize = usesVerticalWriting
-                        ? max(min(overlayRect.width * 0.72, canvas.width * 0.034), 9)
-                        : max(min(overlayRect.height * 0.30, canvas.width * 0.034), 11)
+                    let layout = ImageTranslationTextFitter.fit(
+                        text: translation,
+                        in: overlayRect.size,
+                        vertical: usesVerticalWriting
+                    )
                     let paragraph = NSMutableParagraphStyle()
-                    paragraph.alignment = usesVerticalWriting || mode == .replace ? .center : .left
+                    paragraph.alignment = .center
+                    paragraph.lineBreakMode = .byWordWrapping
                     let attributes: [NSAttributedString.Key: Any] = [
-                        .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
-                        .foregroundColor: UIColor.white,
+                        .font: UIFont.systemFont(ofSize: layout.fontSize, weight: .semibold),
+                        .foregroundColor: UIColor.black,
                         .paragraphStyle: paragraph
                     ]
                     Self.drawImageTranslationText(
-                        text,
+                        translation,
                         in: overlayRect.insetBy(
-                            dx: max(canvas.width * 0.009, 6),
-                            dy: max(canvas.height * 0.005, 5)
+                            dx: layout.edgeInset,
+                            dy: layout.edgeInset
                         ),
                         attributes: attributes,
-                        vertical: usesVerticalWriting
+                        vertical: usesVerticalWriting,
+                        layout: layout
                     )
+                    context.restoreGState()
                 }
             }
 
@@ -28452,7 +28454,8 @@ final class TranslationSessionStore: ObservableObject {
         _ text: String,
         in rect: CGRect,
         attributes: [NSAttributedString.Key: Any],
-        vertical: Bool
+        vertical: Bool,
+        layout: ImageTranslationTextFitter.Plan
     ) {
         guard vertical else {
             NSAttributedString(string: text, attributes: attributes).draw(
@@ -28471,51 +28474,26 @@ final class TranslationSessionStore: ObservableObject {
             return
         }
 
-        let minimumFontSize: CGFloat = 7
-        var fontSize = max(min(sourceFont.pointSize, rect.width * 0.82), minimumFontSize)
-        for _ in 0..<3 {
-            let font = sourceFont.withSize(fontSize)
-            let rowHeight = max(font.lineHeight, 1)
-            let columnWidth = max(rowHeight * 0.9, 1)
-            let columns = max(Int(floor(rect.width / columnWidth)), 1)
-            let requiredRows = max(Int(ceil(Double(characters.count) / Double(columns))), 1)
-            let fittedSize = min(
-                fontSize,
-                min(
-                    rect.height / CGFloat(requiredRows) * 0.88,
-                    rect.width / CGFloat(columns) * 0.84
-                )
-            )
-            guard fittedSize < fontSize - 0.1 else { break }
-            fontSize = max(fittedSize, minimumFontSize)
-        }
-
-        let font = sourceFont.withSize(fontSize)
-        let rowHeight = max(font.lineHeight, 1)
-        let rowCapacity = max(Int(floor(rect.height / rowHeight)), 1)
-        let columnCapacity = max(Int(floor(rect.width / max(rowHeight * 0.9, 1))), 1)
-        let maximumCharacters = max(rowCapacity * columnCapacity, 1)
+        let font = sourceFont.withSize(layout.fontSize)
         let drawableCharacters: [String]
-        if characters.count > maximumCharacters {
-            let prefixCount = max(maximumCharacters - 1, 1)
+        if characters.count > layout.maximumCharacterCount {
+            let prefixCount = max(layout.maximumCharacterCount - 1, 1)
             drawableCharacters = Array(characters.prefix(prefixCount)) + ["…"]
         } else {
             drawableCharacters = characters
         }
 
-        let columnCount = max(Int(ceil(Double(drawableCharacters.count) / Double(rowCapacity))), 1)
-        let actualColumnWidth = rect.width / CGFloat(columnCount)
         var adjustedAttributes = attributes
         adjustedAttributes[.font] = font
         for (index, character) in drawableCharacters.enumerated() {
-            let column = index / rowCapacity
-            let row = index % rowCapacity
+            let column = index / layout.rowCapacity
+            let row = index % layout.rowCapacity
             let glyph = ImageTranslationVerticalTextLayout.verticalGlyph(for: character)
             let cell = CGRect(
-                x: rect.maxX - CGFloat(column + 1) * actualColumnWidth,
-                y: rect.minY + CGFloat(row) * rowHeight,
-                width: actualColumnWidth,
-                height: rowHeight
+                x: rect.maxX - CGFloat(column + 1) * layout.cellWidth,
+                y: rect.minY + CGFloat(row) * layout.cellHeight,
+                width: layout.cellWidth,
+                height: layout.cellHeight
             )
             let glyphSize = NSString(string: glyph).size(withAttributes: adjustedAttributes)
             let centeredGlyphRect = Self.centeredVerticalGlyphRect(
@@ -28823,36 +28801,18 @@ final class TranslationSessionStore: ObservableObject {
             width: canvas.width * box.width,
             height: canvas.height * box.height
         )
-        .insetBy(dx: -max(canvas.width * 0.004, 3), dy: -max(canvas.height * 0.004, 3))
         .intersection(canvas)
     }
 
+    /// Legacy mode values are accepted for persisted callers, but both modes
+    /// intentionally resolve to the OCR rectangle in the product image page.
     nonisolated private static func imageTranslationOverlayRect(
         sourceRect: CGRect,
         canvas: CGRect,
         mode: ImageTranslationOverlayMode
     ) -> CGRect {
         guard mode == .adjacent else { return sourceRect }
-
-        let gap = max(canvas.width * 0.008, 4)
-        let bubbleWidth = min(
-            max(sourceRect.width * 1.45, canvas.width * 0.16),
-            canvas.width * 0.46
-        )
-        let bubbleHeight = min(
-            max(sourceRect.height * 1.65, canvas.height * 0.075),
-            canvas.height * 0.32
-        )
-        let rightX = sourceRect.maxX + gap
-        let x = rightX + bubbleWidth <= canvas.maxX
-            ? rightX
-            : max(canvas.minX, sourceRect.minX - gap - bubbleWidth)
-        let y = min(
-            max(canvas.minY, sourceRect.midY - bubbleHeight / 2),
-            canvas.maxY - bubbleHeight
-        )
-        return CGRect(x: x, y: y, width: bubbleWidth, height: bubbleHeight)
-            .intersection(canvas)
+        return sourceRect.intersection(canvas)
     }
 
     private func currentSessionRecord() -> TranslationSessionRecord {
@@ -29033,7 +28993,7 @@ final class TranslationSessionStore: ObservableObject {
             correctedBlockIDs: imageTranslationCorrectedBlockIDs.sorted { $0.uuidString < $1.uuidString },
             ignoredBlockIDs: ignoredBlockIDs,
             originalBlockOrder: originalBlockOrder,
-            overlayMode: imageOverlayMode,
+            overlayMode: imageOverlayMode.normalizedForImageTranslation,
             transcriptLineID: transcriptLineID
         )
     }
@@ -29112,7 +29072,7 @@ final class TranslationSessionStore: ObservableObject {
             imageTranslationVisionOriginalBlocks[persisted.block.id] = originalBlock
         }
         imageTranslationIgnoredBlocks = []
-        imageOverlayMode = snapshot.overlayMode
+        imageOverlayMode = snapshot.overlayMode.normalizedForImageTranslation
         imageTranslationTranscriptLineID = snapshot.transcriptLineID.flatMap { lineID in
             transcript.contains(where: { $0.id == lineID }) ? lineID : nil
         }

@@ -6568,10 +6568,14 @@ struct ImageOCRDetectionExportDocument: Codable, Sendable {
 }
 
 enum ImageTranslationOverlayMode: String, CaseIterable, Identifiable, Codable, Sendable {
+    /// Kept only so older persisted sessions continue to decode.
     case adjacent = "旁贴"
     case replace = "覆盖"
 
     var id: String { rawValue }
+
+    /// Product image translation now always paints inside the OCR rectangle.
+    var normalizedForImageTranslation: Self { .replace }
 }
 
 enum ImageTextDirection: String, Codable, Sendable {

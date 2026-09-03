@@ -11040,3 +11040,10 @@ CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` �
 图片翻译此前把 Apple Translation 已按 client ID 返回的系统译文继续送入 Gemma 专用的 prompt、术语、跨批 context 与输出形态 QA；任一短拟声词或系统措辞被误拒后整批抛错，已识别块因而保留空译文并显示“等待翻译”。现按引擎分流：Apple 批量和单块结果仅拒绝缺失/空响应，Gemma 保留既有完整 QA、逐块补译和失败边界，OCR、块坐标、取消与持久化流程不变。
 
 文本页 `PasteButton<String>` 改为声明文本 UTI，并从系统提供的 `NSItemProvider` 显式加载 `NSString`，加载完成后在 MainActor 调用既有填入/换行追加逻辑。Apple、图片 QA、单块重试与粘贴定向合同通过；Xcode 26.6 在唯一 `WWIIHexV0 v0.441 iPhone 17 Pro` 模拟器目标构建成功。`test/2.png` 本地运行实际得到 17 个 OCR 块且配置为 Apple Translation、日语→简体中文；该模拟器系统报告该语言对不受支持，故真实系统译文运行验收未完成，不声称翻译质量通过。未运行云端 CI、GGUF、Speech、Koharu 或无关历史测试。
+
+## 图片翻译页原位覆盖重绘（2026-09-03，本地高速验收）
+
+- 图片翻译预览与 PNG 导出统一直接消费 OCR `ImageTranslationBlock.boundingBox`，移除旁贴/外扩区域；在原 OCR 框内以接近白色底覆盖原文，再绘制黑色译文，详情列表与 Store 的 OCR/翻译状态结构保持不变。
+- 新增 `ImageTranslationTextFitter`（Core Text 实测 + 二分搜索），按框宽高与译文长度计算横排换行或竖排行列的最大可用字号；SwiftUI 预览和导出 renderer 共享同一布局计划。
+- 兼容旧持久化的 `ImageTranslationOverlayMode` 保留，但默认、恢复、导出和 UI 均归一到 `.replace`；44pt 只作为透明点击热区，不改变可见覆盖框位置。
+- 本机 Xcode 26.6 针对唯一 `WWIIHexV0 v0.441 iPhone 17 Pro`（iOS 26.5）构建成功；`imageSuccess` DEBUG 场景截图确认译文回填在两个 OCR 框内。相关持久化 `9/9`、渲染安全 `7/7`、导出生命周期 `9/9`、竖排渲染合同 `5/5` 通过；历史 v3.187 UI interaction 合同仍含旁贴/选项旧断言及一个与本任务无关的键盘断言，不改回旧实现。按用户要求不建分支、不 push、不运行云端 CI。

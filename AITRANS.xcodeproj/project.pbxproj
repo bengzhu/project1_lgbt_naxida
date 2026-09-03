@@ -64,6 +64,7 @@
 		0A00000100000000000000EC /* ImageOCRGeometryEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */; };
 		0A00000100000000000000EE /* ImageOCRBlockStructureEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */; };
 		0A00000100000000000000F1 /* ImageTranslationRenderSafety.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */; };
+		0A00000100000000000000FE /* ImageTranslationTextFitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000FF /* ImageTranslationTextFitter.swift */; };
 		0A00000100000000000000F5 /* ImageOCRDetectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F4 /* ImageOCRDetectionView.swift */; };
 		0A00000100000000000000F6 /* BrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F7 /* BrowserModel.swift */; };
 		0A00000100000000000000F8 /* MangaBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F9 /* MangaBrowserView.swift */; };
@@ -150,6 +151,7 @@
 		0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRGeometryEditor.swift; sourceTree = "<group>"; };
 		0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRBlockStructureEditor.swift; sourceTree = "<group>"; };
 		0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTranslationRenderSafety.swift; sourceTree = "<group>"; };
+		0A00000100000000000000FF /* ImageTranslationTextFitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTranslationTextFitter.swift; sourceTree = "<group>"; };
 		0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */ = {isa = PBXFileReference; lastKnownFileType = folder.mlpackage; path = ComicTextBubbleDetectorINT8.mlpackage; sourceTree = "<group>"; };
 		0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */ = {isa = PBXFileReference; lastKnownFileType = text; path = "ComicTextDetector-LICENSE-APACHE"; sourceTree = "<group>"; };
 		0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "ComicTextDetector-NOTICE.md"; sourceTree = "<group>"; };
@@ -218,6 +220,7 @@
 				0A00000100000000000000E9 /* TranslationContextQuality.swift */,
 				0A00000100000000000000F3 /* JapaneseOCRTextNormalizer.swift */,
 				0A00000100000000000000F0 /* ImageTranslationRenderSafety.swift */,
+				0A00000100000000000000FF /* ImageTranslationTextFitter.swift */,
 				0A0000010000000000000013 /* TranscriptModels.swift */,
 				0A00000100000000000000C1 /* ImageOCRResultSummary.swift */,
 				0A00000100000000000000C3 /* ImageOCRReviewFilter.swift */,
@@ -427,6 +430,7 @@
 				0A00000100000000000000EC /* ImageOCRGeometryEditor.swift in Sources */,
 				0A00000100000000000000EE /* ImageOCRBlockStructureEditor.swift in Sources */,
 				0A00000100000000000000F1 /* ImageTranslationRenderSafety.swift in Sources */,
+				0A00000100000000000000FE /* ImageTranslationTextFitter.swift in Sources */,
 				0A00000100000000000000BE /* ImageOCRLayoutEngine.swift in Sources */,
 				0A00000100000000000000C0 /* ImageOCRResultSummary.swift in Sources */,
 				0A00000100000000000000C2 /* ImageOCRReviewFilter.swift in Sources */,

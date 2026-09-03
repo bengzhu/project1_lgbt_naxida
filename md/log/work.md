@@ -6,17 +6,17 @@
 
 ### 当前总目标
 
-在 `smalldata_test` 直接修复 Apple 图片翻译结果被 Gemma QA 误拒、图片块停留“等待翻译”，以及文本页粘贴无响应的问题。
+在 `smalldata_test` 直接完成图片翻译页 OCR 原位覆盖重绘，保留现有 Store/OCR/翻译状态契约；按用户高速约束只做本机验证并提交，不建分支、不 push、不跑云端 CI。
 
 ### 规划小目标（完成 1/1）
 
 | 小目标 | 状态 |
 | --- | --- |
-| Apple 图片结果分流与文本粘贴修复 | 已完成 |
+| OCR 框原位白底覆盖与自适应字号 | 已完成 |
 
 ### 当前状态
 
-- 基线/分支：`smalldata_test@5e1eb5b4`；按用户授权不建分支、不 push、不运行云端 CI。
-- 实现：Apple 图片批量/单块译文只做系统结果必需的非空校验，不再套用 Gemma prompt/术语/context QA；Gemma 仍保留原 QA。文本粘贴改为 `PasteButton` 明确请求文本 UTI，并通过 `NSItemProvider` 加载字符串后回到 MainActor 更新 Store。
-- 本地证据：Apple/图片 QA/粘贴定向合同通过；Xcode 26.6 针对唯一 `WWIIHexV0 v0.441 iPhone 17 Pro` 构建成功。`test/2.png` 实际 OCR 得到 17 个块并确认选择 Apple Translation，但该模拟器系统仍报告不支持日语→简体中文，因此本机无法生成真实 Apple 译文，不能把编译或合同外推为翻译质量证据。
-- 收口：直接提交到 `smalldata_test`；不 push、不运行云端 CI。模拟器系统语言对限制作为已知验证边界保留。
+- 基线/分支：`smalldata_test`；唯一运行设备为 `WWIIHexV0 v0.441 iPhone 17 Pro`（iOS 26.5）。
+- 实现：`ImageTranslationPreview`/`ImageTranslationOverlayBlock` 直接使用 `ImageTranslationBlock.boundingBox`；可见覆盖不再旁贴或外扩，白底盖原文并在同框绘制译文。新增 `ImageTranslationTextFitter`，以 Core Text 测量和二分搜索计算横排换行/竖排列行最大字号；PNG 导出复用同一计划。旧 `ImageTranslationOverlayMode` 保留用于 Codable 兼容，但图片产品统一归一为 `.replace`。
+- 本地证据：Xcode 26.6 Debug build 成功；`imageSuccess` DEBUG 场景在唯一 WWII 模拟器实跑并截图确认两个示例译文均位于 OCR 框内。相关图片会话持久化 `9/9`、渲染安全 `7/7`、导出生命周期 `9/9`、竖排渲染合同 `5/5` 通过；历史 v3.187 UI interaction 合同仍含旁贴/选项旧断言及一个与本任务无关的键盘断言，不改回旧行为。
+- 收口：已直接提交到 `smalldata_test`，未 push、未触发云端 CI；真实日语翻译质量仍受模拟器系统语言包能力限制，本轮不外推质量结论。
