@@ -60,7 +60,9 @@ class V189PasteManualMatrixContractTests(unittest.TestCase):
                 self.assertNotIn("resolvedPasteText", body)
                 self.assertNotIn("pasteText", body)
         button = read("AITRANS/Views/TextWorkspacePasteButton.swift")
-        self.assertIn("PasteButton(payloadType: String.self, onPaste: onPaste)", button)
+        self.assertIn("PasteButton(supportedContentTypes: [.text], payloadAction: loadText)", button)
+        self.assertIn("canLoadObject(ofClass: NSString.self)", button)
+        self.assertIn("provider.loadObject(ofClass: NSString.self)", button)
 
     def test_wide_ipad_evidence_is_required(self) -> None:
         capture = read("scripts/capture-ui-evidence.sh")

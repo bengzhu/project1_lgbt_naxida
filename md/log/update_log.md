@@ -11034,3 +11034,9 @@ CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` �
 
 核心候选 `45f785c4104ae506ea65562f209e795f89f1b041` 的 exact-SHA full CI [33752199467](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33752199467) 成功；未加密 artifact `aitrans-ci-v3.405-codeb-v3.405-safari-browser-tabs--45f785c4104a-run33752199467-attempt1` 已核对 branch/SHA/run/profile、JUnit `11/11`、浏览器合同 `13/13`、共享根导航合同 `5/5`、Xcode simulator build log 与 xcresult。PR [#462](https://github.com/bengzhu/project1_lgbt_naxida/pull/462) 已合并，merge SHA `75c119498fc976a8ef2bfda9753ff1b81d6343ee` 的合入后 fast CI [33753067186](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33753067186) 成功复用该 full receipt，原候选分支已清理。Speech、历史 UI、OCR/翻译 benchmark、Koharu、GGUF、截图和云端漫画探针均按浏览器 scope 跳过；本轮未执行 baidu.com 真机/模拟器手势截图，因此不把静态合同与编译结果外推为实机视觉证据。
 最终记录 PR [#463](https://github.com/bengzhu/project1_lgbt_naxida/pull/463) 已合并，`smalldata_test@ec736a58a2f298701e34bc00147a713df936d418` 的合入后 fast CI [33753445851](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33753445851) 成功复用 full receipt；本轮收口完成。
+
+## Apple 图片译文落块与文本粘贴修复（2026-09-03）
+
+图片翻译此前把 Apple Translation 已按 client ID 返回的系统译文继续送入 Gemma 专用的 prompt、术语、跨批 context 与输出形态 QA；任一短拟声词或系统措辞被误拒后整批抛错，已识别块因而保留空译文并显示“等待翻译”。现按引擎分流：Apple 批量和单块结果仅拒绝缺失/空响应，Gemma 保留既有完整 QA、逐块补译和失败边界，OCR、块坐标、取消与持久化流程不变。
+
+文本页 `PasteButton<String>` 改为声明文本 UTI，并从系统提供的 `NSItemProvider` 显式加载 `NSString`，加载完成后在 MainActor 调用既有填入/换行追加逻辑。Apple、图片 QA、单块重试与粘贴定向合同通过；Xcode 26.6 在唯一 `WWIIHexV0 v0.441 iPhone 17 Pro` 模拟器目标构建成功。`test/2.png` 本地运行实际得到 17 个 OCR 块且配置为 Apple Translation、日语→简体中文；该模拟器系统报告该语言对不受支持，故真实系统译文运行验收未完成，不声称翻译质量通过。未运行云端 CI、GGUF、Speech、Koharu 或无关历史测试。

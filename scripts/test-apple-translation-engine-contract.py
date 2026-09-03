@@ -78,6 +78,25 @@ class AppleTranslationEngineContractTests(unittest.TestCase):
             self.assertIn(marker, self.store)
         self.assertIn("let result = try await generateWithSelectedEngine(request)", self.store)
 
+    def test_image_translation_uses_system_result_validation_not_gemma_qa(self) -> None:
+        batch = self.store.split("private func translateJapaneseImageBatch(", 1)[1].split(
+            "private func japaneseTranslationQAConfiguration(", 1
+        )[0]
+        apple_branch = batch.split("if requestedEngine == .appleTranslation {", 1)[1].split(
+            "let qualityReport = TranslationBatchQualityEvaluator.evaluate(", 1
+        )[0]
+        self.assertIn("guard let value", apple_branch)
+        self.assertIn("guard !translation.isEmpty", apple_branch)
+        self.assertIn("return translations", apple_branch)
+        self.assertNotIn("TranslationBatchQualityEvaluator", apple_branch)
+
+        validator = self.store.split("private func imageTranslationOutputFailures(", 1)[1].split(
+            "private func japaneseImageTranslationPrompt(", 1
+        )[0]
+        self.assertIn("if engine == .appleTranslation", validator)
+        self.assertIn('["emptyOutput"]', validator)
+        self.assertIn("TranslationBatchQualityEvaluator.singleOutputFailures(", validator)
+
     def test_new_sources_are_compiled_by_the_app_target(self) -> None:
         for source in ("AppleTranslationService.swift", "AppleTranslationTaskHost.swift"):
             self.assertIn(f"{source} in Sources", self.project)

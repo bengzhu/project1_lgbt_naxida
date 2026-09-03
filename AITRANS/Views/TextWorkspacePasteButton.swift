@@ -1,11 +1,12 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct TextWorkspacePasteButton: View {
     @Environment(\.isEnabled) private var isEnabled
     let onPaste: ([String]) -> Void
 
     var body: some View {
-        PasteButton(payloadType: String.self, onPaste: onPaste)
+        PasteButton(supportedContentTypes: [.text], payloadAction: loadText)
             .buttonStyle(.plain)
             .foregroundStyle(.clear)
             .frame(maxWidth: .infinity, minHeight: AppTheme.Layout.minimumTarget)
@@ -28,5 +29,20 @@ struct TextWorkspacePasteButton: View {
             }
             .opacity(isEnabled ? 1 : 0.56)
             .contentShape(.rect)
+    }
+
+    private func loadText(from providers: [NSItemProvider]) {
+        guard let provider = providers.first(where: {
+            $0.canLoadObject(ofClass: NSString.self)
+        }) else {
+            onPaste([])
+            return
+        }
+        provider.loadObject(ofClass: NSString.self) { value, _ in
+            let text = value as? String ?? ""
+            Task { @MainActor in
+                onPaste(text.isEmpty ? [] : [text])
+            }
+        }
     }
 }

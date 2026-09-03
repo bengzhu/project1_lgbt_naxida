@@ -5706,11 +5706,29 @@ final class TranslationSessionStore: ObservableObject {
         )
 
         do {
+            let requestedEngine = selectedEngine
             let result = try await generateWithSelectedEngine(request)
             let parsedTranslations = try Self.parseMangaTaggedTranslations(
                 result.text,
                 expectedIDs: expectedIDs
             )
+            if requestedEngine == .appleTranslation {
+                let translations = try parsedTranslations.map { value in
+                    guard let value else {
+                        throw ImageMangaBatchTranslationError.emptyTranslation
+                    }
+                    let translation = value.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !translation.isEmpty else {
+                        throw ImageMangaBatchTranslationError.emptyTranslation
+                    }
+                    return translation
+                }
+                writeLaunchLLMSmokeProbe(
+                    "manga-batch-result state=system-translated engine=\(result.engineName) " +
+                    "count=\(translations.count) output=\(Self.probeField(result.text))"
+                )
+                return translations
+            }
             let qualityReport = TranslationBatchQualityEvaluator.evaluate(
                 output: result.text,
                 items: blocks.enumerated().map { offset, block in
@@ -5865,6 +5883,7 @@ final class TranslationSessionStore: ObservableObject {
         targetLanguage: SupportedLanguage,
         translationContext: TranslationPromptContext
     ) async throws -> String {
+        let requestedEngine = selectedEngine
         let candidate = try await translate(
             block.original,
             sourceLanguage: sourceLanguage,
@@ -5874,10 +5893,11 @@ final class TranslationSessionStore: ObservableObject {
         try Task.checkCancellation()
 
         let cleanCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
+        let failures = imageTranslationOutputFailures(
             output: cleanCandidate,
             sourceText: block.original,
             kind: block.textKind ?? translationContext.textKind,
+            engine: requestedEngine,
             configuration: imageTranslationQAConfiguration(
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
@@ -5915,6 +5935,7 @@ final class TranslationSessionStore: ObservableObject {
             textKind: effectiveTextKind,
             sourceCharacterCount: block.original.count
         )
+        let requestedEngine = selectedEngine
         let candidate = try await translate(
             block.original,
             sourceLanguage: sourceLanguage,
@@ -5924,10 +5945,11 @@ final class TranslationSessionStore: ObservableObject {
         try Task.checkCancellation()
 
         let cleanCandidate = candidate.trimmingCharacters(in: .whitespacesAndNewlines)
-        let failures = TranslationBatchQualityEvaluator.singleOutputFailures(
+        let failures = imageTranslationOutputFailures(
             output: cleanCandidate,
             sourceText: block.original,
             kind: effectiveTextKind,
+            engine: requestedEngine,
             configuration: japaneseTranslationQAConfiguration(
                 sourceLanguage: sourceLanguage,
                 targetLanguage: targetLanguage,
@@ -5943,6 +5965,32 @@ final class TranslationSessionStore: ObservableObject {
             throw ImageMangaBatchTranslationError.qualityFailure([expectedID])
         }
         return cleanCandidate
+    }
+
+    /// Apple Translation returns one system-owned response for each submitted
+    /// source item and reports unsupported pairs as API errors. Gemma still
+    /// needs the stricter prompt/term/context QA, but applying those
+    /// model-specific heuristics to Apple results can reject valid system
+    /// translations that cannot follow a Gemma prompt. Keep the shared image
+    /// boundary fail-closed for empty system responses only.
+    private func imageTranslationOutputFailures(
+        output: String,
+        sourceText: String,
+        kind: TranslationTextKind,
+        engine: ModelEngine,
+        configuration: TranslationBatchQAConfiguration
+    ) -> [String] {
+        if engine == .appleTranslation {
+            return output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? ["emptyOutput"]
+                : []
+        }
+        return TranslationBatchQualityEvaluator.singleOutputFailures(
+            output: output,
+            sourceText: sourceText,
+            kind: kind,
+            configuration: configuration
+        )
     }
 
     /// Rebuilds the same bounded, read-only context used by the full-page

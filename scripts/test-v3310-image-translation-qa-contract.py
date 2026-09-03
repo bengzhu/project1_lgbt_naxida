@@ -73,7 +73,7 @@ class ImageTranslationQAContractTests(unittest.TestCase):
             self.assertIn("confirmedTerms:", body)
             self.assertIn("textKind:", body)
 
-    def test_gate_calls_standard_translation_then_shared_fail_closed_qa(self) -> None:
+    def test_gate_calls_standard_translation_then_engine_aware_fail_closed_qa(self) -> None:
         body = function_body(
             self.store,
             "private func translateImageBlockWithQA(\n",
@@ -81,7 +81,8 @@ class ImageTranslationQAContractTests(unittest.TestCase):
         for marker in (
             "let candidate = try await translate(",
             "try Task.checkCancellation()",
-            "TranslationBatchQualityEvaluator.singleOutputFailures(",
+            "imageTranslationOutputFailures(",
+            "engine: requestedEngine",
             "imageTranslationQAConfiguration(",
             "guard failures.isEmpty else",
             "ImageMangaBatchTranslationError.qualityFailure([0])",
