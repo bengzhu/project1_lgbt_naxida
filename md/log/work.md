@@ -21,4 +21,5 @@
 - 验收：URL 规范化与内联错误；导航/刷新/进度；悬浮栏滚动显隐；加载/失败/进程终止状态；`_blank`、外部协议和下载响应；悬浮球拖拽/菜单/屏内收敛；横竖屏与键盘避让。
 - CI：baseline=`git diff --check`；direct=浏览器合同 + v3.400 根导航共享合同；required=一个 iOS simulator build；skipped=其余历史 UI、v1.88/v1.89、OCR、Speech、Koharu、GGUF、截图与探针。
 - 已知工作树：`AITRANS.xcodeproj/xcshareddata/` 为开始前已有未跟踪内容，继续保留且不纳入提交。
-- 下一步：实现源码与工程接线，运行轻量检查，推送候选并验收精确 SHA 的 task-scoped full。
+- 已完成证据：核心候选 `f18f4e0325fa69150b4b28c8c96569a110fd436d`；exact-SHA full run `33739272351` 成功；artifact `aitrans-ci-v3.404-codeb-v3.404-manga-browser--f18f4e0325fa-run33739272351-attempt1` 已核对 manifest、JUnit `11/11`、Xcode build log 与 xcresult，WebKit delegate 近似匹配警告已消失。
+- 下一步：提交本记录，核对 metadata-only fast receipt，创建 PR、独立复核并合并，随后清理候选分支。
