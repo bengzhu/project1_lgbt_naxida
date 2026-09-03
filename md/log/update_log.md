@@ -11022,4 +11022,6 @@ CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` �
 
 漫画浏览器改为白色浅色 WKWebView 全屏底面，scroll content inset 使用顶部安全区避免状态栏遮挡；进入漫画页隐藏主 TabView，并以随滚动收缩的左上退出按钮、三胶囊底栏和 36pt 域名胶囊替代整条工具栏，翻译球同步显隐。
 
-`BrowserModel` 新增 tabs 与唯一 `activeTabID`。每个标签独立保存阶段、URL、进度、滚动位置、导航状态和 UIImage 缩略图；切换前抓取当前可视快照并释放弱引用 WKWebView，SwiftUI 通过 active ID 重建唯一当前实例。标签切换器为两列卡片，支持新建、切换、关闭；数据只驻留内存，不接翻译/OCR/LLM 或磁盘持久化。候选 exact-SHA、云端 build、baidu.com 运行验收、PR 与合并证据待收口后补记。
+`BrowserModel` 新增 tabs 与唯一 `activeTabID`。每个标签独立保存阶段、URL、进度、滚动位置、导航状态和 UIImage 缩略图；切换前抓取当前可视快照并释放弱引用 WKWebView，SwiftUI 通过 active ID 重建唯一当前实例。标签切换器为两列卡片，支持新建、切换、关闭；数据只驻留内存，不接翻译/OCR/LLM 或磁盘持久化。
+
+核心候选 `45f785c4104ae506ea65562f209e795f89f1b041` 的 exact-SHA full CI [33752199467](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33752199467) 成功；未加密 artifact `aitrans-ci-v3.405-codeb-v3.405-safari-browser-tabs--45f785c4104a-run33752199467-attempt1` 已核对 branch/SHA/run/profile、JUnit `11/11`、浏览器合同 `13/13`、共享根导航合同 `5/5`、Xcode simulator build log 与 xcresult。Speech、历史 UI、OCR/翻译 benchmark、Koharu、GGUF、截图和云端漫画探针均按浏览器 scope 跳过；本轮未执行 baidu.com 真机/模拟器手势截图，因此不把静态合同与编译结果外推为实机视觉证据。PR、merge SHA 与合入后 fast CI 待完成后补记。

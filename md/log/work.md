@@ -21,4 +21,5 @@
 - 验收：baidu.com 顶部白色且内容避开状态栏；主 TabView 隐藏；下滑只留 36pt 域名胶囊并同步收起退出/翻译球；上滑 spring 恢复；两列标签器可新建/切换/关闭；后台标签无 WKWebView，切回恢复 URL 与 scrollOffset。
 - CI：baseline=`git diff --check`；direct=浏览器合同 + 根导航共享合同；required=当前核心 SHA 一个 iOS simulator build；skipped=历史 UI、日语 benchmark、OCR、Speech、Koharu、GGUF、翻译、截图和探针。
 - 已知工作树：`AITRANS.xcodeproj/xcshareddata/` 为开始前已有未跟踪内容，继续保留且不纳入提交。
-- 下一步：完成类型编译修正与轻量合同，推送候选并核对 exact-SHA full artifact。
+- 已完成证据：核心候选 `45f785c4104ae506ea65562f209e795f89f1b041`；exact-SHA full run `33752199467` 成功；artifact `aitrans-ci-v3.405-codeb-v3.405-safari-browser-tabs--45f785c4104a-run33752199467-attempt1` 已核对 manifest、JUnit `11/11`、浏览器合同 `13/13`、共享根导航合同 `5/5`、Xcode build log 与 xcresult。仅有既有 `LlamaRuntime.count32` 未使用警告。
+- 下一步：提交纯文档证据并复用 full receipt，创建 PR 合并，清理候选分支并补记最终 merge/fast CI。
