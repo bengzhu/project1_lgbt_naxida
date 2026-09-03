@@ -13,10 +13,10 @@ def read(relative_path: str) -> str:
 
 
 class V3400ImmersiveUIContractTests(unittest.TestCase):
-    def test_phone_navigation_has_five_clear_primary_destinations(self) -> None:
+    def test_phone_navigation_includes_manga_browser_destination(self) -> None:
         content = read("AITRANS/Views/ContentView.swift")
         self.assertIn(
-            "static let phoneTabs: [AppTab] = [.text, .image, .ocr, .audio, .library]",
+            "static let phoneTabs: [AppTab] = [.text, .image, .manga, .ocr, .audio, .library]",
             content,
         )
         self.assertIn("ForEach(AppTab.phoneTabs)", content)
@@ -28,7 +28,7 @@ class V3400ImmersiveUIContractTests(unittest.TestCase):
     def test_tablet_navigation_exposes_task_groups(self) -> None:
         content = read("AITRANS/Views/ContentView.swift")
         for group in [
-            '("创作", [.text, .image, .audio])',
+            '("创作", [.text, .image, .manga, .audio])',
             '("工具", [.ocr])',
             '("资料", [.history, .settings])',
         ]:
@@ -39,7 +39,7 @@ class V3400ImmersiveUIContractTests(unittest.TestCase):
     def test_visual_identity_is_semantic_and_not_color_only(self) -> None:
         theme = read("AITRANS/Views/AppTheme.swift")
         components = read("AITRANS/Views/AppComponents.swift")
-        for feature in ["text", "image", "ocr", "audio", "library", "settings"]:
+        for feature in ["text", "image", "manga", "ocr", "audio", "library", "settings"]:
             self.assertIn(f"case {feature}", theme)
         self.assertIn("var eyebrow: String", theme)
         self.assertIn("var index: String", theme)

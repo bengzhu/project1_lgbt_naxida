@@ -6,7 +6,7 @@
 
 | 合同/入口 | 路径 | 覆盖对象 |
 | --- | --- | --- |
-| 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 416 个当前 tracked 合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
+| 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 420 个当前合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
 | 非版本 Speech 合同 | [`scripts/test-speech-*.py`](../../../scripts/) | Speech 接线、质量 evaluator |
 | Python evaluator | [`scripts/evaluate-*.py`](../../../scripts/) | benchmark/corpus/report schema 语义 |
 | Swift harness/evaluator | [`scripts/fixtures/`](../../../scripts/fixtures/) 与 `scripts/*evaluator.swift` | 需要编译/运行的 runtime evidence；默认云端 |

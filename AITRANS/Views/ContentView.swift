@@ -3,6 +3,7 @@ import SwiftUI
 enum AppTab: Hashable, CaseIterable, Identifiable {
     case text
     case image
+    case manga
     case ocr
     case audio
     case library
@@ -15,6 +16,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .text: "文本"
         case .image: "图片"
+        case .manga: "漫画"
         case .ocr: "OCR 检测"
         case .audio: "音频"
         case .library: "资料库"
@@ -27,6 +29,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .text: "text.bubble.fill"
         case .image: "photo.on.rectangle"
+        case .manga: "book.pages.fill"
         case .ocr: "text.viewfinder"
         case .audio: "waveform.and.mic"
         case .library: "square.grid.2x2.fill"
@@ -39,6 +42,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         switch self {
         case .text: .text
         case .image: .image
+        case .manga: .manga
         case .ocr: .ocr
         case .audio: .audio
         case .library, .history: .library
@@ -46,9 +50,9 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
         }
     }
 
-    static let phoneTabs: [AppTab] = [.text, .image, .ocr, .audio, .library]
+    static let phoneTabs: [AppTab] = [.text, .image, .manga, .ocr, .audio, .library]
     static let tabletSections: [(title: String, tabs: [AppTab])] = [
-        ("创作", [.text, .image, .audio]),
+        ("创作", [.text, .image, .manga, .audio]),
         ("工具", [.ocr]),
         ("资料", [.history, .settings])
     ]
@@ -212,6 +216,8 @@ private struct AppTabRouter: View {
             TextTranslationView(selectedTab: $selectedTab)
         case .image:
             ImageTranslationView()
+        case .manga:
+            MangaBrowserView()
         case .ocr:
             ImageOCRDetectionView()
         case .audio:

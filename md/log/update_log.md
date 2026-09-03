@@ -11011,3 +11011,9 @@ CI 继续复用既有 v3388 test2 overlay 产物，并输出 test2-ocr-full-over
 本轮先建立 UI 重构底座：新增 `AppFeature`，让文本、图片、OCR、音频、资料库、设置同时通过编号、英文眉题、SF Symbol、浅/深色功能色和 Hero 形态建立非纯色视觉身份；共享页面 Hero 使用高对比渐变、状态胶囊、Increase Contrast 描边与遵循 Reduce Motion 的一次性弹簧入场。共享 surface 改为大圆角、轻层级阴影与可选功能色导轨，文本输入/译文卡片获得明确分区。
 
 iPhone 一级导航从 6 个同级入口收敛为文本、图片、OCR、音频、资料库 5 项，资料库以两个大卡片分流历史和设置；iPad 侧栏直接按“创作 / 工具 / 资料”分组。图片翻译与 OCR-only 工作台仍是独立路由，View 继续只读 Store 投影并调用公开动作。本地 `git diff --check`、Swift parse、v3.400 新合同 `5/5`、v1.87 `12/12`、v1.88 `7/7`、v1.89 `4/4` 通过；六组功能色对比度最低为 5.36:1。核心候选 SHA `02ce27fa43356a4651ddb36033cca3cd01f97937` 的 exact-SHA full [33584670369](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33584670369) 与 Xcode simulator build 通过，未加密 artifact 已核对 branch/SHA/run/profile；真实 OCR/翻译、Koharu、通用 UI evidence 均按 task-scoped 边界跳过，不据静态合同声称真机视觉质量。
+
+## v3.404：漫画内嵌浏览器与翻译悬浮 UI（候选已验证）
+
+新增“漫画”工作区、`BrowserModel` 与 SwiftUI 包装的 WKWebView：无 scheme 地址补 HTTPS，网页阶段、URL、进度和导航能力集中持有；提供全屏网页、悬浮 Safari 风格工具栏、滚动自动隐藏、地址编辑、失败/网页进程终止恢复、`_blank` 当前页加载、外部协议/下载提示，以及只在加载成功后显示的可拖拽 48pt 翻译球和纯 UI 菜单。浏览器不调用翻译、OCR、LLM、`TranslationSessionStore` 或持久化，收藏和所有翻译按钮保持占位。
+
+CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` 标记时，只运行 `test-v3404-manga-browser-ui-contract.py`、共享根导航合同和一个 iOS simulator build，跳过历史 UI、日语 OCR/翻译 benchmark、Speech、Koharu、GGUF、截图和探针；若 changed-files 越出浏览器 allowlist 则恢复常规路由。浏览器 full receipt 允许后续纯文档提交复用，并已修正 fast follow-up 错误要求已跳过 Japanese benchmark 的门禁。最终候选 SHA `d8900b273fdfe1ff3487a2c2f859f9ef8aa40fc0` 的 exact-SHA full [33739983371](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33739983371) 已成功，未加密 artifact `aitrans-ci-v3.404-codeb-v3.404-manga-browser--d8900b273fdf-run33739983371-attempt1` 绑定 branch/SHA/run/profile，JUnit `11/11`、Xcode simulator build 与 xcresult 均已核对；本轮不运行网页联网交互截图、OCR、翻译或模型质量测试，也不以静态合同外推真机视觉质量。PR 与合并证据待收口后补记。

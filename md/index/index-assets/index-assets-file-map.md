@@ -10,6 +10,7 @@
 
 | 文件 | 主题 |
 | --- | --- |
+| [`BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift) | 漫画浏览器网页阶段、URL、进度和导航状态 |
 | [`ImageOCRProvenance.swift`](../../../AITRANS/Models/ImageOCRProvenance.swift) | candidate/engine/crop/selector provenance |
 | [`ImageOCRResultSummary.swift`](../../../AITRANS/Models/ImageOCRResultSummary.swift) | confidence、review、direction 摘要 |
 | [`ImageOCRReviewFilter.swift`](../../../AITRANS/Models/ImageOCRReviewFilter.swift) | 图片复查筛选 |
@@ -54,6 +55,7 @@
 | [`ImageOCRGeometryEditor.swift`](../../../AITRANS/Views/ImageOCRGeometryEditor.swift) | geometry editor |
 | [`ImageOCRProvenanceDisclosureView.swift`](../../../AITRANS/Views/ImageOCRProvenanceDisclosureView.swift) | provenance disclosure |
 | [`ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | 图片 OCR/翻译/overlay/复查 UI |
+| [`MangaBrowserView.swift`](../../../AITRANS/Views/MangaBrowserView.swift) | WKWebView、悬浮浏览器工具栏和翻译球占位 UI |
 | [`ModelManagementView.swift`](../../../AITRANS/Views/ModelManagementView.swift) | 本地模型管理 |
 | [`ProFeatureViews.swift`](../../../AITRANS/Views/ProFeatureViews.swift) | Pro/能力状态 UI |
 | [`PromptLibraryView.swift`](../../../AITRANS/Views/PromptLibraryView.swift) | prompt library/editor |
@@ -90,4 +92,4 @@
 
 ## 维护方式
 
-`AITRANS/` 的 Swift 文件必须出现在本页对应表格；资源新增时补路径和用途。`scripts/` 的 415 个版本合同不复制到本页，统一由 [`scripts/test-v*.py`](../index-validation/index-validation-contracts.md) glob 覆盖，评估器/runner/fixture 由同页入口覆盖。
+`AITRANS/` 的 Swift 文件必须出现在本页对应表格；资源新增时补路径和用途。`scripts/` 的 420 个版本合同不复制到本页，统一由 [`scripts/test-v*.py`](../index-validation/index-validation-contracts.md) glob 覆盖，评估器/runner/fixture 由同页入口覆盖。

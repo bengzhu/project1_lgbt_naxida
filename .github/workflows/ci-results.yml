@@ -588,6 +588,19 @@ jobs:
           receipt_propagation_allowed=$receipt_propagation_allowed
           EOF
 
+      - name: Detect browser-only task scope
+        id: browser_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser_task_scoped=false
+          if grep -E '^AITRANS/(Models/BrowserModel|Views/MangaBrowserView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
+            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AGENTS\.md|README\.md|AITRANS\.xcodeproj/project\.pbxproj|AITRANS/Models/BrowserModel\.swift|AITRANS/Views/(AppTheme|ContentView|MangaBrowserView)\.swift|scripts/test-v340(0-immersive|4-manga-browser)-ui-contract\.py|md/(test/test\.md|index/index\.md|index/index-app/(index-app|index-app-ui)\.md|index/index-assets/index-assets-file-map\.md|index/index-validation/index-validation-(ci|contracts)\.md|flow/(flow|flowchart)\.md|log/(update_log|work)\.md))$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            browser_task_scoped=true
+          fi
+          echo "is_scoped=$browser_task_scoped" >> "$GITHUB_OUTPUT"
+          echo "BROWSER_TASK_SCOPED=$browser_task_scoped" >> "$GITHUB_ENV"
+
       - name: Detect CI scope
         id: ci_scope
         shell: bash
@@ -602,9 +615,11 @@ jobs:
           ui_interaction_contract_required=false
           home_ui_contract_required=false
           paste_matrix_contract_required=false
+          browser_contract_required=false
           koharu_contract_required=false
           workflow_changed=false
           visual_task_scoped=false
+          browser_task_scoped="${BROWSER_TASK_SCOPED:-false}"
           if grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/fixtures/v3214-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness\.swift$|scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness\.swift$|scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness\.swift$|scripts/fixtures/v3254-japanese-region-diagnostic-harness\.swift$|scripts/test-v3214-image-japanese-manga-ocr-runtime\.sh$|scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime\.sh$|scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime\.sh$|scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime\.sh$|scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime\.sh$|scripts/test-v3254-image-japanese-region-diagnostic-runtime\.sh$|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             app_build_changed=true
           fi
@@ -1114,6 +1129,7 @@ jobs:
             ui_interaction_contract_required=false
             home_ui_contract_required=false
             paste_matrix_contract_required=false
+            browser_contract_required=false
             koharu_contract_required=false
           fi
 
@@ -1144,6 +1160,20 @@ jobs:
             paste_matrix_contract_required=false
             speech_contract_required=false
             koharu_contract_required=false
+          fi
+
+          # The browser shell has no dependency on translation, OCR, Speech,
+          # model, or historical UI contracts. Keep its full profile to one
+          # focused contract plus the required simulator build.
+          if [ "$browser_task_scoped" = "true" ]; then
+            ui_interaction_contract_required=false
+            home_ui_contract_required=false
+            paste_matrix_contract_required=false
+            speech_contract_required=false
+            koharu_contract_required=false
+            if [ "$validation_profile" = "full" ]; then
+              browser_contract_required=true
+            fi
           fi
 
           xcode_build_required=false
@@ -1183,6 +1213,8 @@ jobs:
             echo "smalldata_metadata_requires_full_validation=$smalldata_metadata_requires_full_validation"
             echo "receipt_propagation_allowed=$receipt_propagation_allowed"
             echo "visual_task_scoped=$visual_task_scoped"
+            echo "browser_task_scoped=$browser_task_scoped"
+            echo "browser_contract_required=$browser_contract_required"
             echo "speech_contract_required=$speech_contract_required"
             echo "ui_interaction_contract_required=$ui_interaction_contract_required"
             echo "home_ui_contract_required=$home_ui_contract_required"
@@ -1217,6 +1249,8 @@ jobs:
           echo "reused_full_validation_state=$reused_full_validation_state"
           echo "ui_evidence_required=$ui_evidence_required"
           echo "visual_task_scoped=$visual_task_scoped"
+          echo "browser_task_scoped=$browser_task_scoped"
+          echo "browser_contract_required=$browser_contract_required"
           echo "koharu_validator_extended_required=$koharu_validator_extended_required"
 
       - name: Restore GGUF model cache
@@ -1963,6 +1997,18 @@ jobs:
             python3 -B scripts/test-v3402-compact-header-settings-contract.py
           } 2>&1 | tee "$RESULT_ROOT/v188-home-ui-contract.log"
 
+      - name: v3.404 manga browser UI contract
+        id: manga_browser_contract
+        if: steps.ci_scope.outputs.browser_contract_required == 'true'
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          {
+            python3 -B scripts/test-v3404-manga-browser-ui-contract.py
+            python3 -B scripts/test-v3400-immersive-ui-contract.py
+          } 2>&1 | tee "$RESULT_ROOT/v3404-manga-browser-ui-contract.log"
+
       - name: v1.89 paste manual matrix contract
         id: v189_paste_matrix_contract
         if: steps.ci_scope.outputs.paste_matrix_contract_required == 'true'
@@ -2544,7 +2590,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" UI_INTERACTION_REQUIRED="${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" SPEECH_STATUS="${{ steps.speech_contract.outcome }}" SPEECH_REQUIRED="${{ steps.ci_scope.outputs.speech_contract_required }}" HOME_UI_STATUS="${{ steps.home_ui_contract.outcome }}" HOME_UI_REQUIRED="${{ steps.ci_scope.outputs.home_ui_contract_required }}" V189_PASTE_MATRIX_STATUS="${{ steps.v189_paste_matrix_contract.outcome }}" V189_PASTE_MATRIX_REQUIRED="${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" UI_EVIDENCE_STATUS="${{ steps.ui_evidence.outcome }}" UI_EVIDENCE_REQUIRED="${{ steps.ci_scope.outputs.ui_evidence_required }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
+          MODEL_STATUS="${{ steps.verify_model.outcome }}" STATIC_STATUS="${{ steps.static_checks.outcome }}" UI_INTERACTION_STATUS="${{ steps.ui_interaction_contract.outcome }}" UI_INTERACTION_REQUIRED="${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" SPEECH_STATUS="${{ steps.speech_contract.outcome }}" SPEECH_REQUIRED="${{ steps.ci_scope.outputs.speech_contract_required }}" HOME_UI_STATUS="${{ steps.home_ui_contract.outcome }}" HOME_UI_REQUIRED="${{ steps.ci_scope.outputs.home_ui_contract_required }}" BROWSER_STATUS="${{ steps.manga_browser_contract.outcome }}" BROWSER_REQUIRED="${{ steps.ci_scope.outputs.browser_contract_required }}" V189_PASTE_MATRIX_STATUS="${{ steps.v189_paste_matrix_contract.outcome }}" V189_PASTE_MATRIX_REQUIRED="${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" UI_EVIDENCE_STATUS="${{ steps.ui_evidence.outcome }}" UI_EVIDENCE_REQUIRED="${{ steps.ci_scope.outputs.ui_evidence_required }}" BUILD_STATUS="${{ steps.xcode_build.outcome }}" XCODE_BUILD_REQUIRED="${{ steps.ci_scope.outputs.xcode_build_required }}" PROBE_MODE="${{ steps.meta.outputs.probe_mode }}" SIMULATOR_BUILD_STATUS="${{ steps.simulator_build.outcome }}" MANGA_PROBE_STATUS="${{ steps.manga_probe.outcome }}" python3 - <<'PY'
           import os
           import xml.etree.ElementTree as ET
 
@@ -2572,6 +2618,7 @@ jobs:
               ("speech-recognition-contract", scoped_status(os.environ.get("SPEECH_STATUS", "skipped"), os.environ["SPEECH_REQUIRED"]), "speech recognition contract failed"),
               ("ui-interaction-contract", scoped_status(os.environ["UI_INTERACTION_STATUS"], os.environ["UI_INTERACTION_REQUIRED"]), "v1.87 UI interaction contract failed"),
               ("v188-home-ui-contract", scoped_status(os.environ["HOME_UI_STATUS"], os.environ["HOME_UI_REQUIRED"]), "v1.88 home UI contract failed"),
+              ("v3404-manga-browser-ui-contract", scoped_status(os.environ["BROWSER_STATUS"], os.environ["BROWSER_REQUIRED"]), "v3.404 manga browser UI contract failed"),
               ("v189-paste-matrix-contract", scoped_status(os.environ["V189_PASTE_MATRIX_STATUS"], os.environ["V189_PASTE_MATRIX_REQUIRED"]), "v1.89 paste matrix contract failed"),
               ("xcode-build", build_status, "xcode build failed"),
               ("ui-evidence", scoped_status(os.environ["UI_EVIDENCE_STATUS"], os.environ["UI_EVIDENCE_REQUIRED"]), "UI evidence failed"),
@@ -2620,6 +2667,9 @@ jobs:
           MANIFEST_UI_INTERACTION_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.ui_interaction_contract_required }}
           MANIFEST_SPEECH_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.speech_contract_required }}
           MANIFEST_HOME_UI_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.home_ui_contract_required }}
+          MANIFEST_BROWSER_TASK_SCOPED: ${{ steps.ci_scope.outputs.browser_task_scoped }}
+          MANIFEST_BROWSER_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.browser_contract_required }}
+          MANIFEST_BROWSER_CONTRACT_OUTCOME: ${{ steps.manga_browser_contract.outcome }}
           MANIFEST_PASTE_MATRIX_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.paste_matrix_contract_required }}
           MANIFEST_KOHARU_CONTRACT_REQUIRED: ${{ steps.ci_scope.outputs.koharu_contract_required }}
           MANIFEST_KOHARU_VALIDATOR_EXTENDED_REQUIRED: ${{ steps.ci_scope.outputs.koharu_validator_extended_required }}
@@ -2823,6 +2873,10 @@ jobs:
               "uiInteractionContractLogPath": "${RESULT_ROOT}/ui-interaction-contract.log",
               "speechRecognitionContractRequired": os.environ["MANIFEST_SPEECH_CONTRACT_REQUIRED"] == "true",
               "v188HomeUIContractRequired": os.environ["MANIFEST_HOME_UI_CONTRACT_REQUIRED"] == "true",
+              "browserTaskScoped": os.environ["MANIFEST_BROWSER_TASK_SCOPED"] == "true",
+              "v3404MangaBrowserUIContractRequired": os.environ["MANIFEST_BROWSER_CONTRACT_REQUIRED"] == "true",
+              "v3404MangaBrowserUIContractOutcome": os.environ["MANIFEST_BROWSER_CONTRACT_OUTCOME"],
+              "v3404MangaBrowserUIContractLogPath": "${RESULT_ROOT}/v3404-manga-browser-ui-contract.log",
               "v189PasteManualMatrixContractRequired": os.environ["MANIFEST_PASTE_MATRIX_CONTRACT_REQUIRED"] == "true",
               "koharuContractRequired": os.environ["MANIFEST_KOHARU_CONTRACT_REQUIRED"] == "true",
               "koharuValidatorExtendedRequired": os.environ["MANIFEST_KOHARU_VALIDATOR_EXTENDED_REQUIRED"] == "true",
@@ -3251,7 +3305,27 @@ jobs:
         if: always()
         shell: bash
         run: |
-          test "${{ needs.japanese_benchmark.result }}" = "success"
+          if [ "${{ steps.ci_scope.outputs.browser_task_scoped }}" = "true" ] || { [ "${{ steps.ci_scope.outputs.validation_profile }}" = "fast" ] && [ "${{ steps.ci_scope.outputs.reused_full_validation_state }}" = "success" ]; }; then
+            test "${{ needs.japanese_benchmark.result }}" = "skipped"
+          else
+            test "${{ needs.japanese_benchmark.result }}" = "success"
+          fi
+
+      - name: Prepare manga browser contract summary
+        if: always()
+        shell: bash
+        run: |
+          browser_failed=false
+          if [ "${{ steps.ci_scope.outputs.browser_contract_required }}" = "true" ] && [ "${{ steps.manga_browser_contract.outcome }}" != "success" ]; then
+            browser_failed=true
+          fi
+          {
+            echo "- browser task scoped: ${{ steps.ci_scope.outputs.browser_task_scoped }}"
+            echo "- manga browser contract required: ${{ steps.ci_scope.outputs.browser_contract_required }}"
+            echo "- v3.404 manga browser UI contract: ${{ steps.manga_browser_contract.outcome }}"
+            echo "- v3.404 manga browser UI contract log: ${RESULT_ROOT}/v3404-manga-browser-ui-contract.log"
+          } > "$RESULT_ROOT/browser-contract-summary.md"
+          echo "BROWSER_CONTRACT_FAILED=$browser_failed" >> "$GITHUB_ENV"
 
       - name: Write failure summary
         if: always()
@@ -3332,6 +3406,7 @@ jobs:
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
             echo "- UI interaction contract: ${RESULT_ROOT}/ui-interaction-contract.log"
             echo "- v1.88 home UI contract: ${RESULT_ROOT}/v188-home-ui-contract.log"
+            cat "$RESULT_ROOT/browser-contract-summary.md"
             echo "- Koharu active artifact validation: ${RESULT_ROOT}/koharu-active-artifacts-validation.json"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
             echo "- UI evidence: ${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json"
@@ -3465,7 +3540,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || [ "$BROWSER_CONTRACT_FAILED" = "true" ] || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
@@ -3518,7 +3593,7 @@ jobs:
             state=failure
             description="Task-scoped full validation failed: Koharu MIT48 cloud parity failed"
           fi
-          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.browser_contract_required }}" = "true" ] && [ "${{ steps.manga_browser_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
             state=failure
             description="Task-scoped full validation failed"
           fi
@@ -3543,13 +3618,14 @@ jobs:
             echo "Cloud Koharu MIT48 parity did not pass."
             exit 1
           fi
-          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
+          if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.browser_contract_required }}" = "true" ] && [ "${{ steps.manga_browser_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; } || [ "${{ steps.upload_results.outcome }}" != "success" ]; then
             echo "CI result bundle uploaded; failing job because at least one required stage failed."
             exit 1
           fi
 
   japanese_benchmark:
     name: Japanese OCR and translation benchmark contract
+    if: ${{ contains(github.event.head_commit.message, '[browser-only]') == false && contains(github.event.pull_request.title, '[browser-only]') == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

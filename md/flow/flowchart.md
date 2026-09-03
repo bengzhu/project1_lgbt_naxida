@@ -5,12 +5,15 @@
 
 ```mermaid
 flowchart TD
-  %% 用户入口：文本、图片、音频、开发页探针
+  %% 用户入口：文本、图片、漫画网页、音频、开发页探针
   A["用户操作 / test 固定素材"] --> NAV{"设备布局"}
-  NAV -->|"iPhone"| TAB["五入口 TabView"]
+  NAV -->|"iPhone"| TAB["六项 TabView<br/>紧凑宽度由系统承载 More"]
   NAV -->|"iPad"| SPLIT["NavigationSplitView"]
-  TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 音频 / 历史 / 设置 / 开发"]
+  TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 漫画 / OCR / 音频 / 资料库"]
   SPLIT --> B
+  B --> BROWSER["MangaBrowserView<br/>悬浮地址栏 / 翻译球占位"]
+  BROWSER --> BMODEL["BrowserModel<br/>页面阶段 / URL / 进度 / 导航"]
+  BMODEL --> WEB["WKWebView<br/>默认 ATS / 不持久化"]
   DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
   TWB["TextWorkspaceBackground<br/>静态网格 / 导向线路 / 文本页专属"] --> B
   SH["文本页顶部 safe-area inset<br/>页头 + 模型状态"] --> B
@@ -209,8 +212,10 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  APP["AITRANSApp"] --> UI["SwiftUI Views\n六个功能入口"]
-  UI --> STORE["TranslationSessionStore\n唯一业务状态与调度中心"]
+  APP["AITRANSApp"] --> UI["SwiftUI Views\n七个功能入口"]
+  UI --> STORE["TranslationSessionStore\n唯一翻译业务状态与调度中心"]
+  UI --> BROWSER2["MangaBrowserView\nBrowserModel -> WKWebView"]
+  BROWSER2 -. "不进入翻译 / OCR / 持久化" .-> END_BROWSER["网页浏览与纯 UI 翻译占位"]
 
   STORE --> TEXT["文本翻译"]
   STORE --> IMAGE["图片翻译"]
