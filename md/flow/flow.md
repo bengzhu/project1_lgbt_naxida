@@ -10,7 +10,7 @@
 | 网页浏览状态 | tabs/activeTabID、漫画页阶段、URL、内存缩略图、滚动位置、导航能力与 WKWebView 意图 | `BrowserModel`、`MangaBrowserView` |
 | 状态与调度 | 唯一业务状态、异步任务、持久化、导出和服务编排 | `TranslationSessionStore` |
 | OCR 与布局 | Vision OCR、漫画区域、Manga OCR、几何融合和阅读顺序 | `VisionOCRService`、`ComicTextBubbleDetectorService`、`MangaOCRService`、`ImageOCRLayoutEngine` |
-| 翻译模型 | Mock、本地 GGUF、prompt、采样、输出清洗和 QA | `MockGemmaService`、`GemmaLocalService`、`LlamaRuntime` |
+| 翻译引擎 | Apple Translation、本地 GGUF、预留路由、prompt、采样、输出清洗和 QA | `AppleTranslationService`、`GemmaLocalService`、`LlamaRuntime` |
 | Speech | 授权、录音/文件识别、取消隔离和事后质量评估 | Store、`SpeechQualityProbeService`、`SpeechQualityEvaluator` |
 | 诊断与验证 | 漫画覆盖探针、benchmark、合同和机器可读报告 | `MangaOverlayProbeService`、`scripts/`、`benchmarks/`、`output/` |
 
@@ -53,14 +53,15 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
 ```text
 用户输入
   -> TranslationSessionStore 组装 ModelGenerationRequest
-  -> 当前引擎（Mock 或 Local）
+  -> 当前翻译引擎（Apple Translation / Gemma / 预留）
   -> 译文 / 摘要 / 错误
   -> Store 提交当前会话和历史投影
   -> View 展示
 ```
 
-- Mock 用于界面和数据流冒烟。
-- Local 由 `GemmaLocalService` 生成 prompt，通过 `LlamaRuntime` 调用 llama.cpp 与沙盒 GGUF。
+- Apple Translation 由根视图的 `translationTask` 提供系统 `TranslationSession`，适配器把请求和结果维持为与 Gemma 相同的模型接口；程序化翻译需要 iOS 18+。
+- Gemma 由 `GemmaLocalService` 生成 prompt，通过 `LlamaRuntime` 调用 llama.cpp 与沙盒 GGUF；Mock 只用于 Preview 和数据流冒烟。
+- 浑元与通义千问只保存选项并明确返回未接入，不静默回退。
 - 模型缺失、模板不支持、上下文超限、分词/decode 失败都在服务边界返回错误，不能伪造成功。
 - 用户翻译使用产品采样策略；确定性解码只用于明确的诊断和对照。
 
@@ -74,7 +75,7 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
      -> 日语时按需使用漫画文字检测 + bundled Manga OCR
   -> ImageOCRLayoutEngine 融合、排序和方向判定
   -> ImageTranslationBlock 列表
-  -> Store 逐块翻译
+  -> Store 按当前翻译引擎批量或逐块翻译
   -> 复查 / OCR 修正 / 忽略与恢复
   -> 旁贴或覆盖渲染
   -> 稳定导出与分享

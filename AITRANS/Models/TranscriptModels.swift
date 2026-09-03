@@ -6967,22 +6967,56 @@ struct ImageTranslationPersistenceSnapshot: Equatable, Codable, Sendable {
 }
 
 enum ModelEngine: String, CaseIterable, Identifiable, Codable, Sendable {
+    case appleTranslation = "Apple Translation"
     case mock = "Mock"
     case local = "Local"
+    case hunyuan = "Hunyuan"
+    case qwen = "Qwen"
+
+    /// `mock` remains decodable for existing previews, diagnostics, and saved
+    /// prototype sessions, but it is not a user-selectable translation engine.
+    static let allCases: [ModelEngine] = [
+        .appleTranslation,
+        .local,
+        .hunyuan,
+        .qwen
+    ]
 
     var id: String { rawValue }
 
-    var title: String {
+    var selectionTitle: String {
         switch self {
+        case .appleTranslation: "[本地] Apple Translation（系统原生）"
         case .mock: "Gemma 1.5B Mock"
-        case .local: "Local GGUF"
+        case .local: "[本地] Gemma"
+        case .hunyuan: "[预留] 浑元大模型"
+        case .qwen: "[预留] 通义千问"
         }
+    }
+
+    var displayName: String {
+        switch self {
+        case .appleTranslation: "Apple Translation"
+        case .mock: "Gemma 1.5B Mock"
+        case .local: "Gemma 本地模型"
+        case .hunyuan: "浑元大模型"
+        case .qwen: "通义千问"
+        }
+    }
+
+    var title: String { selectionTitle }
+
+    var isReserved: Bool {
+        self == .hunyuan || self == .qwen
     }
 
     var systemImage: String {
         switch self {
+        case .appleTranslation: "character.book.closed.fill"
         case .mock: "cpu.fill"
         case .local: "externaldrive.fill"
+        case .hunyuan: "cloud.fill"
+        case .qwen: "cloud.fill"
         }
     }
 }
@@ -7332,7 +7366,7 @@ struct AppSettings: Equatable, Codable, Sendable {
         sourceLanguage: .englishUS,
         targetLanguage: .simplifiedChinese,
         selectedPromptID: PromptTemplate.translatorID,
-        selectedEngine: .mock,
+        selectedEngine: .local,
         sampling: .defaultValue,
         isProUnlocked: false,
         isDeveloperModeEnabled: false

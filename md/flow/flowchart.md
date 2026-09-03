@@ -31,9 +31,11 @@ flowchart TD
   DONE["键盘完成 / 翻译 / 新会话 / 离开文本页"] --> FOCUS["inputFocused = false"]
   FOCUS --> C
   C --> D["submitDraft<br/>ModelGenerationRequest"]
-  D --> E["LocalLanguageModeling<br/>Mock 或 Local"]
-  E --> F["MockGemmaService<br/>UI 和数据流冒烟"]
+  D --> E{"当前翻译引擎"}
+  E --> F["AppleTranslationService<br/>SwiftUI translationTask / TranslationSession"]
   E --> G["GemmaLocalService<br/>GGUF 本地模型适配"]
+  E --> GM["MockGemmaService<br/>Preview / UI 数据流冒烟"]
+  E --> GR["浑元 / 通义千问<br/>预留且明确失败"]
   G --> H["LlamaRuntime<br/>llama.cpp C API 封装"]
 
   %% 图片 OCR 分支：普通图片翻译

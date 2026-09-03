@@ -59,6 +59,7 @@ enum AppTab: Hashable, CaseIterable, Identifiable {
 }
 
 struct ContentView: View {
+    @EnvironmentObject private var store: TranslationSessionStore
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.colorScheme) private var colorScheme
     @AppStorage("aitrans.ui.appearance") private var appearanceRawValue = AppAppearance.system.rawValue
@@ -91,23 +92,25 @@ struct ContentView: View {
     }
 
     var body: some View {
-        ZStack {
-            AppCanvasBackground()
+        AppleTranslationTaskHost(service: store.appleTranslationService) {
+            ZStack {
+                AppCanvasBackground()
 
-            if evidenceScenario?.presentsPromptDirectly == true {
-                PromptLibraryView()
-            } else if evidenceScenario?.presentsDeveloperDirectly == true {
-                DeveloperConsoleView()
-            } else if evidenceScenario?.presentsModelDirectly == true {
-                ModelManagementView()
-            } else if evidenceScenario?.presentsHistoryDirectly == true {
-                HistoryView(selectedTab: $selectedTab)
-            } else if evidenceScenario?.presentsSettingsDirectly == true {
-                SettingsView(selectedTab: $selectedTab)
-            } else if horizontalSizeClass == .regular {
-                TabletRootView(selectedTab: $selectedTab)
-            } else {
-                PhoneRootView(selectedTab: $selectedTab)
+                if evidenceScenario?.presentsPromptDirectly == true {
+                    PromptLibraryView()
+                } else if evidenceScenario?.presentsDeveloperDirectly == true {
+                    DeveloperConsoleView()
+                } else if evidenceScenario?.presentsModelDirectly == true {
+                    ModelManagementView()
+                } else if evidenceScenario?.presentsHistoryDirectly == true {
+                    HistoryView(selectedTab: $selectedTab)
+                } else if evidenceScenario?.presentsSettingsDirectly == true {
+                    SettingsView(selectedTab: $selectedTab)
+                } else if horizontalSizeClass == .regular {
+                    TabletRootView(selectedTab: $selectedTab)
+                } else {
+                    PhoneRootView(selectedTab: $selectedTab)
+                }
             }
         }
         .preferredColorScheme(appearance.colorScheme)

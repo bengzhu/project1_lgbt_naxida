@@ -20,7 +20,7 @@ AITRANS 的核心协作入口。这里只保留长期有效的项目事实、迭
 - `BrowserModel` 只拥有漫画浏览器的标签、活动标签、网页阶段、地址、进度与导航状态；后台标签仅保存内存快照，不持有 WKWebView，也不进入 `TranslationSessionStore`、翻译、OCR、LLM 或持久化。
 - 普通图片识别以 Apple Vision OCR 为基础；日语漫画和竖排场景可结合漫画文字检测器与随包 Core ML Manga OCR，再由布局引擎融合、排序和复查。
 - `OCR 检测` 是 OCR-only 工作台，不进入翻译或 LLM；`MangaOverlayProbeService` 是独立诊断链路，不等同普通图片产品路径。
-- 本地翻译通过 `GemmaLocalService`、`LlamaRuntime` 和 `llama.cpp` 加载 GGUF；`MockGemmaService` 用于 UI/数据流冒烟。内置 Gemma 270M 只用于下载、加载和接口验证，不作为翻译质量基准。
+- 翻译引擎由 Store 统一选择：`AppleTranslationService` 通过 SwiftUI `TranslationSession` 调用系统翻译，Gemma 通过 `GemmaLocalService`、`LlamaRuntime` 和 `llama.cpp` 加载 GGUF；`MockGemmaService` 只用于 UI/数据流冒烟。内置 Gemma 270M 只用于下载、加载和接口验证，不作为翻译质量基准。
 - 音频识别使用 Apple Speech；参考 transcript 只允许在最终识别文本返回后参与评估，不能进入识别、纠错或生产翻译。
 - GGUF、用户数据和生成型测试产物不进仓库。当前版本、历史结论和 CI 证据以源码、工程配置、[`md/log/update_log.md`](md/log/update_log.md)、`metrics/` 与实际产物为准，不在本文件复制。
 
@@ -62,7 +62,7 @@ AITRANS 的核心协作入口。这里只保留长期有效的项目事实、迭
 - 普通图片 OCR：`VisionOCRService`、`MangaOCRService`、`ComicTextBubbleDetectorService`、`ImageOCRLayoutEngine`。
 - 状态与 UI：`TranslationSessionStore` 和对应 SwiftUI View。
 - 漫画浏览器：`BrowserModel`、`MangaBrowserView` 和其中的 `BrowserWebView`。
-- 本地翻译：`GemmaLocalService`、`LlamaRuntime`、`LocalModelPromptProfile`。
+- 翻译引擎：`AppleTranslationService`、`AppleTranslationTaskHost`、`GemmaLocalService`、`LlamaRuntime`、`LocalModelPromptProfile`。
 - 漫画探针：`MangaOverlayProbeService`、`test/1.png`、当前 `output/`。
 - Speech：`SpeechQualityProbeService`、`SpeechQualityEvaluator`、`test/speech_corpus/`。
 

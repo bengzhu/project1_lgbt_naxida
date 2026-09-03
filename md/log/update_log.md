@@ -1,3 +1,11 @@
+## 翻译引擎扩展与 Apple Translation 接入（2026-09-03，本地验收）
+
+- 设置页新增 `[本地] Apple Translation（系统原生）`、`[本地] Gemma`、`[预留] 浑元大模型`、`[预留] 通义千问` 四项翻译引擎菜单；`TranslationSessionStore.selectedEngine` 继续作为文本、图片和音频后续翻译的唯一权威并持久化，旧 Mock 设置/历史加载迁移到 Gemma，预留引擎明确失败且不静默回退。
+- 新增 Apple Translation 适配器与 SwiftUI 会话宿主，将现有语言设置映射到 `Locale.Language`，支持普通文本及带 client ID 的漫画批量请求，并处理 iOS 18 门槛、取消、切换、超时与同语言连续任务重触发；Gemma 调用路径保持独立。
+- 本机 Xcode 26.6 针对唯一 WWII iPhone 模拟器构建成功。普通图片页实跑 `test/2.png` 得到 17 个带坐标非空日语 OCR 块；引擎/语言/文件配置持久化正确。模拟器按系统限制明确返回“Apple Translation 不支持 日语到简体中文的翻译”，任务快速进入 `failed` 且未逐块重试；真实语言包下载与中文译文仍需 iOS 18+ 真机验证，本轮不声称翻译质量成功。
+- 定向 Apple Translation 合同 `6/6`、设置动作 `1/1`、根视图动作 `1/1`、图片会话持久化 `9/9`、配置 `invalidate()` 等价性和工程 plist 解析通过。两个历史 UI 合同的本任务断言通过，但全文件各有一个基线已存在的文本页 `safeAreaInset` 陈旧断言失败，不纳入本次结果。
+- 按用户高速约束直接修改 `smalldata_test`，不建候选分支、不运行或触发云端 CI；只运行本次相关本机构建、模拟器联调、配置版本语义检查、diff/链接检查。
+
 ## v3.403：滚动顶栏与资料库入口紧凑化（已完成）
 
 - 文本页将 `AppPageHeader` 从 `.safeAreaInset(edge: .top)` 移入主 `ScrollView`，五个主界面统一随内容滚动，避免“秒译”吸顶遮挡。

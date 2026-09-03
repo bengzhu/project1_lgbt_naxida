@@ -26,6 +26,7 @@
 
 | 文件 | 主题 |
 | --- | --- |
+| [`AppleTranslationService.swift`](../../../AITRANS/Services/AppleTranslationService.swift) | Apple Translation 适配、语言映射、批量请求与生命周期 |
 | [`ComicTextBubbleDetectorService.swift`](../../../AITRANS/Services/ComicTextBubbleDetectorService.swift) | bundled Core ML 漫画文字区域检测 |
 | [`GemmaLocalService.swift`](../../../AITRANS/Services/GemmaLocalService.swift) | 本地 GGUF 翻译/总结 service |
 | [`ImageOCRLayoutEngine.swift`](../../../AITRANS/Services/ImageOCRLayoutEngine.swift) | OCR geometry、融合、阅读顺序 |
@@ -44,6 +45,7 @@
 
 | 文件 | 主题 |
 | --- | --- |
+| [`AppleTranslationTaskHost.swift`](../../../AITRANS/Views/AppleTranslationTaskHost.swift) | SwiftUI `translationTask` 系统会话宿主 |
 | [`AppComponents.swift`](../../../AITRANS/Views/AppComponents.swift) | 共用组件 |
 | [`AppPreviewSupport.swift`](../../../AITRANS/Views/AppPreviewSupport.swift) | Preview/UI evidence scenario |
 | [`AppTheme.swift`](../../../AITRANS/Views/AppTheme.swift) | 主题与布局常量 |

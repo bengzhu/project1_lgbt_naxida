@@ -7,6 +7,7 @@
 | 屏幕/主题 | 文件 | 关键符号 |
 | --- | --- | --- |
 | 根路由、tab、Phone/iPad | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `ContentView`、`PhoneRootView`、`TabletRootView`、`AppTabRouter`、`LibraryHubView` |
+| Apple Translation 会话宿主 | [`AITRANS/Views/AppleTranslationTaskHost.swift`](../../../AITRANS/Views/AppleTranslationTaskHost.swift) | `AppleTranslationTaskHost`、`translationTask` |
 | 视觉系统与共享组件 | [`AppTheme.swift`](../../../AITRANS/Views/AppTheme.swift)、[`AppComponents.swift`](../../../AITRANS/Views/AppComponents.swift) | `AppFeature`、`AppPageHeader`、`AppCanvasBackground`、`appSurface` |
 | 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane`、`TextSessionUtilityBar` |
 | 图片翻译主屏 | [`AITRANS/Views/ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | `ImageTranslationView`、`ImageTranslationPanel`、`ImageTranslationPreview` |
@@ -16,7 +17,7 @@
 | 图片 overlay/竖排显示 | 同上 | `ImageTranslationOverlayBlock`、`ImageTranslationVerticalText` |
 | 图片结构/几何编辑 | [`ImageOCRBlockStructureEditor.swift`](../../../AITRANS/Views/ImageOCRBlockStructureEditor.swift)、[`ImageOCRGeometryEditor.swift`](../../../AITRANS/Views/ImageOCRGeometryEditor.swift) | editor Views |
 | 音频、历史、设置 | [`AudioTranslationView.swift`](../../../AITRANS/Views/AudioTranslationView.swift)、[`HistoryView.swift`](../../../AITRANS/Views/HistoryView.swift)、[`SettingsView.swift`](../../../AITRANS/Views/SettingsView.swift) | `AudioWorkspaceMode`、`SpeechCapabilityDisclosure`、历史操作 `Menu`、`SettingsAdvancedSection` |
-| Prompt/模型/Developer Console | [`PromptLibraryView.swift`](../../../AITRANS/Views/PromptLibraryView.swift)、[`ModelManagementView.swift`](../../../AITRANS/Views/ModelManagementView.swift)、[`DeveloperConsoleView.swift`](../../../AITRANS/Views/DeveloperConsoleView.swift) | settings destinations |
+| Prompt/引擎/模型/Developer Console | [`PromptLibraryView.swift`](../../../AITRANS/Views/PromptLibraryView.swift)、[`ModelManagementView.swift`](../../../AITRANS/Views/ModelManagementView.swift)、[`DeveloperConsoleView.swift`](../../../AITRANS/Views/DeveloperConsoleView.swift) | settings destinations、翻译引擎菜单 |
 | UI evidence fixtures | [`AITRANS/Views/AppPreviewSupport.swift`](../../../AITRANS/Views/AppPreviewSupport.swift) | `AppPreviewScenario` |
 
 ## 操作数据流

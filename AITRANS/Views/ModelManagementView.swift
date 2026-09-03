@@ -18,7 +18,7 @@ struct ModelManagementView: View {
                     statusTone: store.modelStatus.isReady ? .success : .warning,
                     feature: .settings
                 )
-                EngineSection()
+                TranslationEngineSection()
                 ModelFileSection(
                     importModel: { showModelImporter = true },
                     removeModel: { showRemoveConfirmation = true }
@@ -43,24 +43,25 @@ struct ModelManagementView: View {
             Button("移除模型", role: .destructive, action: store.removeLocalModel)
             Button("取消", role: .cancel) {}
         } message: {
-            Text("GGUF 文件将从 App 沙盒删除，Mock 引擎不受影响。")
+            Text("GGUF 文件将从 App 沙盒删除，Apple Translation 与预留引擎配置不受影响。")
         }
         .alert("模型文件", isPresented: $showImportResult) {} message: { Text(store.dataTransferMessage) }
     }
 }
 
-private struct EngineSection: View {
+private struct TranslationEngineSection: View {
     @EnvironmentObject private var store: TranslationSessionStore
 
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
-            AppSectionHeader(title: "运行引擎", subtitle: store.selectedEngine.rawValue, systemImage: "switch.2")
-            Picker("运行引擎", selection: engineBinding) {
+            AppSectionHeader(title: "翻译引擎", subtitle: store.selectedEngine.displayName, systemImage: "switch.2")
+            Picker("翻译引擎", selection: engineBinding) {
                 ForEach(ModelEngine.allCases) { engine in
-                    Label(engine.rawValue, systemImage: engine.systemImage).tag(engine)
+                    Label(engine.selectionTitle, systemImage: engine.systemImage).tag(engine)
                 }
             }
-            .pickerStyle(.segmented)
+            .pickerStyle(.menu)
+            .accessibilityValue(store.selectedEngine.selectionTitle)
             AppStatusRow(
                 title: store.modelStatus.title,
                 detail: store.modelStatus.detail,

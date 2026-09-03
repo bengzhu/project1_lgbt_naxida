@@ -7,6 +7,7 @@
 | 任务/符号 | 文件路径 | 关键入口 |
 | --- | --- | --- |
 | Store 初始化、恢复、启动任务 | [`AITRANS/Services/TranslationSessionStore.swift`](../../../AITRANS/Services/TranslationSessionStore.swift) | `init`、`restoreSnapshot()`、`runLaunch...IfNeeded()` |
+| 翻译引擎选择/持久化 | 同上、[`AITRANS/Models/TranscriptModels.swift`](../../../AITRANS/Models/TranscriptModels.swift) | `selectedEngine`、`selectEngine(_:)`、`AppSettings` |
 | 文本翻译 | 同上 | `submitDraft()` |
 | 图片会话 | 同上 | `beginImageTranslationTask`、`runImageTranslationPipeline`、`translateImage`、`translateImageData` |
 | 图片单块操作 | 同上 | `retryImageTranslationBlock`、`rerecognizeImageTranslationBlock`、`correctImageTranslationBlock`、`cancelImageTranslationBlockRetry`、`cancelImageTranslationBlockRerecognition` |

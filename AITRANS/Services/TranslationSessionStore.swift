@@ -111,8 +111,11 @@ final class TranslationSessionStore: ObservableObject {
         didSet { persist() }
     }
 
-    @Published var selectedEngine: ModelEngine = .mock {
+    @Published var selectedEngine: ModelEngine = .local {
         didSet {
+            if oldValue == .appleTranslation, selectedEngine != .appleTranslation {
+                appleTranslationService.cancelPendingRequest()
+            }
             refreshModelStatus()
             persist()
         }
@@ -123,9 +126,9 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     @Published var modelStatus = ModelStatus(
-        title: "Gemma 1.5B Mock",
-        detail: "未下载模型，当前使用本地模拟输出",
-        isReady: true
+        title: "Gemma 本地模型",
+        detail: "正在检查本地 GGUF 模型",
+        isReady: false
     )
 
     @Published var isRecording = false
@@ -212,6 +215,7 @@ final class TranslationSessionStore: ObservableObject {
     let builtInModel = BuiltInLocalModel.gemma270M
     let persistenceURL: URL
 
+    let appleTranslationService = AppleTranslationService()
     private let mockService: any LocalLanguageModeling
     private let localService: GemmaLocalService
     private let modelDownloadService = LocalModelDownloadService()
@@ -323,7 +327,7 @@ final class TranslationSessionStore: ObservableObject {
 #endif
     }
 
-    /// Cloud-only DEBUG entry point for an actual ordinary image
+    /// DEBUG entry point for an actual ordinary image
     /// OCR→translation run. This deliberately does not use the preview
     /// scenario or the Koharu diagnostic probe, so the captured UI represents
     /// the same image path a user reaches from the image importer.
@@ -342,7 +346,11 @@ final class TranslationSessionStore: ObservableObject {
         isProUnlocked = true
         sourceLanguage = .japanese
         targetLanguage = .simplifiedChinese
-        selectedEngine = .local
+        if ProcessInfo.processInfo.environment["AITRANS_IMAGE_TRANSLATION_ENGINE"] == ModelEngine.appleTranslation.rawValue {
+            selectedEngine = .appleTranslation
+        } else {
+            selectedEngine = .local
+        }
         imageTranslationMessage = "已准备 test/\(filename)，开始日语 OCR 与简体中文翻译"
         dataTransferMessage = imageTranslationMessage
 
@@ -450,7 +458,16 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     var selectedAdapterMetadata: ModelAdapterMetadata {
-        selectedEngine == .local ? localService.metadata : mockService.metadata
+        switch selectedEngine {
+        case .appleTranslation:
+            appleTranslationService.metadata
+        case .local:
+            localService.metadata
+        case .hunyuan, .qwen:
+            ReservedTranslationService(engine: selectedEngine).metadata
+        case .mock:
+            mockService.metadata
+        }
     }
 
     var proStatusTitle: String {
@@ -3768,7 +3785,7 @@ final class TranslationSessionStore: ObservableObject {
         selectedPromptID = prompts.contains(where: { $0.id == record.selectedPromptID })
             ? record.selectedPromptID
             : PromptTemplate.translatorID
-        selectedEngine = record.selectedEngine
+        selectedEngine = record.selectedEngine == .mock ? .local : record.selectedEngine
         elapsedSeconds = record.durationSeconds
         transcript = record.transcript
         summary = record.summary
@@ -5415,6 +5432,20 @@ final class TranslationSessionStore: ObservableObject {
 
     func refreshModelStatus() {
         switch selectedEngine {
+        case .appleTranslation:
+            if #available(iOS 18.0, *) {
+                modelStatus = ModelStatus(
+                    title: appleTranslationService.metadata.displayName,
+                    detail: "使用系统原生翻译；语言包会在首次请求时由 iOS 检查或下载",
+                    isReady: true
+                )
+            } else {
+                modelStatus = ModelStatus(
+                    title: appleTranslationService.metadata.displayName,
+                    detail: "需要 iOS 18 或更高版本",
+                    isReady: false
+                )
+            }
         case .mock:
             modelStatus = ModelStatus(
                 title: mockService.metadata.displayName,
@@ -5435,6 +5466,12 @@ final class TranslationSessionStore: ObservableObject {
                     isReady: false
                 )
             }
+        case .hunyuan, .qwen:
+            modelStatus = ModelStatus(
+                title: selectedEngine.displayName,
+                detail: "预留配置已保存，当前版本尚未接入此翻译服务",
+                isReady: false
+            )
         }
     }
 
@@ -5743,6 +5780,9 @@ final class TranslationSessionStore: ObservableObject {
             return translations
         } catch {
             if error is CancellationError {
+                throw error
+            }
+            if error is TranslationEngineRoutingError {
                 throw error
             }
             if let batchError = error as? ImageMangaBatchTranslationError,
@@ -27611,7 +27651,43 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     private func generateWithSelectedEngine(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult {
-        let primary: any LocalLanguageModeling = selectedEngine == .local ? localService : mockService
+        let requestedEngine = selectedEngine
+
+        if requestedEngine == .appleTranslation {
+            writeLaunchLLMSmokeProbe(
+                "generate-start task=\(request.task.rawValue) source=\(request.sourceLanguage.rawValue) " +
+                "target=\(request.targetLanguage.rawValue) selectedEngine=\(requestedEngine.rawValue) " +
+                "adapter=\(appleTranslationService.metadata.displayName) input=\(Self.probeField(request.inputText))"
+            )
+            do {
+                let result = try await appleTranslationService.generate(request)
+                guard selectedEngine == requestedEngine else { throw CancellationError() }
+                writeLaunchLLMSmokeProbe(
+                    "generate-done engine=\(result.engineName) chars=\(result.text.count) " +
+                    "output=\(Self.probeField(result.text))"
+                )
+                lastGenerationLabel = "\(result.engineName) · \(result.durationMilliseconds ?? 0)ms"
+                return result
+            } catch {
+                writeLaunchLLMSmokeProbe(
+                    "generate-error source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
+                    "selectedEngine=\(requestedEngine.rawValue) error=\(Self.probeField(error.localizedDescription))"
+                )
+                throw error
+            }
+        }
+
+        let primary: any LocalLanguageModeling
+        switch requestedEngine {
+        case .local:
+            primary = localService
+        case .hunyuan, .qwen:
+            primary = ReservedTranslationService(engine: requestedEngine)
+        case .mock:
+            primary = mockService
+        case .appleTranslation:
+            preconditionFailure("Apple Translation is routed through its SwiftUI session adapter")
+        }
 
         do {
             writeLaunchLLMSmokeProbe("prepare-start engine=\(primary.metadata.displayName)")
@@ -27624,6 +27700,7 @@ final class TranslationSessionStore: ObservableObject {
                 "input=\(Self.probeField(request.inputText))"
             )
             let result = try await primary.generate(request)
+            guard selectedEngine == requestedEngine else { throw CancellationError() }
             writeLaunchLLMSmokeProbe(
                 "generate-done engine=\(result.engineName) chars=\(result.text.count) " +
                 "output=\(Self.probeField(result.text))"
@@ -27635,10 +27712,11 @@ final class TranslationSessionStore: ObservableObject {
                 "generate-error source=\(request.sourceLanguage.rawValue) target=\(request.targetLanguage.rawValue) " +
                 "selectedEngine=\(selectedEngine.rawValue) error=\(Self.probeField(error.localizedDescription))"
             )
-            guard selectedEngine == .local, error is GemmaLocalServiceError else { throw error }
+            guard requestedEngine == .local, error is GemmaLocalServiceError else { throw error }
             guard !isLocalModelInstalled else { throw error }
             try await mockService.prepare()
             let fallback = try await mockService.generate(request)
+            guard selectedEngine == requestedEngine else { throw CancellationError() }
             writeLaunchLLMSmokeProbe(
                 "generate-fallback engine=\(fallback.engineName) source=\(request.sourceLanguage.rawValue) " +
                 "target=\(request.targetLanguage.rawValue) output=\(Self.probeField(fallback.text))"
@@ -29114,7 +29192,7 @@ final class TranslationSessionStore: ObservableObject {
         sourceLanguage = settings.sourceLanguage
         targetLanguage = settings.targetLanguage
         selectedPromptID = settings.selectedPromptID
-        selectedEngine = settings.selectedEngine
+        selectedEngine = settings.selectedEngine == .mock ? .local : settings.selectedEngine
         sampling = settings.sampling
         isProUnlocked = settings.isProUnlocked
         isDeveloperModeEnabled = settings.isDeveloperModeEnabled
@@ -29314,7 +29392,8 @@ final class TranslationSessionStore: ObservableObject {
 
     private func logLaunchLLMSmokeTestResult(_ test: LLMInterfaceSmokeTest) {
 #if DEBUG
-        guard Self.shouldRunLLMSmokeTestFromLaunchEnvironment else { return }
+        guard Self.shouldRunLLMSmokeTestFromLaunchEnvironment
+                || Self.shouldRunBundledImageTranslationTestFromLaunchEnvironment else { return }
         let output = test.output.replacing("\n", with: "\\n")
         writeLaunchLLMSmokeProbe(
             "result state=\(test.state.rawValue) engine=\(test.engineName) output=\(output) message=\(test.message)"
@@ -29331,7 +29410,8 @@ final class TranslationSessionStore: ObservableObject {
 
     private func writeLaunchLLMSmokeProbe(_ message: String) {
 #if DEBUG
-        guard Self.shouldRunLLMSmokeTestFromLaunchEnvironment else { return }
+        guard Self.shouldRunLLMSmokeTestFromLaunchEnvironment
+                || Self.shouldRunBundledImageTranslationTestFromLaunchEnvironment else { return }
         let directory = persistenceURL.deletingLastPathComponent()
         let url = directory.appendingPathComponent("llm-smoke-result.log")
         let line = "\(Date.now.ISO8601Format()) \(message)\n"

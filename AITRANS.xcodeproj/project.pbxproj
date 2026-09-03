@@ -13,6 +13,8 @@
 		0A0000010000000000000004 /* TranslationSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000014 /* TranslationSessionStore.swift */; };
 		0A0000010000000000000005 /* MockGemmaService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000015 /* MockGemmaService.swift */; };
 		0A0000010000000000000007 /* GemmaLocalService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000019 /* GemmaLocalService.swift */; };
+		0A00000100000000000000FA /* AppleTranslationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000FB /* AppleTranslationService.swift */; };
+		0A00000100000000000000FC /* AppleTranslationTaskHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000FD /* AppleTranslationTaskHost.swift */; };
 		0A0000010000000000000008 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001A /* AppTheme.swift */; };
 		0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001B /* ImageTranslationViews.swift */; };
 		0A000001000000000000000A /* VisionOCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A000001000000000000001C /* VisionOCRService.swift */; };
@@ -96,6 +98,8 @@
 		0A0000010000000000000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0A0000010000000000000018 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = SOURCE_ROOT; };
 		0A0000010000000000000019 /* GemmaLocalService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GemmaLocalService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000FB /* AppleTranslationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationService.swift; sourceTree = "<group>"; };
+		0A00000100000000000000FD /* AppleTranslationTaskHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppleTranslationTaskHost.swift; sourceTree = "<group>"; };
 		0A000001000000000000001A /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		0A000001000000000000001B /* ImageTranslationViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTranslationViews.swift; sourceTree = "<group>"; };
 		0A000001000000000000001C /* VisionOCRService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionOCRService.swift; sourceTree = "<group>"; };
@@ -234,6 +238,7 @@
 				0A00000100000000000000D5 /* ComicTextBubbleDetectorService.swift */,
 				0A0000010000000000000015 /* MockGemmaService.swift */,
 				0A0000010000000000000019 /* GemmaLocalService.swift */,
+				0A00000100000000000000FB /* AppleTranslationService.swift */,
 				0A000001000000000000001E /* LlamaRuntime.swift */,
 				0A0000010000000000000026 /* LocalModelDownloadService.swift */,
 				0A000001000000000000002A /* MangaOverlayProbeService.swift */,
@@ -264,6 +269,7 @@
 				0A00000100000000000000AF /* DeveloperConsoleView.swift */,
 				0A00000100000000000000B1 /* AppPreviewSupport.swift */,
 				0A000001000000000000001B /* ImageTranslationViews.swift */,
+				0A00000100000000000000FD /* AppleTranslationTaskHost.swift */,
 				0A00000100000000000000F4 /* ImageOCRDetectionView.swift */,
 				0A000001000000000000001D /* ProFeatureViews.swift */,
 			);
@@ -412,6 +418,8 @@
 				0A0000010000000000000004 /* TranslationSessionStore.swift in Sources */,
 				0A0000010000000000000005 /* MockGemmaService.swift in Sources */,
 				0A0000010000000000000007 /* GemmaLocalService.swift in Sources */,
+				0A00000100000000000000FA /* AppleTranslationService.swift in Sources */,
+				0A00000100000000000000FC /* AppleTranslationTaskHost.swift in Sources */,
 				0A0000010000000000000008 /* AppTheme.swift in Sources */,
 				0A0000010000000000000009 /* ImageTranslationViews.swift in Sources */,
 				0A00000100000000000000F5 /* ImageOCRDetectionView.swift in Sources */,
