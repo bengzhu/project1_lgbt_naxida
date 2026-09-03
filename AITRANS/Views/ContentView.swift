@@ -217,7 +217,7 @@ private struct AppTabRouter: View {
         case .image:
             ImageTranslationView()
         case .manga:
-            MangaBrowserView()
+            MangaBrowserView(selectedTab: $selectedTab)
         case .ocr:
             ImageOCRDetectionView()
         case .audio:

@@ -13,23 +13,96 @@ final class BrowserModel {
         case webContentProcessTerminated
     }
 
-    private(set) var phase: Phase = .start
-    private(set) var currentURL: URL?
-    private(set) var loadingProgress = 0.0
-    private(set) var canGoBack = false
-    private(set) var canGoForward = false
-    private(set) var isChromeVisible = true
+    enum ChromeMode: Equatable {
+        case expanded
+        case compact
+    }
+
+    struct BrowserTab: Identifiable {
+        let id: UUID
+        var phase: Phase
+        var currentURL: URL?
+        var loadingProgress: Double
+        var canGoBack: Bool
+        var canGoForward: Bool
+        var scrollOffsetY: CGFloat
+        var thumbnail: UIImage?
+        fileprivate var lastRequestedURL: URL?
+
+        init(id: UUID = UUID()) {
+            self.id = id
+            phase = .start
+            currentURL = nil
+            loadingProgress = 0
+            canGoBack = false
+            canGoForward = false
+            scrollOffsetY = 0
+            thumbnail = nil
+            lastRequestedURL = nil
+        }
+
+        var displayHost: String {
+            currentURL?.host(percentEncoded: false) ?? currentURL?.host ?? "新标签"
+        }
+    }
+
+    private(set) var tabs: [BrowserTab]
+    private(set) var activeTabID: UUID
+    private(set) var chromeMode: ChromeMode = .expanded
     private(set) var notice: String?
     private(set) var noticeRevision = 0
     private(set) var addressError: String?
+    private(set) var isSwitchingTabs = false
+
+    var activeTab: BrowserTab {
+        tabs.first(where: { $0.id == activeTabID }) ?? tabs[0]
+    }
+
+    var phase: Phase { activeTab.phase }
+    var currentURL: URL? { activeTab.currentURL }
+    var loadingProgress: Double { activeTab.loadingProgress }
+    var canGoBack: Bool { activeTab.canGoBack }
+    var canGoForward: Bool { activeTab.canGoForward }
+    var displayHost: String { activeTab.displayHost }
+    var tabCount: Int { tabs.count }
+    var showsExpandedChrome: Bool { chromeMode == .expanded }
 
     @ObservationIgnored private weak var webView: WKWebView?
-    @ObservationIgnored private var lastRequestedURL: URL?
+    @ObservationIgnored private var attachedTabID: UUID?
     @ObservationIgnored private var chromeAutoHideSuspended = false
+    @ObservationIgnored private var pendingRestorationOffsets: [UUID: CGFloat] = [:]
 
-    func attach(webView: WKWebView) {
+    init() {
+        let initialTab = BrowserTab()
+        tabs = [initialTab]
+        activeTabID = initialTab.id
+    }
+
+    func attach(webView: WKWebView, to tabID: UUID) {
+        guard tabID == activeTabID else { return }
         self.webView = webView
-        refreshNavigationState(from: webView)
+        attachedTabID = tabID
+        refreshNavigationState(from: webView, tabID: tabID)
+
+        let tab = activeTab
+        guard let url = tab.currentURL,
+              tab.phase == .loaded || tab.phase == .loading else { return }
+
+        pendingRestorationOffsets[tabID] = tab.scrollOffsetY
+        mutateTab(tabID) {
+            $0.phase = .loading
+            $0.loadingProgress = 0
+            $0.canGoBack = false
+            $0.canGoForward = false
+        }
+        webView.load(URLRequest(url: url))
+    }
+
+    func detach(webView: WKWebView, from tabID: UUID) {
+        guard attachedTabID == tabID, self.webView === webView else { return }
+        captureSessionState(from: webView, tabID: tabID)
+        self.webView = nil
+        attachedTabID = nil
     }
 
     @discardableResult
@@ -69,16 +142,20 @@ final class BrowserModel {
             handleExternalNavigation(url)
             return
         }
-        guard let webView else {
-            phase = .failed("浏览器尚未准备好，请稍后重试。")
+        guard let webView, attachedTabID == activeTabID else {
+            mutateActiveTab { $0.phase = .failed("浏览器尚未准备好，请稍后重试。") }
             return
         }
 
-        lastRequestedURL = url
-        currentURL = url
-        loadingProgress = 0
-        phase = .loading
-        isChromeVisible = true
+        pendingRestorationOffsets[activeTabID] = nil
+        mutateActiveTab {
+            $0.lastRequestedURL = url
+            $0.currentURL = url
+            $0.loadingProgress = 0
+            $0.scrollOffsetY = 0
+            $0.phase = .loading
+        }
+        chromeMode = .expanded
         webView.load(URLRequest(url: url))
     }
 
@@ -95,13 +172,13 @@ final class BrowserModel {
     func reload() {
         if webView?.url != nil {
             webView?.reload()
-        } else if let lastRequestedURL {
-            load(url: lastRequestedURL)
+        } else if let retryURL = activeTab.lastRequestedURL ?? currentURL {
+            load(url: retryURL)
         }
     }
 
     func retry() {
-        guard let retryURL = currentURL ?? lastRequestedURL else { return }
+        guard let retryURL = currentURL ?? activeTab.lastRequestedURL else { return }
         load(url: retryURL)
     }
 
@@ -111,70 +188,145 @@ final class BrowserModel {
 
     func setChromeAutoHideSuspended(_ suspended: Bool) {
         chromeAutoHideSuspended = suspended
-        if suspended {
-            isChromeVisible = true
-        }
+        if suspended { chromeMode = .expanded }
     }
 
-    func updateChromeVisibility(isScrollingDown: Bool?, isAtTop: Bool) {
+    func updateChromePresentation(isScrollingDown: Bool?, isAtTop: Bool) {
         if isAtTop || chromeAutoHideSuspended {
-            isChromeVisible = true
+            chromeMode = .expanded
         } else if let isScrollingDown {
-            isChromeVisible = !isScrollingDown
+            chromeMode = isScrollingDown ? .compact : .expanded
         }
     }
 
-    func navigationDidStart(url: URL?, webView: WKWebView) {
-        if let url {
-            currentURL = url
-            lastRequestedURL = url
+    func navigationDidStart(url: URL?, webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
+        mutateTab(tabID) {
+            if let url {
+                $0.currentURL = url
+                $0.lastRequestedURL = url
+            }
+            $0.phase = .loading
         }
-        phase = .loading
-        isChromeVisible = true
-        refreshNavigationState(from: webView)
+        chromeMode = .expanded
+        refreshNavigationState(from: webView, tabID: tabID)
     }
 
-    func navigationDidFinish(url: URL?, webView: WKWebView) {
-        if let url {
-            currentURL = url
-            lastRequestedURL = url
+    func navigationDidFinish(url: URL?, webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
+        mutateTab(tabID) {
+            if let url {
+                $0.currentURL = url
+                $0.lastRequestedURL = url
+            }
+            $0.loadingProgress = 1
+            $0.phase = .loaded
         }
-        loadingProgress = 1
-        phase = .loaded
-        refreshNavigationState(from: webView)
+        refreshNavigationState(from: webView, tabID: tabID)
     }
 
-    func navigationDidFail(_ error: Error, webView: WKWebView) {
+    func navigationDidFail(_ error: Error, webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
         let nsError = error as NSError
         guard nsError.code != NSURLErrorCancelled else {
-            refreshNavigationState(from: webView)
+            refreshNavigationState(from: webView, tabID: tabID)
             return
         }
 
-        phase = .failed(Self.failureMessage(for: nsError, url: currentURL ?? lastRequestedURL))
-        isChromeVisible = true
-        refreshNavigationState(from: webView)
+        let failedURL = activeTab.currentURL ?? activeTab.lastRequestedURL
+        mutateTab(tabID) { $0.phase = .failed(Self.failureMessage(for: nsError, url: failedURL)) }
+        chromeMode = .expanded
+        refreshNavigationState(from: webView, tabID: tabID)
     }
 
-    func webContentProcessDidTerminate(webView: WKWebView) {
-        phase = .webContentProcessTerminated
-        isChromeVisible = true
-        refreshNavigationState(from: webView)
+    func webContentProcessDidTerminate(webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
+        mutateTab(tabID) { $0.phase = .webContentProcessTerminated }
+        chromeMode = .expanded
+        refreshNavigationState(from: webView, tabID: tabID)
     }
 
-    func updateProgress(_ progress: Double) {
-        loadingProgress = min(max(progress, 0), 1)
+    func updateProgress(_ progress: Double, webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
+        mutateTab(tabID) { $0.loadingProgress = min(max(progress, 0), 1) }
     }
 
-    func updateCurrentURL(_ url: URL?) {
-        guard let url else { return }
-        currentURL = url
-        lastRequestedURL = url
+    func updateCurrentURL(_ url: URL?, webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID), let url else { return }
+        mutateTab(tabID) {
+            $0.currentURL = url
+            $0.lastRequestedURL = url
+        }
     }
 
-    func refreshNavigationState(from webView: WKWebView) {
-        canGoBack = webView.canGoBack
-        canGoForward = webView.canGoForward
+    func updateScrollOffset(_ offsetY: CGFloat, webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
+        mutateTab(tabID) { $0.scrollOffsetY = offsetY }
+    }
+
+    func restorationScrollOffset(for tabID: UUID) -> CGFloat? {
+        pendingRestorationOffsets.removeValue(forKey: tabID)
+    }
+
+    func refreshNavigationState(from webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
+        mutateTab(tabID) {
+            $0.canGoBack = webView.canGoBack
+            $0.canGoForward = webView.canGoForward
+        }
+    }
+
+    func captureActiveThumbnail() {
+        guard let webView, attachedTabID == activeTabID else { return }
+        captureSessionState(from: webView, tabID: activeTabID)
+        takeSnapshot(of: webView, tabID: activeTabID) {}
+    }
+
+    func activateTab(_ tabID: UUID) {
+        guard tabID != activeTabID, tabs.contains(where: { $0.id == tabID }) else { return }
+        transitionAfterCapturingActiveTab {
+            self.activeTabID = tabID
+            self.chromeMode = .expanded
+            self.addressError = nil
+        }
+    }
+
+    func newTab() {
+        transitionAfterCapturingActiveTab {
+            let tab = BrowserTab()
+            self.tabs.append(tab)
+            self.activeTabID = tab.id
+            self.chromeMode = .expanded
+            self.addressError = nil
+        }
+    }
+
+    func closeTab(_ tabID: UUID) {
+        guard let closingIndex = tabs.firstIndex(where: { $0.id == tabID }) else { return }
+        if tabID != activeTabID {
+            tabs.remove(at: closingIndex)
+            return
+        }
+
+        if tabs.count == 1 {
+            transitionAfterCapturingActiveTab {
+                let replacement = BrowserTab()
+                self.tabs = [replacement]
+                self.activeTabID = replacement.id
+                self.chromeMode = .expanded
+                self.addressError = nil
+            }
+            return
+        }
+
+        let nextIndex = closingIndex == tabs.count - 1 ? closingIndex - 1 : closingIndex + 1
+        let nextID = tabs[nextIndex].id
+        transitionAfterCapturingActiveTab {
+            self.tabs.removeAll(where: { $0.id == tabID })
+            self.activeTabID = nextID
+            self.chromeMode = .expanded
+            self.addressError = nil
+        }
     }
 
     @discardableResult
@@ -183,22 +335,84 @@ final class BrowserModel {
         let isWebURL = scheme == "http" || scheme == "https"
         let isAppStoreURL = isWebURL && url.host?.lowercased() == "apps.apple.com"
         guard !isWebURL || isAppStoreURL else { return false }
-
         handleExternalNavigation(url)
         return true
     }
 
-    func reportUnsupportedDownload(webView: WKWebView) {
+    func reportUnsupportedDownload(webView: WKWebView, tabID: UUID) {
+        guard isActiveAttachment(webView, tabID: tabID) else { return }
         showNotice("暂不支持下载此内容")
-        if webView.url != nil {
-            phase = .loaded
+        mutateTab(tabID) {
+            $0.phase = webView.url == nil
+                ? .failed("暂不支持下载此内容，请使用系统浏览器打开。")
+                : .loaded
         }
-        refreshNavigationState(from: webView)
+        refreshNavigationState(from: webView, tabID: tabID)
     }
 
     func clearNotice(revision: Int) {
         guard revision == noticeRevision else { return }
         notice = nil
+    }
+
+    private func transitionAfterCapturingActiveTab(_ transition: @escaping @MainActor () -> Void) {
+        guard !isSwitchingTabs else { return }
+        guard let webView, attachedTabID == activeTabID else {
+            transition()
+            return
+        }
+
+        isSwitchingTabs = true
+        let outgoingID = activeTabID
+        captureSessionState(from: webView, tabID: outgoingID)
+        takeSnapshot(of: webView, tabID: outgoingID) {
+            self.webView = nil
+            self.attachedTabID = nil
+            transition()
+            self.isSwitchingTabs = false
+        }
+    }
+
+    private func takeSnapshot(of webView: WKWebView, tabID: UUID, completion: @escaping @MainActor () -> Void) {
+        guard webView.bounds.width > 0, webView.bounds.height > 0 else {
+            completion()
+            return
+        }
+
+        let configuration = WKSnapshotConfiguration()
+        configuration.rect = webView.bounds
+        configuration.afterScreenUpdates = false
+        webView.takeSnapshot(with: configuration) { [weak self] image, _ in
+            Task { @MainActor in
+                if let image { self?.mutateTab(tabID) { $0.thumbnail = image } }
+                completion()
+            }
+        }
+    }
+
+    private func captureSessionState(from webView: WKWebView, tabID: UUID) {
+        mutateTab(tabID) {
+            if let url = webView.url {
+                $0.currentURL = url
+                $0.lastRequestedURL = url
+            }
+            $0.canGoBack = webView.canGoBack
+            $0.canGoForward = webView.canGoForward
+            $0.scrollOffsetY = webView.scrollView.contentOffset.y
+        }
+    }
+
+    private func isActiveAttachment(_ webView: WKWebView, tabID: UUID) -> Bool {
+        tabID == activeTabID && attachedTabID == tabID && self.webView === webView
+    }
+
+    private func mutateActiveTab(_ mutation: (inout BrowserTab) -> Void) {
+        mutateTab(activeTabID, mutation)
+    }
+
+    private func mutateTab(_ tabID: UUID, _ mutation: (inout BrowserTab) -> Void) {
+        guard let index = tabs.firstIndex(where: { $0.id == tabID }) else { return }
+        mutation(&tabs[index])
     }
 
     private func normalizedCandidate(from address: String) -> String {
@@ -216,9 +430,7 @@ final class BrowserModel {
     private func handleExternalNavigation(_ url: URL) {
         UIApplication.shared.open(url, options: [:]) { [weak self] opened in
             guard !opened else { return }
-            Task { @MainActor in
-                self?.showNotice("暂不支持此链接")
-            }
+            Task { @MainActor in self?.showNotice("暂不支持此链接") }
         }
     }
 

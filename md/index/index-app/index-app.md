@@ -33,7 +33,7 @@ AITRANSApp
 
 `TranslationSessionStore` 拥有当前 transcript、history、model 状态、图片 task、图片 blocks、翻译/复查进度、取消 generation、导出状态和持久化入口。View 的 `@State` 只保存导航、筛选、焦点、sheet 等展示状态；`ImageTranslationBlock` 是产品层 block，OCR 的 candidate/provenance/owner ledger 不应直接写入其中。
 
-`BrowserModel` 是漫画浏览器唯一网页状态持有者，拥有页面阶段、当前 URL、加载进度与前进/后退能力，并直接接收 View 的 load/back/forward/reload 意图；Coordinator 只把 WKWebView delegate/KVO 状态回写给它。菜单展开、分段选择和球拖拽位置是非持久化 View 状态。
+`BrowserModel` 是漫画浏览器唯一网页状态持有者，拥有 tabs、`activeTabID`、每页阶段、URL、缩略图、滚动位置与导航能力，并直接接收 View 的 load/back/forward/reload/new/switch/close 意图；Coordinator 只把当前 WKWebView delegate/KVO 状态回写给活动标签。后台标签只保留值快照，不持有 WKWebView；菜单展开、分段选择和球拖拽位置是非持久化 View 状态。
 
 OCR 检测工作台使用独立的 `imageOCRDetection*` 状态和 task，不调用图片翻译/LLM；它只把已整理的 OCR `ImageTranslationBlock` 投影到原图框选、结果复查和导出。
 

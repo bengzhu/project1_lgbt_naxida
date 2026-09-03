@@ -6,7 +6,7 @@ AITRANS 是一个面向 iPhone 和 iPad 的本地 AI 翻译原型。它把文本
 
 - 文本翻译：输入或粘贴文本，使用 Mock 或本地 GGUF 模型生成译文与摘要。
 - 图片翻译：从照片、相机、文件或剪贴板导入图片，识别文字块、逐块翻译、复查 OCR，并生成旁贴或覆盖效果。
-- 漫画浏览器：使用内嵌 WKWebView 阅读网页，提供地址、前进/后退/刷新、失败恢复和翻译悬浮 UI；当前不执行翻译，也不保存阅读数据。
+- 漫画浏览器：使用单个活动 WKWebView 阅读网页，提供 Safari 式悬浮地址栏、多标签切换、失败恢复和翻译悬浮 UI；后台标签只保留内存缩略图、URL 与滚动位置，当前不执行翻译，也不保存阅读数据。
 - OCR 检测：只执行文字检测与识别，支持块定位、筛选、编辑、复制以及 TXT/JSON 导出，不调用翻译模型。
 - 日语漫画 OCR：Apple Vision OCR 负责通用识别，漫画文字检测器和随包 Manga OCR Core ML 模型补充日语漫画、竖排和局部文字区域，再由布局引擎融合与排序。
 - 音频翻译：通过 Apple Speech 识别麦克风或音频文件，再把最终文本交给当前翻译引擎。
@@ -16,7 +16,7 @@ AITRANS 是一个面向 iPhone 和 iPad 的本地 AI 翻译原型。它把文本
 
 ```text
 SwiftUI Views
-  -> BrowserModel -> WKWebView（网页导航状态，不持久化）
+  -> BrowserModel tabs / activeTabID -> 当前 WKWebView（后台标签不持有 WebView、不持久化）
   -> TranslationSessionStore
      -> VisionOCRService
         -> Apple Vision OCR
@@ -28,7 +28,7 @@ SwiftUI Views
 ```
 
 - `TranslationSessionStore` 是唯一业务状态与调度中心。
-- `BrowserModel` 独立拥有漫画浏览器的网页阶段、地址、进度和导航状态，不进入翻译或持久化链路。
+- `BrowserModel` 独立拥有漫画浏览器标签与网页状态；`activeTabID` 是唯一活动标签源，只有当前标签重建 WKWebView，不进入翻译或持久化链路。
 - `VisionOCRService` 统一普通图片 OCR；日语场景按需调用检测器和 Manga OCR。
 - `ImageOCRLayoutEngine` 负责文字块几何、融合、阅读顺序和复查风险。
 - `MangaOverlayProbeService` 是开发诊断链路，不等同普通图片产品路径。
