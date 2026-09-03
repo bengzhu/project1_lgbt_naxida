@@ -33,7 +33,7 @@ iPhone `TabView` 增加“漫画”，一级项为文本、图片、漫画、OCR
 
 七个功能域通过 `AppFeature` 同时绑定编号、英文眉题、图标和自适应浅/深色功能色；颜色不是唯一识别手段。共享页面顶栏采用标准字号下 92pt 的紧凑横向基线并填满页面内容宽度，动态字体可按内容向下扩展以避免裁切；入场动效必须响应 Reduce Motion，描边必须响应 Increase Contrast。
 
-漫画浏览器隐藏 Phone `TabView` 底栏，WKWebView 以白色浅色页面通铺屏幕，并通过顶部 content inset 避开状态栏；左上退出、Safari 式三胶囊底栏和 48pt 翻译球均是覆盖层。下滑时底栏收成 36pt 域名胶囊并同步收起退出/翻译球，上滑或到顶恢复。`BrowserModel` 以 `activeTabID` 管理独立标签值状态；切换前保存缩略图、URL 与滚动位置，后台标签释放 WKWebView，返回时只重建当前实例。翻译菜单与拖拽仍是非持久化展示状态，不接翻译链路。
+漫画浏览器隐藏 Phone `TabView` 底栏，WKWebView 以白色浅色页面通铺屏幕，并通过顶部 content inset 避开状态栏；左上退出、Safari 式三胶囊底栏和 48pt 翻译球均是覆盖层。下滑时底栏收成 36pt 域名胶囊并同步收起退出/翻译球，上滑或到顶恢复。`BrowserModel` 以 `activeTabID` 管理独立标签值状态；切换前保存缩略图、URL 与滚动位置，后台标签释放 WKWebView，返回时只重建当前实例。稳定可视内容区支持一键/框选翻译，底部工具条和安全区不进入 OCR；Store 通过页面/任务/配置世代门禁发布原文/译文覆盖，进度、失败重试、字体/字号、性能诊断和五项安全开关均有可见反馈。翻译菜单、选择框与拖拽仍是非持久化展示状态。
 
 重点页面采用渐进呈现：文本页只保留输入、译文和会话工具条，不重复展示最近翻译；手机音频页通过分段选择一次显示实时或文件工作区，iPad 保留双栏；历史导入/导出/清理归入操作菜单；设置的 Pro 能力说明和开发解锁归入“高级与开发”折叠区。低频入口收起时不得移除原有 Store action、破坏确认流程或仅靠颜色表达状态。
 
@@ -55,6 +55,7 @@ OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进�
 - [`test-v187-ui-interaction-contract.py`](../../../scripts/test-v187-ui-interaction-contract.py)、[`test-v188-home-ui-contract.py`](../../../scripts/test-v188-home-ui-contract.py)：全 App 交互/首页。
 - [`test-v3400-immersive-ui-contract.py`](../../../scripts/test-v3400-immersive-ui-contract.py)、[`test-v3401-focused-workspaces-contract.py`](../../../scripts/test-v3401-focused-workspaces-contract.py)、[`test-v3402-compact-header-settings-contract.py`](../../../scripts/test-v3402-compact-header-settings-contract.py)：功能视觉身份、聚焦工作区、紧凑顶栏、资料库/设置导航所有权和 visual-task CI 路由。
 - [`test-v3404-manga-browser-ui-contract.py`](../../../scripts/test-v3404-manga-browser-ui-contract.py)：漫画 tab、BrowserModel/tab ownership、单 WKWebView 生命周期、安全区/浅色页面、Safari 胶囊、失败 UI 与翻译占位菜单的直接静态合同。
+- [`test-v3405-browser-translation-contract.py`](../../../scripts/test-v3405-browser-translation-contract.py)：浏览器抓图/OCR/翻译身份门禁、缓存/释放、覆盖切换、安全开关、收藏与诊断隔离合同。
 - [`test-v313-image-block-focus-contract.py`](../../../scripts/test-v313-image-block-focus-contract.py)、[`test-v3150-image-focus-restore-action-contract.py`](../../../scripts/test-v3150-image-focus-restore-action-contract.py)：图片焦点和恢复动作。
 - [`test-v3247-image-ocr-rerecognition-review-focus-contract.py`](../../../scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py)、[`test-v3248-image-ocr-rerecognition-failure-focus-contract.py`](../../../scripts/test-v3248-image-ocr-rerecognition-failure-focus-contract.py)：重识别完成/失败焦点。
 - [`test-v3289-image-ocr-block-structure-editor-contract.py`](../../../scripts/test-v3289-image-ocr-block-structure-editor-contract.py)、[`test-v3289-image-ocr-geometry-editor-contract.py`](../../../scripts/test-v3289-image-ocr-geometry-editor-contract.py)：结构/几何编辑。

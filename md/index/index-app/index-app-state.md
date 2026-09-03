@@ -10,6 +10,8 @@
 | 翻译引擎选择/持久化 | 同上、[`AITRANS/Models/TranscriptModels.swift`](../../../AITRANS/Models/TranscriptModels.swift) | `selectedEngine`、`selectEngine(_:)`、`AppSettings` |
 | 文本翻译 | 同上 | `submitDraft()` |
 | 图片会话 | 同上 | `beginImageTranslationTask`、`runImageTranslationPipeline`、`translateImage`、`translateImageData` |
+| 浏览器翻译会话 | 同上、[`AITRANS/Models/BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift) | `updateBrowserPageIdentity`、`translateBrowserCapture`、`invalidateBrowserTranslation` |
+| 音频翻译配置身份 | 同上 | `SpeechTranslationConfiguration`、`beginSpeechRecognitionRun`、`invalidateTranslationRunsForConfigurationChange` |
 | 图片单块操作 | 同上 | `retryImageTranslationBlock`、`rerecognizeImageTranslationBlock`、`correctImageTranslationBlock`、`cancelImageTranslationBlockRetry`、`cancelImageTranslationBlockRerecognition` |
 | 图片结构/复查 | 同上 | `splitImageTranslationBlock`、`mergeImageTranslationBlocks`、`moveImageTranslationBlock`、`markImageTranslationBlockReviewed`、`ignoreImageTranslationBlock` |
 | 整图取消/重试/清空 | 同上 | `cancelImageTranslation`、`retryImageTranslation`、`rerunImageRecognition`、`clearImageTranslation` |
@@ -34,6 +36,7 @@
 - `TranslationSessionStore` 是唯一的运行时状态和持久化调度中心；View、Preview 和 evaluator 不可直接写 JSON 或模型状态。
 - `ImageOCRLayoutBlock`、`ImageOCRCandidate`、shadow ledger 是 OCR 内部/诊断数据；不要把 ephemeral owner、candidate ledger 或 external artifact 字段写入产品 snapshot。
 - `CancellationError` 必须经过当前 task/content guard；旧回调只能退出，不能回滚到错误 session。
+- 引擎、语言、prompt、术语或采样变化必须先失效活动中的浏览器、图片和音频翻译；音频最终 transcript 使用 run 开始时冻结的配置并排除历史/参考 transcript。
 - 改变 snapshot 字段、清理图片目录、分享/导出生命周期时，检查同一 Store 中的 `persistedLocationDisplay`、文件复制和 orphan cleanup。
 
 ## 相关测试与测试路由

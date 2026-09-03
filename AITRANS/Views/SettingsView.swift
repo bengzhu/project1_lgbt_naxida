@@ -57,6 +57,7 @@ struct SettingsView: View {
                 )
 
                 AppearanceSection()
+                BrowserSettingsSection()
                 ProAccessPanel()
                 SettingsNavigationSection()
                 SettingsAdvancedSection(
@@ -133,6 +134,76 @@ private struct AppearanceSection: View {
 
     private var appearance: AppAppearance {
         AppAppearance(rawValue: appearanceRawValue) ?? .system
+    }
+}
+
+private struct BrowserSettingsSection: View {
+    @AppStorage("aitrans.browser.blockAds") private var blockAds = true
+    @AppStorage("aitrans.browser.blockPopups") private var blockPopups = true
+    @AppStorage("aitrans.browser.blockRedirects") private var blockRedirects = true
+    @AppStorage("aitrans.browser.elementRemoval") private var elementRemovalEnabled = false
+    @AppStorage("aitrans.browser.antiHijacking") private var antiHijackingEnabled = true
+    @AppStorage("aitrans.browser.sourceLanguage") private var sourceLanguageRaw = SupportedLanguage.japanese.rawValue
+    @AppStorage("aitrans.browser.targetLanguage") private var targetLanguageRaw = SupportedLanguage.simplifiedChinese.rawValue
+    @AppStorage("aitrans.browser.fontName") private var fontName = "system"
+    @AppStorage("aitrans.browser.fontScale") private var fontScale = 1.0
+
+    private let fontOptions = [
+        ("system", "系统圆体"),
+        ("kaiti", "楷体"),
+        ("rounded", "漫画圆体")
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.Spacing.section) {
+            AppSectionHeader(
+                title: "浏览器设置",
+                subtitle: "漫画阅读、翻译与安全防护（逐项独立）",
+                systemImage: "book.pages.fill"
+            )
+            Toggle("基础广告拦截", isOn: $blockAds)
+                .accessibilityHint("拦截常见广告域名与第三方广告资源")
+            Toggle("弹窗拦截", isOn: $blockPopups)
+                .accessibilityHint("阻止网页创建新的弹窗标签")
+            Toggle("重定向拦截", isOn: $blockRedirects)
+                .accessibilityHint("阻止非用户点击触发的跨站强制跳转")
+            Toggle("点选元素消除", isOn: $elementRemovalEnabled)
+                .accessibilityHint("在浏览器中点选网页元素即可移除，并记住规则")
+            Toggle("防劫持保护", isOn: $antiHijackingEnabled)
+                .accessibilityHint("保护触摸和剪贴板不被网页脚本劫持")
+
+            Divider().overlay(Color.appBorder)
+            Picker("浏览器源语言", selection: $sourceLanguageRaw) {
+                ForEach([SupportedLanguage.japanese, .englishUS, .simplifiedChinese, .french, .german]) { language in
+                    Text(language.rawValue).tag(language.rawValue)
+                }
+            }
+            Picker("浏览器目标语言", selection: $targetLanguageRaw) {
+                ForEach(SupportedLanguage.allCases) { language in
+                    Text(language.rawValue).tag(language.rawValue)
+                }
+            }
+            Picker("漫画字体", selection: $fontName) {
+                ForEach(fontOptions, id: \.0) { option in
+                    Text(option.1).tag(option.0)
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("译文大小")
+                    Spacer()
+                    Text("\(Int(fontScale * 100))%")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Color.appTextSecondary)
+                }
+                Slider(value: $fontScale, in: 0.75...1.35, step: 0.05)
+                    .accessibilityValue("\(Int(fontScale * 100))%")
+            }
+            Text("浏览器翻译只保留在当前页面的内存缓存；清除规则不会影响文本、图片或 OCR 会话。")
+                .font(.caption)
+                .foregroundStyle(Color.appTextSecondary)
+        }
+        .appSurface()
     }
 }
 

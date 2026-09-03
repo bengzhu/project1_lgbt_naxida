@@ -107,7 +107,7 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         store = read("AITRANS/Services/TranslationSessionStore.swift")
 
         submit = swift_body(store, "private func submit(")
-        submit_await = submit.index("let translation = try await translate(text)")
+        submit_await = submit.index("let translation = try await translate(")
         submit_guard = submit.index(
             "guard isCurrentSpeechTranslation(expectedSpeechRunID) else", submit_await
         )
@@ -126,7 +126,7 @@ class SpeechRecognitionContractTests(unittest.TestCase):
         self.assertLess(file_guard, file_state_write)
 
         live = swift_body(store, "func translateProLiveTranscript()")
-        live_await = live.index("let translation = try await self.translate(text)")
+        live_await = live.index("let translation = try await self.translate(")
         live_guard = live.index(
             "guard !Task.isCancelled, self.speechRecognitionRunID == runID else",
             live_await,

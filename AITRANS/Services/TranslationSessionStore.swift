@@ -1,6 +1,7 @@
 import Combine
 import AVFoundation
 import CryptoKit
+import Darwin
 import Foundation
 import Speech
 import StoreKit
@@ -41,9 +42,52 @@ private struct ImageTranslationBatchPlan {
     let blockIDs: [UUID]
 }
 
+private struct BrowserCachedOCRPage {
+    var regions: [BrowserCachedRegion]
+    var lastAccess: Int
+    var estimatedCost: Int
+}
+
+private struct BrowserCachedTranslation {
+    var text: String
+    var lastAccess: Int
+    var estimatedCost: Int
+}
+
+private struct BrowserCachedRegion {
+    var id: UUID
+    var original: String
+    var confidence: Float
+    var boundingBox: NormalizedImageRect
+    var documentRectCSS: CGRect
+    var sourceDirection: ImageTextDirection?
+    var sourceFingerprint: String
+}
+
+@MainActor
+private final class BrowserCaptureBuffer {
+    var data: Data?
+
+    init(data: Data) {
+        self.data = data
+    }
+}
+
 private struct ImageTranslationJapanesePrompt {
     let startIndex: Int
     let context: TranslationPromptContext
+}
+
+/// Immutable configuration captured when an audio run starts. Speech
+/// recognition and its follow-up translation are one logical task: a later
+/// change to the global engine/language/prompt must not make an already
+/// recognized transcript run through a different adapter or language pair.
+private struct SpeechTranslationConfiguration: Equatable, Sendable {
+    let sourceLanguage: SupportedLanguage
+    let targetLanguage: SupportedLanguage
+    let engine: ModelEngine
+    let prompt: PromptTemplate
+    let sampling: GenerationSampling
 }
 
 private enum ImageMangaBatchTranslationError: LocalizedError {
@@ -78,11 +122,21 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     @Published var sourceLanguage: SupportedLanguage = .englishUS {
-        didSet { persist() }
+        didSet {
+            if oldValue != sourceLanguage {
+                invalidateTranslationRunsForConfigurationChange()
+            }
+            persist()
+        }
     }
 
     @Published var targetLanguage: SupportedLanguage = .simplifiedChinese {
-        didSet { persist() }
+        didSet {
+            if oldValue != targetLanguage {
+                invalidateTranslationRunsForConfigurationChange()
+            }
+            persist()
+        }
     }
 
     @Published var transcript: [TranscriptLine] = [] {
@@ -94,17 +148,33 @@ final class TranslationSessionStore: ObservableObject {
     }
 
     @Published var prompts: [PromptTemplate] = PromptTemplate.defaultPrompts {
-        didSet { persist() }
+        didSet {
+            let oldSelectedPrompt = oldValue.first { $0.id == selectedPromptID }
+            if oldSelectedPrompt != selectedPrompt {
+                invalidateTranslationRunsForConfigurationChange()
+            }
+            persist()
+        }
     }
 
     /// Project-scoped confirmed terminology and addressing memory. Candidate
     /// and revoked entries are persisted for audit but never enter a prompt.
     @Published var translationTermMemory: [TranslationTermMemoryEntry] = [] {
-        didSet { persist() }
+        didSet {
+            if oldValue != translationTermMemory {
+                invalidateTranslationRunsForConfigurationChange()
+            }
+            persist()
+        }
     }
 
     @Published var selectedPromptID: UUID = PromptTemplate.translatorID {
-        didSet { persist() }
+        didSet {
+            if oldValue != selectedPromptID {
+                invalidateTranslationRunsForConfigurationChange()
+            }
+            persist()
+        }
     }
 
     @Published var history: [TranslationSessionRecord] = [] {
@@ -116,13 +186,21 @@ final class TranslationSessionStore: ObservableObject {
             if oldValue == .appleTranslation, selectedEngine != .appleTranslation {
                 appleTranslationService.cancelPendingRequest()
             }
+            if oldValue != selectedEngine {
+                invalidateTranslationRunsForConfigurationChange()
+            }
             refreshModelStatus()
             persist()
         }
     }
 
     @Published var sampling: GenerationSampling = .defaultValue {
-        didSet { persist() }
+        didSet {
+            if oldValue != sampling {
+                invalidateTranslationRunsForConfigurationChange()
+            }
+            persist()
+        }
     }
 
     @Published var modelStatus = ModelStatus(
@@ -207,6 +285,15 @@ final class TranslationSessionStore: ObservableObject {
     @Published var imageOCRDetectionLanguage: ImageOCRDetectionLanguage = .automatic
     @Published var imageOCRDetectionLayout: ImageOCRDetectionLayout = .automatic
     @Published var imageOCRDetectionMetrics: ImageOCRDetectionMetrics = .empty
+    // Browser translation stays isolated from image/OCR workspaces. Only the
+    // lightweight, identity-bound projection is published; screenshots and
+    // intermediate OCR buffers never enter Store state or persistence.
+    @Published private(set) var browserTranslationStatus: BrowserTranslationStatus = .idle
+    @Published private(set) var browserTranslationOverlay: BrowserTranslationOverlaySnapshot?
+    @Published private(set) var browserTranslationBlocks: [BrowserTranslationRegion] = []
+    @Published private(set) var browserTranslationDiagnostics: [String] = []
+    @Published private(set) var browserTranslationRenderRevision = 0
+    @Published private(set) var browserPerformanceSample: BrowserPerformanceSample?
     @Published private(set) var imageOCRDetectionRerecognizingBlockID: UUID?
     @Published private(set) var imageOCRDetectionCorrectedBlockIDs: Set<UUID> = []
 
@@ -231,6 +318,13 @@ final class TranslationSessionStore: ObservableObject {
     private var imageOCRDetectionBlockRerecognitionTask: Task<Void, Never>?
     private var imageOCRDetectionBlockRerecognitionID = UUID()
     private var imageOCRDetectionFileSelectionID: UUID?
+    private var browserTranslationTask: Task<Void, Never>?
+    private var browserTranslationTaskID = UUID()
+    private var browserPageIdentity: BrowserPageSnapshotIdentity?
+    private var browserConfigurationRevision = 0
+    private var browserOCRCache: [String: BrowserCachedOCRPage] = [:]
+    private var browserTranslationCache: [String: BrowserCachedTranslation] = [:]
+    private var browserCacheAccessCounter = 0
     private var imageTranslationCorrectionID = UUID()
     private var imageTranslationBlockRetryTask: Task<Void, Never>?
     private var imageTranslationBlockRetryID = UUID()
@@ -257,6 +351,7 @@ final class TranslationSessionStore: ObservableObject {
     private var liveSpeechRecognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var isProLiveSpeechCaptureRequested = false
     private var speechRecognitionRunID = UUID()
+    private var speechTranslationConfiguration: SpeechTranslationConfiguration?
     private var proSubscriptionProduct: Product?
     private var imageTranslationSourceURL: URL?
     private var activeSessionID = UUID()
@@ -307,6 +402,7 @@ final class TranslationSessionStore: ObservableObject {
         ticker?.cancel()
         modelDownloadTask?.cancel()
         imageTranslationTask?.cancel()
+        browserTranslationTask?.cancel()
         imageOCRDetectionTask?.cancel()
         imageOCRDetectionBlockRerecognitionTask?.cancel()
         imageTranslationBlockRetryTask?.cancel()
@@ -876,7 +972,10 @@ final class TranslationSessionStore: ObservableObject {
             guard let self else { return }
 
             do {
-                let translation = try await self.translate(text)
+                let translation = try await self.translate(
+                    text,
+                    configuration: self.speechTranslationConfiguration
+                )
                 guard !Task.isCancelled, self.speechRecognitionRunID == runID else { return }
                 self.proLiveTranslationText = translation
                 self.draftText = text
@@ -1159,6 +1258,13 @@ final class TranslationSessionStore: ObservableObject {
         speechTranslationTask = nil
         let runID = UUID()
         speechRecognitionRunID = runID
+        speechTranslationConfiguration = SpeechTranslationConfiguration(
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            engine: selectedEngine,
+            prompt: selectedPrompt,
+            sampling: sampling
+        )
         speechRecognitionRunSummary = SpeechRecognitionRunSummary(
             mode: mode,
             inputName: inputName.isEmpty ? mode.displayName : inputName,
@@ -1182,6 +1288,13 @@ final class TranslationSessionStore: ObservableObject {
         speechTranslationTask?.cancel()
         let runID = UUID()
         speechRecognitionRunID = runID
+        speechTranslationConfiguration = SpeechTranslationConfiguration(
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            engine: selectedEngine,
+            prompt: selectedPrompt,
+            sampling: sampling
+        )
         speechRecognitionRunSummary.runToken = String(runID.uuidString.prefix(8))
         speechRecognitionRunSummary.completedAt = nil
         speechRecognitionRunSummary.failureMessage = nil
@@ -1190,6 +1303,7 @@ final class TranslationSessionStore: ObservableObject {
 
     private func invalidateSpeechRecognitionRun() {
         speechRecognitionRunID = UUID()
+        speechTranslationConfiguration = nil
     }
 
     private func updateSpeechRecognitionRun(
@@ -1906,6 +2020,774 @@ final class TranslationSessionStore: ObservableObject {
 
     func translateImageData(_ data: Data, filename: String) {
         translateImageTransfer(filename: filename) { data }
+    }
+
+    // MARK: - Browser translation
+
+    /// Browser identity is signed by BrowserModel and mirrored here before a
+    /// capture is accepted. Any identity change immediately clears the
+    /// renderable projection and makes late OCR/model callbacks no-ops.
+    func updateBrowserPageIdentity(_ identity: BrowserPageSnapshotIdentity) {
+        guard browserPageIdentity != identity else { return }
+        invalidateBrowserTranslation(reason: "网页内容或视口已变化", publishIdle: true)
+        browserPageIdentity = identity
+    }
+
+    func translateBrowserCapture(
+        _ capture: BrowserPageCapture,
+        sourceLanguage requestedSourceLanguage: SupportedLanguage? = nil,
+        targetLanguage requestedTargetLanguage: SupportedLanguage? = nil
+    ) {
+        guard !capture.imageData.isEmpty else {
+            browserTranslationStatus = BrowserTranslationStatus(
+                phase: .failed,
+                completedRegions: 0,
+                totalRegions: 0,
+                message: "截图为空，请重试",
+                estimatedDurationMilliseconds: nil,
+                startedAt: nil
+            )
+            return
+        }
+        if browserPageIdentity == nil {
+            browserPageIdentity = capture.identity
+        }
+        guard browserPageIdentity == capture.identity,
+              capture.identity.isStable else {
+            appendBrowserDiagnostic("capture-rejected identity-or-unstable")
+            return
+        }
+
+        invalidateBrowserTranslation(reason: "替换上一项任务", publishIdle: false)
+        let taskID = UUID()
+        let configurationRevision = browserConfigurationRevision
+        browserTranslationTaskID = taskID
+        let startedAt = Date()
+        browserTranslationStatus = BrowserTranslationStatus(
+            phase: .capturing,
+            completedRegions: 0,
+            totalRegions: 0,
+            message: "正在截取可视内容…",
+            estimatedDurationMilliseconds: 1_200,
+            startedAt: startedAt
+        )
+        browserTranslationOverlay = nil
+        browserTranslationBlocks = []
+        browserTranslationRenderRevision &+= 1
+        browserTranslationDiagnostics = [
+            "task=\(taskID.uuidString)",
+            "page=\(capture.identity.normalizedURL)",
+            "captureSHA256=\(capture.captureSHA256)",
+            "capturePixels=\(Int(capture.capturePixelSize.width))x\(Int(capture.capturePixelSize.height))",
+            "coordinateSpace=contentRectPoints→documentCSS"
+        ]
+        sampleBrowserPerformance(stage: "capturing", captureBytes: capture.imageData.count)
+
+        let sourceLanguage = requestedSourceLanguage ?? self.sourceLanguage
+        let targetLanguage = requestedTargetLanguage ?? self.targetLanguage
+        let captureMetadata = capture.metadata
+        // Capture data lives in a mutable task box so it can be nilled as soon
+        // as OCR returns; keeping an immutable copy in the closure would retain
+        // the screenshot until every translation batch finished.
+        let captureBuffer = BrowserCaptureBuffer(data: capture.imageData)
+        browserTranslationTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                guard self.isCurrentBrowserTranslationTask(
+                    taskID,
+                    identity: captureMetadata.identity,
+                    configurationRevision: configurationRevision
+                ) else { throw CancellationError() }
+
+                let pageKey = self.browserPageCacheKey(for: captureMetadata, sourceLanguage: sourceLanguage)
+                self.browserTranslationStatus = BrowserTranslationStatus(
+                    phase: .recognizing,
+                    completedRegions: 0,
+                    totalRegions: 0,
+                    message: "正在识别内容区文字…",
+                    estimatedDurationMilliseconds: 1_500,
+                    startedAt: startedAt
+                )
+
+                var recognitionOutput: ImageOCRRecognitionOutput?
+                if let cached = self.browserOCRCache[pageKey] {
+                    self.browserCacheAccessCounter &+= 1
+                    self.browserOCRCache[pageKey]?.lastAccess = self.browserCacheAccessCounter
+                    self.appendBrowserDiagnostic("ocr-cache-hit")
+                    recognitionOutput = ImageOCRRecognitionOutput(
+                        blocks: cached.regions.map { cachedRegion in
+                            ImageTranslationBlock(
+                                id: cachedRegion.id,
+                                original: cachedRegion.original,
+                                confidence: cachedRegion.confidence,
+                                boundingBox: cachedRegion.boundingBox,
+                                sourceDirection: cachedRegion.sourceDirection
+                            )
+                        },
+                        shadowLedger: ImageOCRShadowLedger(candidates: [])
+                    )
+                } else {
+                    guard let input = captureBuffer.data else { throw BrowserCaptureError.imageEncodingFailed }
+                    recognitionOutput = try await self.visionOCRService
+                        .recognizeTextBlocksWithShadowLedger(
+                            in: input,
+                            sourceLanguage: sourceLanguage,
+                            japaneseDirectionReread: true,
+                            layoutPreference: .automatic
+                        )
+                    if let timings = recognitionOutput?.timings {
+                        self.appendBrowserDiagnostic(
+                            "ocr_ms=\(Int(timings.totalMilliseconds.rounded())) image=\(timings.imageWidth)x\(timings.imageHeight)"
+                        )
+                    }
+                }
+                // Release the only task-owned screenshot as soon as OCR has
+                // produced lightweight text/geometry values.
+                captureBuffer.data = nil
+                self.sampleBrowserPerformance(stage: "translating", captureBytes: 0)
+                let recognizedBlocks = recognitionOutput?.blocks ?? []
+                recognitionOutput = nil
+                guard self.isCurrentBrowserTranslationTask(
+                    taskID,
+                    identity: captureMetadata.identity,
+                    configurationRevision: configurationRevision
+                ) else { throw CancellationError() }
+
+                let limitedBlocks = Array(recognizedBlocks.prefix(256))
+                let droppedCount = max(0, recognizedBlocks.count - limitedBlocks.count)
+                var regions = limitedBlocks.compactMap { block -> BrowserTranslationRegion? in
+                    guard let boundingBox = block.boundingBox.normalizedToUnit(),
+                          !block.original.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                        return nil
+                    }
+                    let documentRect = self.browserDocumentRect(
+                        for: boundingBox,
+                        in: captureMetadata.visibleDocumentRectCSS
+                    )
+                    let fingerprint = self.browserRegionFingerprint(
+                        pageHash: captureMetadata.captureSHA256,
+                        boundingBox: boundingBox,
+                        original: block.original
+                    )
+                    return BrowserTranslationRegion(
+                        id: block.id,
+                        original: block.original,
+                        translation: "",
+                        confidence: block.confidence,
+                        boundingBox: boundingBox,
+                        documentRectCSS: documentRect,
+                        readingOrder: 0,
+                        sourceDirection: block.effectiveSourceDirection,
+                        sourceFingerprint: fingerprint,
+                        translationError: nil
+                    )
+                }
+                regions.sort { lhs, rhs in
+                    if abs(lhs.boundingBox.y - rhs.boundingBox.y) > 0.02 {
+                        return lhs.boundingBox.y < rhs.boundingBox.y
+                    }
+                    return lhs.boundingBox.x < rhs.boundingBox.x
+                }
+                for index in regions.indices { regions[index].readingOrder = index }
+
+                let cachedRegions = regions.map {
+                    BrowserCachedRegion(
+                        id: $0.id,
+                        original: $0.original,
+                        confidence: $0.confidence,
+                        boundingBox: $0.boundingBox,
+                        documentRectCSS: $0.documentRectCSS,
+                        sourceDirection: $0.sourceDirection,
+                        sourceFingerprint: $0.sourceFingerprint
+                    )
+                }
+                self.browserCacheAccessCounter &+= 1
+                self.browserOCRCache[pageKey] = BrowserCachedOCRPage(
+                    regions: cachedRegions,
+                    lastAccess: self.browserCacheAccessCounter,
+                    estimatedCost: cachedRegions.reduce(0) { $0 + $1.original.utf8.count + 180 }
+                )
+                self.trimBrowserCaches()
+
+                self.browserTranslationBlocks = regions
+                self.browserTranslationStatus = BrowserTranslationStatus(
+                    phase: regions.isEmpty ? .completed : .translating,
+                    completedRegions: 0,
+                    totalRegions: regions.count,
+                    message: regions.isEmpty ? "当前可视区没有识别到文字" : "正在翻译 0/\(regions.count) 个文字块…",
+                    estimatedDurationMilliseconds: regions.isEmpty ? 1_500 : 1_500 + regions.count * 650,
+                    startedAt: startedAt
+                )
+                if droppedCount > 0 {
+                    self.appendBrowserDiagnostic("region-limit=256 dropped=\(droppedCount)")
+                }
+                guard !regions.isEmpty else {
+                    self.browserTranslationOverlay = BrowserTranslationOverlaySnapshot(
+                        identity: captureMetadata.identity,
+                        captureRectInView: captureMetadata.captureRectInView,
+                        contentRectInView: captureMetadata.contentRectInView,
+                        regions: [],
+                        renderRevision: self.browserTranslationRenderRevision
+                    )
+                    self.browserTranslationTask = nil
+                    return
+                }
+
+                let batches = self.browserTranslationBatches(regions)
+                var translatedCount = 0
+                var failedCount = 0
+                for batch in batches {
+                    try Task.checkCancellation()
+                    guard self.isCurrentBrowserTranslationTask(
+                        taskID,
+                        identity: captureMetadata.identity,
+                        configurationRevision: configurationRevision
+                    ) else { throw CancellationError() }
+                    let translations: [String]
+                    do {
+                        translations = try await self.translateBrowserBatch(
+                            batch,
+                            sourceLanguage: sourceLanguage,
+                            targetLanguage: targetLanguage,
+                            taskID: taskID,
+                            identity: captureMetadata.identity,
+                            configurationRevision: configurationRevision
+                        )
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch {
+                        let reason = String(error.localizedDescription.prefix(180))
+                        translations = []
+                        failedCount += batch.count
+                        for index in batch where regions.indices.contains(index) {
+                            regions[index].translationError = reason
+                        }
+                        self.appendBrowserDiagnostic(
+                            "batch-failed count=\(batch.count) reason=\(Self.probeField(reason))"
+                        )
+                    }
+                    guard self.isCurrentBrowserTranslationTask(
+                        taskID,
+                        identity: captureMetadata.identity,
+                        configurationRevision: configurationRevision
+                    ) else { throw CancellationError() }
+                    for (offset, translation) in translations.enumerated() {
+                        guard batch.indices.contains(offset) else { continue }
+                        regions[batch[offset]].translation = translation
+                        regions[batch[offset]].translationError = nil
+                        translatedCount += 1
+                    }
+                    let processedCount = translatedCount + failedCount
+                    let allProcessed = processedCount >= regions.count
+                    let isPartial = droppedCount > 0 || failedCount > 0
+                    self.browserTranslationBlocks = regions
+                    self.browserTranslationRenderRevision &+= 1
+                    self.browserTranslationOverlay = BrowserTranslationOverlaySnapshot(
+                        identity: captureMetadata.identity,
+                        captureRectInView: captureMetadata.captureRectInView,
+                        contentRectInView: captureMetadata.contentRectInView,
+                        regions: regions,
+                        renderRevision: self.browserTranslationRenderRevision
+                    )
+                    self.browserTranslationStatus = BrowserTranslationStatus(
+                        phase: allProcessed ? (isPartial ? .partial : .completed) : .translating,
+                        completedRegions: translatedCount,
+                        failedRegions: failedCount,
+                        totalRegions: regions.count,
+                        message: allProcessed
+                            ? (isPartial
+                                ? "翻译完成，部分文字块失败或超出上限，可重试"
+                                : "翻译完成，可切换原文/译文")
+                            : "正在翻译 \(processedCount)/\(regions.count) 个文字块…",
+                        estimatedDurationMilliseconds: 1_500 + regions.count * 650,
+                        startedAt: startedAt
+                    )
+                }
+                self.browserTranslationTask = nil
+                self.appendBrowserDiagnostic(
+                    "finished_ms=\(Int(Date().timeIntervalSince(startedAt) * 1_000)) success=\(translatedCount) failed=\(failedCount) dropped=\(droppedCount)"
+                )
+                self.sampleBrowserPerformance(
+                    stage: failedCount > 0 || droppedCount > 0 ? "partial" : "completed",
+                    captureBytes: 0
+                )
+            } catch is CancellationError {
+                guard self.browserTranslationTaskID == taskID else { return }
+                self.browserTranslationTask = nil
+                self.appendBrowserDiagnostic("cancelled task=\(taskID.uuidString)")
+            } catch {
+                guard self.browserTranslationTaskID == taskID else { return }
+                self.browserTranslationTask = nil
+                self.browserTranslationStatus = BrowserTranslationStatus(
+                    phase: .failed,
+                    completedRegions: self.browserTranslationStatus.completedRegions,
+                    totalRegions: self.browserTranslationStatus.totalRegions,
+                    message: "浏览器翻译失败：\(error.localizedDescription)",
+                    estimatedDurationMilliseconds: self.browserTranslationStatus.estimatedDurationMilliseconds,
+                    startedAt: startedAt
+                )
+                self.appendBrowserDiagnostic(
+                    "failed=\(Self.probeField(error.localizedDescription))"
+                )
+                self.sampleBrowserPerformance(stage: "failed", captureBytes: 0)
+            }
+        }
+    }
+
+    func cancelBrowserTranslation() {
+        invalidateBrowserTranslation(reason: "用户取消浏览器翻译", publishIdle: true)
+    }
+
+    /// Browser-only resource-pressure hook. It never mutates text, image,
+    /// OCR-only, or Speech product state; it only drops the browser's
+    /// identity-bound work and bounded caches so a later stable viewport can
+    /// start from a fresh capture.
+    func handleBrowserMemoryWarning() {
+        invalidateBrowserTranslation(reason: "内存压力，已释放浏览器翻译任务", publishIdle: true)
+        browserOCRCache.removeAll(keepingCapacity: false)
+        browserTranslationCache.removeAll(keepingCapacity: false)
+        browserCacheAccessCounter = 0
+        appendBrowserDiagnostic("memory-warning caches-cleared")
+    }
+
+    /// Called when the app leaves the foreground. Pending Apple Translation
+    /// sessions and browser work must not retain a page capture while UIKit
+    /// may reclaim the app; the next foreground capture gets a new identity.
+    func handleApplicationDidEnterBackground() {
+        appleTranslationService.cancelPendingRequest()
+        invalidateBrowserTranslation(reason: "应用进入后台，已取消浏览器翻译", publishIdle: true)
+    }
+
+    /// Called by the browser-only language controls. These values live in
+    /// AppStorage rather than the global translation workspace, so the View
+    /// explicitly rotates the same configuration revision used by callbacks.
+    func browserTranslationConfigurationDidChange() {
+        invalidateBrowserTranslationConfiguration()
+    }
+
+    func reportBrowserTranslationFailure(_ message: String) {
+        browserTranslationTask?.cancel()
+        browserTranslationTask = nil
+        browserTranslationTaskID = UUID()
+        browserTranslationOverlay = nil
+        browserTranslationBlocks = []
+        browserTranslationRenderRevision &+= 1
+        browserTranslationStatus = BrowserTranslationStatus(
+            phase: .failed,
+            completedRegions: browserTranslationStatus.completedRegions,
+            totalRegions: browserTranslationStatus.totalRegions,
+            message: "浏览器翻译失败：\(message)",
+            estimatedDurationMilliseconds: browserTranslationStatus.estimatedDurationMilliseconds,
+            startedAt: browserTranslationStatus.startedAt
+        )
+        appendBrowserDiagnostic("capture-failed=\(Self.probeField(message))")
+    }
+
+    private func appendBrowserDiagnostic(_ message: String) {
+        browserTranslationDiagnostics.append(String(message.prefix(512)))
+        if browserTranslationDiagnostics.count > 96 {
+            browserTranslationDiagnostics.removeFirst(browserTranslationDiagnostics.count - 96)
+        }
+    }
+
+    private func invalidateBrowserTranslation(reason: String, publishIdle: Bool) {
+        browserTranslationTask?.cancel()
+        browserTranslationTask = nil
+        browserTranslationTaskID = UUID()
+        browserTranslationRenderRevision &+= 1
+        browserTranslationOverlay = nil
+        browserTranslationBlocks = []
+        appendBrowserDiagnostic("invalidated=\(Self.probeField(reason))")
+        if publishIdle {
+            browserTranslationStatus = BrowserTranslationStatus(
+                phase: .idle,
+                completedRegions: 0,
+                totalRegions: 0,
+                message: reason,
+                estimatedDurationMilliseconds: nil,
+                startedAt: nil
+            )
+        }
+    }
+
+    /// Diagnostics-only device snapshot. It is intentionally not persisted,
+    /// included in translation requests, or used to alter production routing.
+    private func sampleBrowserPerformance(stage: String, captureBytes: Int) {
+        let processInfo = ProcessInfo.processInfo
+        let thermal: String
+        switch processInfo.thermalState {
+        case .nominal: thermal = "nominal"
+        case .fair: thermal = "fair"
+        case .serious: thermal = "serious"
+        case .critical: thermal = "critical"
+        @unknown default: thermal = "unknown"
+        }
+        let sample = BrowserPerformanceSample(
+            stage: stage,
+            timestamp: .now,
+            captureBytes: max(0, captureBytes),
+            physicalMemoryBytes: processInfo.physicalMemory,
+            processorCount: processInfo.processorCount,
+            activeProcessorCount: processInfo.activeProcessorCount,
+            residentMemoryBytes: Self.currentResidentMemoryBytes(),
+            processCPUTimeMilliseconds: Self.currentProcessCPUTimeMilliseconds(),
+            thermalState: thermal
+        )
+        browserPerformanceSample = sample
+        appendBrowserDiagnostic(
+            "perf stage=\(stage) captureBytes=\(sample.captureBytes) " +
+            "physicalMemory=\(sample.physicalMemoryBytes) cpu=\(sample.activeProcessorCount)/\(sample.processorCount) " +
+            "residentMemory=\(sample.residentMemoryBytes) processCPUms=\(sample.processCPUTimeMilliseconds) " +
+            "thermal=\(sample.thermalState)"
+        )
+    }
+
+    private static func currentResidentMemoryBytes() -> UInt64 {
+        var info = mach_task_basic_info_data_t()
+        var count = mach_msg_type_number_t(
+            MemoryLayout<mach_task_basic_info_data_t>.stride / MemoryLayout<integer_t>.stride
+        )
+        let result = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? UInt64(info.resident_size) : 0
+    }
+
+    private static func currentProcessCPUTimeMilliseconds() -> Int64 {
+        var usage = rusage()
+        guard getrusage(RUSAGE_SELF, &usage) == 0 else { return 0 }
+        let user = Int64(usage.ru_utime.tv_sec) * 1_000
+            + Int64(usage.ru_utime.tv_usec) / 1_000
+        let system = Int64(usage.ru_stime.tv_sec) * 1_000
+            + Int64(usage.ru_stime.tv_usec) / 1_000
+        return max(0, user + system)
+    }
+
+    private func invalidateBrowserTranslationConfiguration() {
+        browserConfigurationRevision &+= 1
+        guard browserPageIdentity != nil else { return }
+        invalidateBrowserTranslation(reason: "翻译配置已变化", publishIdle: true)
+    }
+
+    /// Engine, language, prompt, terminology, and sampling values are part of
+    /// the identity of every product translation. Rotate browser identity and
+    /// cancel any active image/audio run before it can commit output produced
+    /// under a now-stale configuration.
+    private func invalidateTranslationRunsForConfigurationChange() {
+        guard !isRestoring else { return }
+        appleTranslationService.cancelPendingRequest()
+        invalidateBrowserTranslationConfiguration()
+
+        switch imageTranslationState {
+        case .loading, .recognizing, .translating:
+            cancelImageTranslation()
+            imageTranslationMessage = "翻译配置已变化，请重新开始图片翻译"
+            dataTransferMessage = imageTranslationMessage
+        case .idle, .translated, .failed:
+            break
+        }
+
+        switch audioRecognitionState {
+        case .checking, .recognizing, .translating:
+            cancelAudioRecognition()
+            audioRecognitionMessage = "翻译配置已变化，请重新开始音频识别或翻译"
+            dataTransferMessage = audioRecognitionMessage
+        case .idle, .translated, .failed:
+            break
+        }
+    }
+
+    private func isCurrentBrowserTranslationTask(
+        _ taskID: UUID,
+        identity: BrowserPageSnapshotIdentity,
+        configurationRevision: Int
+    ) -> Bool {
+        !Task.isCancelled
+            && browserTranslationTaskID == taskID
+            && browserPageIdentity == identity
+            && browserConfigurationRevision == configurationRevision
+    }
+
+    private func browserPageCacheKey(
+        for capture: BrowserPageCaptureMetadata,
+        sourceLanguage: SupportedLanguage
+    ) -> String {
+        let size = "\(Int(capture.capturePixelSize.width))x\(Int(capture.capturePixelSize.height))"
+        let rect = [capture.visibleDocumentRectCSS.minX, capture.visibleDocumentRectCSS.minY,
+                    capture.visibleDocumentRectCSS.width, capture.visibleDocumentRectCSS.height]
+            .map { String(format: "%.2f", $0) }.joined(separator: ",")
+        return "v1|\(capture.identity.normalizedURL)|\(capture.captureSHA256)|\(size)|\(rect)|ocr=vision-\(sourceLanguage.rawValue)|content-space-v1"
+    }
+
+    private func browserRegionFingerprint(
+        pageHash: String,
+        boundingBox: NormalizedImageRect,
+        original: String
+    ) -> String {
+        let quantized = [boundingBox.x, boundingBox.y, boundingBox.width, boundingBox.height]
+            .map { String(format: "%.5f", $0) }
+            .joined(separator: ",")
+        return Self.sha256Hex(Data("v1|region-pixel|\(pageHash)|\(quantized)|\(original)".utf8))
+    }
+
+    private func browserDocumentRect(for box: NormalizedImageRect, in documentRect: CGRect) -> CGRect {
+        CGRect(
+            x: documentRect.minX + documentRect.width * box.x,
+            y: documentRect.minY + documentRect.height * box.y,
+            width: documentRect.width * box.width,
+            height: documentRect.height * box.height
+        )
+    }
+
+    private func browserTranslationBatches(_ regions: [BrowserTranslationRegion]) -> [[Int]] {
+        var batches: [[Int]] = []
+        var current: [Int] = []
+        var characters = 0
+        for index in regions.indices {
+            let count = regions[index].original.count
+            if !current.isEmpty && (current.count >= 8 || characters + count > 1_800) {
+                batches.append(current)
+                current = []
+                characters = 0
+            }
+            current.append(index)
+            characters += count
+        }
+        if !current.isEmpty { batches.append(current) }
+        return batches
+    }
+
+    private func translateBrowserBatch(
+        _ indices: [Int],
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage,
+        taskID: UUID,
+        identity: BrowserPageSnapshotIdentity,
+        configurationRevision: Int
+    ) async throws -> [String] {
+        let regions = indices.compactMap { browserTranslationBlocks.indices.contains($0) ? browserTranslationBlocks[$0] : nil }
+        guard !regions.isEmpty else { return [] }
+        var values = Array(repeating: "", count: regions.count)
+        var missing: [Int] = []
+        for (offset, region) in regions.enumerated() {
+            let key = browserTranslationCacheKey(
+                region: region,
+                sourceLanguage: sourceLanguage,
+                targetLanguage: targetLanguage
+            )
+            if let cached = browserTranslationCache[key] {
+                values[offset] = cached.text
+                browserCacheAccessCounter &+= 1
+                browserTranslationCache[key]?.lastAccess = browserCacheAccessCounter
+            } else {
+                missing.append(offset)
+            }
+        }
+        guard !missing.isEmpty else {
+            appendBrowserDiagnostic("translation-cache-hit count=\(regions.count)")
+            return values
+        }
+
+        let taggedInput = missing.enumerated().map { ordinal, offset in
+            let clean = regions[offset].original
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return "[\(ordinal + 1)] \(clean)"
+        }.joined(separator: "\n")
+        var request = makeRequest(
+            task: .translation,
+            inputText: taggedInput,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            translationProfile: .mangaBlocks,
+            requestSampling: Self.mangaBatchSampling(
+                current: sampling,
+                blockCount: missing.count,
+                inputCharacterCount: taggedInput.count
+            )
+        )
+        // The browser task is deliberately isolated from the text/Speech
+        // workspace; no unrelated transcript lines may leak into its prompt.
+        request.mode = .translate
+        request.transcriptContext = []
+        let result = try await generateForBrowser(request)
+        guard isCurrentBrowserTranslationTask(
+            taskID,
+            identity: identity,
+            configurationRevision: configurationRevision
+        ) else { throw CancellationError() }
+        let parsed: [String?]
+        do {
+            parsed = try Self.parseMangaTaggedTranslations(
+                result.text,
+                expectedIDs: Array(1...missing.count)
+            )
+        } catch {
+            // A small model may omit tags. Fall back to bounded single-block
+            // requests; each output still passes through the same identity gate
+            // in the caller and is never written to the image/OCR workspaces.
+            var fallback = values
+            for offset in missing {
+                guard isCurrentBrowserTranslationTask(
+                    taskID,
+                    identity: identity,
+                    configurationRevision: configurationRevision
+                ) else { throw CancellationError() }
+                var singleRequest = makeRequest(
+                    task: .translation,
+                    inputText: regions[offset].original,
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
+                singleRequest.mode = .translate
+                singleRequest.transcriptContext = []
+                let single = try await generateForBrowser(singleRequest)
+                guard isCurrentBrowserTranslationTask(
+                    taskID,
+                    identity: identity,
+                    configurationRevision: configurationRevision
+                ) else { throw CancellationError() }
+                let text = single.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { throw ImageMangaBatchTranslationError.emptyTranslation }
+                fallback[offset] = text
+                let key = browserTranslationCacheKey(
+                    region: regions[offset],
+                    sourceLanguage: sourceLanguage,
+                    targetLanguage: targetLanguage
+                )
+                browserCacheAccessCounter &+= 1
+                browserTranslationCache[key] = BrowserCachedTranslation(
+                    text: text,
+                    lastAccess: browserCacheAccessCounter,
+                    estimatedCost: text.utf8.count + 220
+                )
+            }
+            trimBrowserCaches()
+            return fallback
+        }
+        for (ordinal, offset) in missing.enumerated() {
+            guard isCurrentBrowserTranslationTask(
+                taskID,
+                identity: identity,
+                configurationRevision: configurationRevision
+            ) else { throw CancellationError() }
+            guard let text = parsed[ordinal]?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else {
+                throw ImageMangaBatchTranslationError.emptyTranslation
+            }
+            values[offset] = text
+            let key = browserTranslationCacheKey(
+                region: regions[offset],
+                sourceLanguage: sourceLanguage,
+                targetLanguage: targetLanguage
+            )
+            browserCacheAccessCounter &+= 1
+            browserTranslationCache[key] = BrowserCachedTranslation(
+                text: text,
+                lastAccess: browserCacheAccessCounter,
+                estimatedCost: text.utf8.count + 220
+            )
+        }
+        trimBrowserCaches()
+        return values
+    }
+
+    private func browserTranslationCacheKey(
+        region: BrowserTranslationRegion,
+        sourceLanguage: SupportedLanguage,
+        targetLanguage: SupportedLanguage
+    ) -> String {
+        let promptSignature = selectedPrompt.instruction(
+            source: sourceLanguage,
+            target: targetLanguage
+        ) + "|tone=" + selectedPrompt.tone
+        let promptDigest = Self.sha256Hex(Data(promptSignature.utf8))
+        let normalizedTerms = TranslationPromptContext(
+            confirmedTerms: translationTermMemory
+        )
+        .bound(to: sourceLanguage, targetLanguage: targetLanguage)
+        .normalized()
+        .confirmedTerms
+        let termsDigest = Self.sha256Hex(
+            Data(normalizedTerms.map {
+                "\($0.kind.rawValue)|\($0.source)=\($0.target)"
+            }.joined(separator: "|").utf8)
+        )
+        return "v1|\(region.sourceFingerprint)|\(sourceLanguage.rawValue)|\(targetLanguage.rawValue)|\(selectedEngine.rawValue)|model=\(browserModelRevision)|profile=\(TranslationRequestProfile.mangaBlocks.rawValue)|prompt=\(selectedPromptID.uuidString)|\(promptDigest)|\(sampling.temperature)|\(sampling.maxTokens)|\(termsDigest)"
+    }
+
+    private var browserModelRevision: String {
+        switch selectedEngine {
+        case .local:
+            let url = localModelDirectory.appendingPathComponent(localModelFilename)
+            let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)
+            let size = (attributes?[.size] as? NSNumber)?.int64Value ?? 0
+            let modified = (attributes?[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+            return "gguf:\(localModelFilename):\(size):\(String(format: "%.0f", modified))"
+        case .appleTranslation:
+            return "apple-adapter-v1:\(ProcessInfo.processInfo.operatingSystemVersionString)"
+        case .mock:
+            return "mock-adapter-v1"
+        case .hunyuan, .qwen:
+            return "reserved-adapter-v1"
+        }
+    }
+
+    private func generateForBrowser(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult {
+#if targetEnvironment(simulator)
+        if selectedEngine == .appleTranslation {
+            appendBrowserDiagnostic("simulator-apple→gemma-fallback")
+            do {
+                try await localService.prepare()
+                return try await localService.generate(request)
+            } catch {
+                try await mockService.prepare()
+                return try await mockService.generate(request)
+            }
+        }
+#endif
+        switch selectedEngine {
+        case .appleTranslation:
+            return try await appleTranslationService.generate(request)
+        case .local:
+            do {
+                try await localService.prepare()
+                return try await localService.generate(request)
+            } catch {
+                guard !isLocalModelInstalled else { throw error }
+                try await mockService.prepare()
+                appendBrowserDiagnostic("local-model-missing→mock-fallback")
+                return try await mockService.generate(request)
+            }
+        case .mock:
+            try await mockService.prepare()
+            return try await mockService.generate(request)
+        case .hunyuan, .qwen:
+            throw TranslationEngineRoutingError.reservedEngine(selectedEngine)
+        }
+    }
+
+    private func trimBrowserCaches() {
+        while browserOCRCache.count > 8 {
+            if let key = browserOCRCache.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key {
+                browserOCRCache.removeValue(forKey: key)
+            } else { break }
+        }
+        while browserTranslationCache.count > 2_000 {
+            if let key = browserTranslationCache.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key {
+                browserTranslationCache.removeValue(forKey: key)
+            } else { break }
+        }
+        let totalCost = browserOCRCache.values.reduce(0) { $0 + $1.estimatedCost }
+            + browserTranslationCache.values.reduce(0) { $0 + $1.estimatedCost }
+        guard totalCost > 16 * 1024 * 1024 else { return }
+        let oldestOCR = browserOCRCache.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key
+        let oldestTranslation = browserTranslationCache.min(by: { $0.value.lastAccess < $1.value.lastAccess })?.key
+        if let oldestOCR { browserOCRCache.removeValue(forKey: oldestOCR) }
+        if let oldestTranslation { browserTranslationCache.removeValue(forKey: oldestTranslation) }
+        if browserOCRCache.isEmpty && browserTranslationCache.isEmpty { return }
+        trimBrowserCaches()
     }
 
     // MARK: - OCR detection workspace
@@ -5436,11 +6318,19 @@ final class TranslationSessionStore: ObservableObject {
         switch selectedEngine {
         case .appleTranslation:
             if #available(iOS 18.0, *) {
+#if targetEnvironment(simulator)
+                modelStatus = ModelStatus(
+                    title: appleTranslationService.metadata.displayName,
+                    detail: "模拟器不支持系统翻译；产品请求将自动回退 Local，缺少 GGUF 时回退 Mock",
+                    isReady: true
+                )
+#else
                 modelStatus = ModelStatus(
                     title: appleTranslationService.metadata.displayName,
                     detail: "使用系统原生翻译；语言包会在首次请求时由 iOS 检查或下载",
                     isReady: true
                 )
+#endif
             } else {
                 modelStatus = ModelStatus(
                     title: appleTranslationService.metadata.displayName,
@@ -5548,7 +6438,8 @@ final class TranslationSessionStore: ObservableObject {
         _ text: String,
         timestamp: String,
         refreshesSummary: Bool = true,
-        expectedSpeechRunID: UUID? = nil
+        expectedSpeechRunID: UUID? = nil,
+        translationConfiguration: SpeechTranslationConfiguration? = nil
     ) async -> Bool {
         writeLaunchLLMSmokeProbe(
             "submit-start source=\(sourceLanguage.rawValue) target=\(targetLanguage.rawValue) " +
@@ -5562,7 +6453,12 @@ final class TranslationSessionStore: ObservableObject {
         }
 
         do {
-            let translation = try await translate(text)
+            let capturedConfiguration = translationConfiguration
+                ?? (expectedSpeechRunID == nil ? nil : speechTranslationConfiguration)
+            let translation = try await translate(
+                text,
+                configuration: capturedConfiguration
+            )
             guard isCurrentSpeechTranslation(expectedSpeechRunID) else { return false }
             let line = TranscriptLine(
                 speaker: "You",
@@ -6261,6 +7157,40 @@ final class TranslationSessionStore: ObservableObject {
             sourceLanguage: sourceLanguage,
             targetLanguage: targetLanguage
         )
+    }
+
+    /// Audio translation uses the configuration captured at recognition (or
+    /// explicit live-translation) start.  It intentionally sends an empty
+    /// transcript context: prior conversation lines are not recognition
+    /// input, correction hints, or production translation context.
+    private func translate(
+        _ text: String,
+        configuration: SpeechTranslationConfiguration?
+    ) async throws -> String {
+        guard let configuration else {
+            return try await translate(text)
+        }
+        let request = makeRequest(
+            task: .translation,
+            inputText: text,
+            sourceLanguage: configuration.sourceLanguage,
+            targetLanguage: configuration.targetLanguage,
+            requestSampling: configuration.sampling,
+            prompt: configuration.prompt,
+            transcriptContext: []
+        )
+        writeLaunchLLMSmokeProbe(
+            "speech-translate-request source=\(request.sourceLanguage.rawValue) " +
+            "target=\(request.targetLanguage.rawValue) engine=\(configuration.engine.rawValue) " +
+            "input=\(Self.probeField(text))"
+        )
+        let result = try await generateWithSelectedEngine(request, engine: configuration.engine)
+        writeLaunchLLMSmokeProbe(
+            "speech-translate-result source=\(request.sourceLanguage.rawValue) " +
+            "target=\(request.targetLanguage.rawValue) engine=\(result.engineName) " +
+            "output=\(Self.probeField(result.text))"
+        )
+        return result.text
     }
 
     private func translate(
@@ -27700,8 +28630,34 @@ final class TranslationSessionStore: ObservableObject {
             .map(\.block)
     }
 
-    private func generateWithSelectedEngine(_ request: ModelGenerationRequest) async throws -> ModelGenerationResult {
-        let requestedEngine = selectedEngine
+    private func generateWithSelectedEngine(
+        _ request: ModelGenerationRequest,
+        engine explicitEngine: ModelEngine? = nil
+    ) async throws -> ModelGenerationResult {
+        let requestedEngine = explicitEngine ?? selectedEngine
+
+#if targetEnvironment(simulator)
+        // TranslationSession cannot execute in the simulator. Keep every
+        // product surface (text, image, browser, and audio) testable through
+        // the configured local adapter, with Mock only when no GGUF exists.
+        if requestedEngine == .appleTranslation {
+            writeLaunchLLMSmokeProbe(
+                "generate-simulator-fallback selectedEngine=\(requestedEngine.rawValue) " +
+                "input=\(Self.probeField(request.inputText))"
+            )
+            do {
+                try await localService.prepare()
+                let result = try await localService.generate(request)
+                lastGenerationLabel = "Simulator Apple→Local · \(result.durationMilliseconds ?? 0)ms"
+                return result
+            } catch {
+                try await mockService.prepare()
+                let result = try await mockService.generate(request)
+                lastGenerationLabel = "Simulator Apple→Mock · \(result.durationMilliseconds ?? 0)ms"
+                return result
+            }
+        }
+#endif
 
         if requestedEngine == .appleTranslation {
             writeLaunchLLMSmokeProbe(
@@ -27711,7 +28667,9 @@ final class TranslationSessionStore: ObservableObject {
             )
             do {
                 let result = try await appleTranslationService.generate(request)
-                guard selectedEngine == requestedEngine else { throw CancellationError() }
+                guard explicitEngine != nil || selectedEngine == requestedEngine else {
+                    throw CancellationError()
+                }
                 writeLaunchLLMSmokeProbe(
                     "generate-done engine=\(result.engineName) chars=\(result.text.count) " +
                     "output=\(Self.probeField(result.text))"
@@ -27750,7 +28708,9 @@ final class TranslationSessionStore: ObservableObject {
                 "input=\(Self.probeField(request.inputText))"
             )
             let result = try await primary.generate(request)
-            guard selectedEngine == requestedEngine else { throw CancellationError() }
+            guard explicitEngine != nil || selectedEngine == requestedEngine else {
+                throw CancellationError()
+            }
             writeLaunchLLMSmokeProbe(
                 "generate-done engine=\(result.engineName) chars=\(result.text.count) " +
                 "output=\(Self.probeField(result.text))"
@@ -27766,7 +28726,9 @@ final class TranslationSessionStore: ObservableObject {
             guard !isLocalModelInstalled else { throw error }
             try await mockService.prepare()
             let fallback = try await mockService.generate(request)
-            guard selectedEngine == requestedEngine else { throw CancellationError() }
+            guard explicitEngine != nil || selectedEngine == requestedEngine else {
+                throw CancellationError()
+            }
             writeLaunchLLMSmokeProbe(
                 "generate-fallback engine=\(fallback.engineName) source=\(request.sourceLanguage.rawValue) " +
                 "target=\(request.targetLanguage.rawValue) output=\(Self.probeField(fallback.text))"
@@ -28197,7 +29159,9 @@ final class TranslationSessionStore: ObservableObject {
         targetLanguage requestTargetLanguage: SupportedLanguage? = nil,
         translationProfile: TranslationRequestProfile = .standard,
         requestSampling: GenerationSampling? = nil,
-        translationContext: TranslationPromptContext? = nil
+        translationContext: TranslationPromptContext? = nil,
+        prompt requestPrompt: PromptTemplate? = nil,
+        transcriptContext requestTranscriptContext: [TranscriptLine]? = nil
     ) -> ModelGenerationRequest {
         let resolvedSourceLanguage = requestSourceLanguage ?? sourceLanguage
         let resolvedTargetLanguage = requestTargetLanguage ?? targetLanguage
@@ -28205,10 +29169,10 @@ final class TranslationSessionStore: ObservableObject {
             task: task,
             mode: mode,
             inputText: inputText,
-            transcriptContext: transcript,
+            transcriptContext: requestTranscriptContext ?? transcript,
             sourceLanguage: resolvedSourceLanguage,
             targetLanguage: resolvedTargetLanguage,
-            prompt: selectedPrompt,
+            prompt: requestPrompt ?? selectedPrompt,
             sampling: requestSampling ?? sampling,
             translationProfile: translationProfile,
             translationContext: (translationContext

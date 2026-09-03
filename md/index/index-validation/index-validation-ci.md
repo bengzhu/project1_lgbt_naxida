@@ -27,7 +27,7 @@ docs-only     -> 父 receipt 成功时可传播；否则不能掩盖代码未验
 - `expected_commit_sha` 必须与 checkout 的真实 HEAD 相等。
 - 结果包至少看 `junit.xml`、`xcodebuild.log`、`ci-artifact-manifest.json`、`ci-failure-summary.md`；涉及 Xcode/探针时再看 `.xcresult`、`output/` 和关键 PNG/JSON/TXT。
 - `ui_evidence_mode=full`、`probe_mode=ci-fast/full`、Koharu artifact 注入和 test2 workflow 都是显式成本边界；默认 push 不启动探针。
-- `BrowserModel`/`MangaBrowserView` 的纯浏览器变更使用 `[browser-only]` 候选提交与 PR 标记，路由为浏览器直接合同 + iOS build；只有 changed-files 命中浏览器 allowlist 时才接受日语 benchmark 跳过。
+- `BrowserModel`/`MangaBrowserView`/浏览器翻译 Store 与同轮 Apple 图片/音频接线使用 `[browser-only]` 候选提交与 PR 标记，路由为 v3.404 浏览器壳、v3.405 浏览器翻译、v3.406 Apple 媒体和 Speech 身份合同 + iOS build；只有 changed-files 命中 allowlist 时才接受历史矩阵跳过。
 - 本机默认不跑 `xcodebuild`、`swiftc`/Swift evaluator、Core ML、Rust/Cargo、GGUF 或 App runtime；除非人工明确要求。
 
 ## CI 成本护栏
@@ -46,7 +46,7 @@ docs-only     -> 父 receipt 成功时可传播；否则不能掩盖代码未验
 - 所有变更：`git diff --check`；只有确实改变对应路由、版本身份或共享边界时，才增加相应合同。
 - App Swift、Xcode 工程、Info.plist、bundle 资源或构建依赖：基础 simulator `xcodebuild` + 变更所属领域的直接合同。
 - OCR/layout、翻译/context/QA、Speech、UI/Store：只跑对应主题合同和一个最近共享边界合同；共享状态/协议变更才向相邻主题扩展。v3.390 OCR-only 另行产出 overlay 时，不启动 LLM 翻译或通用 UI 截图。
-- 漫画浏览器：`test-v3404-manga-browser-ui-contract.py`、受影响的 v3.400 根导航合同 + iOS simulator build；跳过其余历史 UI、OCR/翻译 benchmark、Speech、Koharu、GGUF、截图和探针。
+- 漫画浏览器与本轮媒体接线：`test-v3404-manga-browser-ui-contract.py`、`test-v3405-browser-translation-contract.py`、`test-v3406-apple-media-translation-contract.py`、Speech run-id 合同、受影响的 v3.400 根导航合同 + iOS simulator build；跳过其余历史 UI、OCR/Koharu、GGUF、截图和探针。
 - `scripts/`、`benchmarks/`、schema/fixture：只跑本次修改脚本、直接依赖和对应 evaluator/schema smoke；没有 App 接线变化就跳过 Xcode。
 - `md/`、README、AGENTS、update_log、metrics：做链接/路径/必要格式检查；父 full receipt 成功才允许 metadata fast，缺失或失败则不能掩盖代码验证缺口。
 - `test/2.png` OCR/翻译截图、test2 UI、Koharu/GGUF、授权语料和目标设备都是显式 `optional`，不因普通 OCR/翻译代码变更自动开启；overlay 需要时只选择对应 runtime artifact。

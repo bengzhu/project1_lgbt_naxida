@@ -6,7 +6,7 @@
 
 | 合同/入口 | 路径 | 覆盖对象 |
 | --- | --- | --- |
-| 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 420 个当前合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
+| 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 422 个当前合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
 | 非版本 Speech 合同 | [`scripts/test-speech-*.py`](../../../scripts/) | Speech 接线、质量 evaluator |
 | Python evaluator | [`scripts/evaluate-*.py`](../../../scripts/) | benchmark/corpus/report schema 语义 |
 | Swift harness/evaluator | [`scripts/fixtures/`](../../../scripts/fixtures/) 与 `scripts/*evaluator.swift` | 需要编译/运行的 runtime evidence；默认云端 |
@@ -22,6 +22,7 @@
 - 翻译/context/QA：`test-v3286*`–`test-v3299*`、`test-v3300*`–`test-v380*` 中的 `translation`/`context`/`gguf`。
 - Koharu/artifact/探针：`test-v32*`、`test-v19*`、`test-v20*` 及 `koharu`/`manga`/`artifact` 命名合同；真实外部 artifact 只走 cloud-only gate。
 - Speech：`scripts/test-speech-quality-contract.py`、`scripts/test-speech-recognition-contract.py`、`scripts/test-speech-quality-evaluator.swift`、`scripts/validate-speech-corpus.py`。
+- 漫画浏览器与 Apple 媒体：`scripts/test-v3404-manga-browser-ui-contract.py`、`scripts/test-v3405-browser-translation-contract.py`、`scripts/test-v3406-apple-media-translation-contract.py`。
 - benchmark/schema：`scripts/test-v3280-japanese-benchmark-contract.py`、`scripts/test-v3282*`–`test-v3294*` 以及 `scripts/evaluate-japanese-*.py`。
 
 ## 测试选择规则
