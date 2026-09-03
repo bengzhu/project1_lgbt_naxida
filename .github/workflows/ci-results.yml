@@ -588,6 +588,19 @@ jobs:
           receipt_propagation_allowed=$receipt_propagation_allowed
           EOF
 
+      - name: Detect browser-only task scope
+        id: browser_scope
+        shell: bash
+        run: |
+          set -euo pipefail
+          browser_task_scoped=false
+          if grep -E '^AITRANS/(Models/BrowserModel|Views/MangaBrowserView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
+            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AGENTS\.md|README\.md|AITRANS\.xcodeproj/project\.pbxproj|AITRANS/Models/BrowserModel\.swift|AITRANS/Views/(AppTheme|ContentView|MangaBrowserView)\.swift|scripts/test-v340(0-immersive|4-manga-browser)-ui-contract\.py|md/(test/test\.md|index/index\.md|index/index-app/(index-app|index-app-ui)\.md|index/index-assets/index-assets-file-map\.md|index/index-validation/index-validation-(ci|contracts)\.md|flow/(flow|flowchart)\.md|log/(update_log|work)\.md))$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+            browser_task_scoped=true
+          fi
+          echo "is_scoped=$browser_task_scoped" >> "$GITHUB_OUTPUT"
+          echo "BROWSER_TASK_SCOPED=$browser_task_scoped" >> "$GITHUB_ENV"
+
       - name: Detect CI scope
         id: ci_scope
         shell: bash
@@ -606,16 +619,12 @@ jobs:
           koharu_contract_required=false
           workflow_changed=false
           visual_task_scoped=false
-          browser_task_scoped=false
+          browser_task_scoped="${BROWSER_TASK_SCOPED:-false}"
           if grep -E '^(AITRANS/|AITRANS\.xcodeproj/|build-apple/|test/|scripts/fixtures/v3214-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3218-long-page-manga-ocr-runtime-harness\.swift$|scripts/fixtures/v3238-manga-ocr-quad-bbox-fallback-runtime-harness\.swift$|scripts/fixtures/v3239-manga-ocr-bbox-primary-runtime-harness\.swift$|scripts/fixtures/v3245-directional-manga-ocr-crop-runtime-harness\.swift$|scripts/fixtures/v3254-japanese-region-diagnostic-harness\.swift$|scripts/test-v3214-image-japanese-manga-ocr-runtime\.sh$|scripts/test-v3218-image-japanese-long-page-manga-ocr-runtime\.sh$|scripts/test-v3238-image-japanese-quad-bbox-fallback-runtime\.sh$|scripts/test-v3239-image-japanese-manga-ocr-bbox-primary-runtime\.sh$|scripts/test-v3245-image-japanese-directional-manga-ocr-crop-runtime\.sh$|scripts/test-v3254-image-japanese-region-diagnostic-runtime\.sh$|scripts/capture-ui-evidence\.sh$)' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             app_build_changed=true
           fi
           if grep -Fx '.github/workflows/ci-results.yml' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             workflow_changed=true
-          fi
-          if grep -E '^AITRANS/(Models/BrowserModel|Views/MangaBrowserView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
-            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AGENTS\.md|README\.md|AITRANS\.xcodeproj/project\.pbxproj|AITRANS/Models/BrowserModel\.swift|AITRANS/Views/(AppTheme|ContentView|MangaBrowserView)\.swift|scripts/test-v340(0-immersive|4-manga-browser)-ui-contract\.py|md/(test/test\.md|index/index\.md|index/index-app/(index-app|index-app-ui)\.md|index/index-assets/index-assets-file-map\.md|index/index-validation/index-validation-(ci|contracts)\.md|flow/(flow|flowchart)\.md|log/(update_log|work)\.md))$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
-            browser_task_scoped=true
           fi
           if grep -E '^AITRANS/Views/(AppComponents|AppTheme|AppPreviewSupport|ContentView|TextTranslationView|ImageTranslationViews|ImageOCRDetectionView|AudioTranslationView|HistoryView|SettingsView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
             && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AITRANS/Views/(AppComponents|AppTheme|AppPreviewSupport|ContentView|TextTranslationView|ImageTranslationViews|ImageOCRDetectionView|AudioTranslationView|HistoryView|SettingsView)\.swift|scripts/(capture-ui-evidence\.sh|test-v189-paste-manual-matrix-contract\.py|test-v318-image-review-progress-evidence-contract\.py|test-v3401-focused-workspaces-contract\.py|test-v3402-compact-header-settings-contract\.py)|md/(index/index-app/index-app-ui|log/(update_log|work))\.md)$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
@@ -3603,7 +3612,7 @@ jobs:
 
   japanese_benchmark:
     name: Japanese OCR and translation benchmark contract
-    if: ${{ ! contains(format('{0} {1}', github.event.head_commit.message, github.event.pull_request.title), '[browser-only]') }}
+    if: ${{ contains(github.event.head_commit.message, '[browser-only]') == false && contains(github.event.pull_request.title, '[browser-only]') == false }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
