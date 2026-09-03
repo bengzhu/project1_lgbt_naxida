@@ -3311,6 +3311,22 @@ jobs:
             test "${{ needs.japanese_benchmark.result }}" = "success"
           fi
 
+      - name: Prepare manga browser contract summary
+        if: always()
+        shell: bash
+        run: |
+          browser_failed=false
+          if [ "${{ steps.ci_scope.outputs.browser_contract_required }}" = "true" ] && [ "${{ steps.manga_browser_contract.outcome }}" != "success" ]; then
+            browser_failed=true
+          fi
+          {
+            echo "- browser task scoped: ${{ steps.ci_scope.outputs.browser_task_scoped }}"
+            echo "- manga browser contract required: ${{ steps.ci_scope.outputs.browser_contract_required }}"
+            echo "- v3.404 manga browser UI contract: ${{ steps.manga_browser_contract.outcome }}"
+            echo "- v3.404 manga browser UI contract log: ${RESULT_ROOT}/v3404-manga-browser-ui-contract.log"
+          } > "$RESULT_ROOT/browser-contract-summary.md"
+          echo "BROWSER_CONTRACT_FAILED=$browser_failed" >> "$GITHUB_ENV"
+
       - name: Write failure summary
         if: always()
         shell: bash
@@ -3367,8 +3383,6 @@ jobs:
             echo "- Speech contract required: ${{ steps.ci_scope.outputs.speech_contract_required }}"
             echo "- UI interaction contract required: ${{ steps.ci_scope.outputs.ui_interaction_contract_required }}"
             echo "- home UI contract required: ${{ steps.ci_scope.outputs.home_ui_contract_required }}"
-            echo "- browser task scoped: ${{ steps.ci_scope.outputs.browser_task_scoped }}"
-            echo "- manga browser contract required: ${{ steps.ci_scope.outputs.browser_contract_required }}"
             echo "- paste matrix contract required: ${{ steps.ci_scope.outputs.paste_matrix_contract_required }}"
             echo "- Koharu contract required: ${{ steps.ci_scope.outputs.koharu_contract_required }}"
             echo "- UI evidence required: ${{ steps.ci_scope.outputs.ui_evidence_required }}"
@@ -3380,7 +3394,6 @@ jobs:
             echo "- static checks: ${{ steps.static_checks.outcome }}"
             echo "- UI interaction contract: ${{ steps.ui_interaction_contract.outcome }}"
             echo "- v1.88 home UI contract: ${{ steps.home_ui_contract.outcome }}"
-            echo "- v3.404 manga browser UI contract: ${{ steps.manga_browser_contract.outcome }}"
             echo "- xcode build: ${{ steps.xcode_build.outcome }}"
             echo "- UI evidence: ${{ steps.ui_evidence.outcome }}"
             echo "- simulator build: ${{ steps.simulator_build.outcome }}"
@@ -3393,7 +3406,7 @@ jobs:
             echo "- Static checks: ${RESULT_ROOT}/static-checks.log"
             echo "- UI interaction contract: ${RESULT_ROOT}/ui-interaction-contract.log"
             echo "- v1.88 home UI contract: ${RESULT_ROOT}/v188-home-ui-contract.log"
-            echo "- v3.404 manga browser UI contract: ${RESULT_ROOT}/v3404-manga-browser-ui-contract.log"
+            cat "$RESULT_ROOT/browser-contract-summary.md"
             echo "- Koharu active artifact validation: ${RESULT_ROOT}/koharu-active-artifacts-validation.json"
             echo "- Xcode build: ${RESULT_ROOT}/xcodebuild.log"
             echo "- UI evidence: ${RESULT_ROOT}/ui-evidence/ui-evidence-manifest.json"
@@ -3527,7 +3540,7 @@ jobs:
               echo "- active artifact validator output missing; inspect static checks."
             fi
             echo
-            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.browser_contract_required }}" = "true" ] && [ "${{ steps.manga_browser_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
+            if { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.verify_model.outcome }}" != "success" ]; } || [ "${{ steps.static_checks.outcome }}" != "success" ] || { [ "${{ steps.ci_scope.outputs.speech_contract_required }}" = "true" ] && [ "${{ steps.speech_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_interaction_contract_required }}" = "true" ] && [ "${{ steps.ui_interaction_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.home_ui_contract_required }}" = "true" ] && [ "${{ steps.home_ui_contract.outcome }}" != "success" ]; } || [ "$BROWSER_CONTRACT_FAILED" = "true" ] || { [ "${{ steps.ci_scope.outputs.paste_matrix_contract_required }}" = "true" ] && [ "${{ steps.v189_paste_matrix_contract.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.xcode_build_required }}" = "true" ] && [ "${{ steps.xcode_build.outcome }}" != "success" ]; } || { [ "${{ steps.ci_scope.outputs.ui_evidence_required }}" = "true" ] && [ "${{ steps.ui_evidence.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.simulator_build.outcome }}" != "success" ]; } || { [ "${{ steps.meta.outputs.probe_mode }}" != "skip" ] && [ "${{ steps.manga_probe.outcome }}" != "success" ]; }; then
               echo "## Return to Agent B"
               echo "Fix the failed stage above, then push a new commit to the same codeb/... branch. Agent C must discard older run artifacts after a new push."
             else
