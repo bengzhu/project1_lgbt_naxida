@@ -8,18 +8,19 @@
 
 将漫画浏览器升级为 Safari iOS 18 风格：修正顶部白色安全区、隐藏主 TabView、增加三胶囊收缩栏与左上退出，并以 `activeTabID` 实现两列多标签切换；后台标签只保留内存缩略图、URL、滚动与页面状态，不持有 WKWebView。翻译球继续仅为纯 UI。
 
-### 规划小目标（完成 0/1）
+### 规划小目标（完成 1/1）
 
 | 小目标 | 状态 |
 | --- | --- |
-| v3.405 Safari 胶囊与单 WebView 多标签 | 进行中 |
+| v3.405 Safari 胶囊与单 WebView 多标签 | 已完成 |
 
 ### 当前状态
 
-- 当前分支：`codeb/v3.405-safari-browser-tabs`，基于 `origin/smalldata_test@91f15492`。
+- 当前分支：`codeb/v3.405-browser-final-record`，功能已通过 PR #462 合入 `smalldata_test@75c11949`，本分支只补最终记录。
 - changed-files：`BrowserModel`、`MangaBrowserView`、`ContentView`、浏览器直接合同，以及职责变化所需 AGENTS/README/flow/index/test/log。
 - 验收：baidu.com 顶部白色且内容避开状态栏；主 TabView 隐藏；下滑只留 36pt 域名胶囊并同步收起退出/翻译球；上滑 spring 恢复；两列标签器可新建/切换/关闭；后台标签无 WKWebView，切回恢复 URL 与 scrollOffset。
 - CI：baseline=`git diff --check`；direct=浏览器合同 + 根导航共享合同；required=当前核心 SHA 一个 iOS simulator build；skipped=历史 UI、日语 benchmark、OCR、Speech、Koharu、GGUF、翻译、截图和探针。
 - 已知工作树：`AITRANS.xcodeproj/xcshareddata/` 为开始前已有未跟踪内容，继续保留且不纳入提交。
 - 已完成证据：核心候选 `45f785c4104ae506ea65562f209e795f89f1b041`；exact-SHA full run `33752199467` 成功；artifact `aitrans-ci-v3.405-codeb-v3.405-safari-browser-tabs--45f785c4104a-run33752199467-attempt1` 已核对 manifest、JUnit `11/11`、浏览器合同 `13/13`、共享根导航合同 `5/5`、Xcode build log 与 xcresult。仅有既有 `LlamaRuntime.count32` 未使用警告。
-- 下一步：提交纯文档证据并复用 full receipt，创建 PR 合并，清理候选分支并补记最终 merge/fast CI。
+- 已完成收口：PR [#462](https://github.com/bengzhu/project1_lgbt_naxida/pull/462) 已合并，merge SHA `75c119498fc976a8ef2bfda9753ff1b81d6343ee` 的合入后 fast CI [33753067186](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33753067186) 成功复用核心 full receipt；原功能候选分支本地与远端均已删除。
+- 下一步：合并本纯文档记录分支并清理；总目标状态为 `complete`。
