@@ -1265,7 +1265,7 @@ private struct BrowserWebView: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, @preconcurrency WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, WKScriptMessageHandler {
         fileprivate let model: BrowserModel
         fileprivate let tabID: UUID
         private var observations: [NSKeyValueObservation] = []
@@ -1336,7 +1336,7 @@ private struct BrowserWebView: UIViewRepresentable {
             securityUpdateTask = Task { @MainActor [weak self, weak webView] in
                 guard let self, let webView else { return }
                 if let installedRuleList = self.installedRuleList {
-                    webView.configuration.userContentController.removeContentRuleList(installedRuleList)
+                    webView.configuration.userContentController.remove(installedRuleList)
                     self.installedRuleList = nil
                 }
                 guard enabled, !Task.isCancelled else {

@@ -2292,8 +2292,8 @@ final class TranslationSessionStore: ObservableObject {
                     self.browserTranslationStatus = BrowserTranslationStatus(
                         phase: allProcessed ? (isPartial ? .partial : .completed) : .translating,
                         completedRegions: translatedCount,
-                        failedRegions: failedCount,
                         totalRegions: regions.count,
+                        failedRegions: failedCount,
                         message: allProcessed
                             ? (isPartial
                                 ? "翻译完成，部分文字块失败或超出上限，可重试"
