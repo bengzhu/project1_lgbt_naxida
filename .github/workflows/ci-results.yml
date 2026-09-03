@@ -3603,7 +3603,7 @@ jobs:
 
   japanese_benchmark:
     name: Japanese OCR and translation benchmark contract
-    if: ${{ !contains(github.event.head_commit.message || github.event.pull_request.title || '', '[browser-only]') }}
+    if: ${{ ! contains(format('{0} {1}', github.event.head_commit.message, github.event.pull_request.title), '[browser-only]') }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
