@@ -768,11 +768,7 @@ struct MangaBrowserView: View {
                             Button {
                                 browserSourceLanguageRaw = language.rawValue
                             } label: {
-                                if isSelected {
-                                    Label(language.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(language.rawValue)
-                                }
+                                languageMenuLabel(language, isSelected: isSelected)
                             }
                         }
                     }
@@ -782,11 +778,7 @@ struct MangaBrowserView: View {
                             Button {
                                 browserTargetLanguageRaw = language.rawValue
                             } label: {
-                                if isSelected {
-                                    Label(language.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(language.rawValue)
-                                }
+                                languageMenuLabel(language, isSelected: isSelected)
                             }
                         }
                     }
@@ -853,6 +845,18 @@ struct MangaBrowserView: View {
 
     private func formattedBytes(_ value: UInt64) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .memory)
+    }
+
+    @ViewBuilder
+    private func languageMenuLabel(
+        _ language: SupportedLanguage,
+        isSelected: Bool
+    ) -> some View {
+        if isSelected {
+            Label(language.rawValue, systemImage: "checkmark")
+        } else {
+            Text(language.rawValue)
+        }
     }
 
     private func resolvedTranslationBallY(in proxy: GeometryProxy) -> CGFloat {
