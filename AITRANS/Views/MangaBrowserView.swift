@@ -23,6 +23,7 @@ struct MangaBrowserView: View {
     @Binding private var selectedTab: AppTab
     @EnvironmentObject private var store: TranslationSessionStore
     @Environment(AdBlockStore.self) private var adBlockStore
+    @Environment(BrowserDebugLogStore.self) private var debugLogStore
     @State private var model = BrowserModel()
     @State private var addressDraft = ""
     @State private var isEditingAddress = false
@@ -63,7 +64,8 @@ struct MangaBrowserView: View {
                     tabID: model.activeTabID,
                     topSafeAreaInset: proxy.safeAreaInsets.top,
                     captureExclusionInsets: captureExclusionInsets(in: proxy),
-                    adBlockStore: adBlockStore
+                    adBlockStore: adBlockStore,
+                    debugLogStore: debugLogStore
                 )
                 .id(model.activeTabID)
                 .ignoresSafeArea(.container, edges: .all)
@@ -807,6 +809,25 @@ struct MangaBrowserView: View {
                     .foregroundStyle(adBlockStore.state.lastError == nil ? Color.secondary : Color.orange)
                     .lineLimit(2)
 
+#if DEBUG
+                Button {
+                    if debugLogStore.isRecording {
+                        debugLogStore.send(.stop)
+                    } else {
+                        debugLogStore.send(.start(tabID: model.activeTabID))
+                    }
+                } label: {
+                    Label(
+                        debugLogStore.isRecording ? "停止 Debug 日志" : "开始 Debug 日志",
+                        systemImage: debugLogStore.isRecording ? "stop.circle.fill" : "ladybug.fill"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(debugLogStore.isRecording ? .orange : .blue)
+                .accessibilityHint("仅记录当前漫画 WebView 的资源、DOM、媒体与导航元数据")
+#endif
+
                 if let performance = store.browserPerformanceSample {
                     Label(
                         "诊断：温度 \(performance.thermalState) · CPU \(performance.activeProcessorCount)/\(performance.processorCount) · 内存 \(formattedBytes(performance.residentMemoryBytes))",
@@ -1267,9 +1288,15 @@ private struct BrowserWebView: UIViewRepresentable {
     let topSafeAreaInset: CGFloat
     let captureExclusionInsets: UIEdgeInsets
     let adBlockStore: AdBlockStore
+    let debugLogStore: BrowserDebugLogStore
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(model: model, adBlockStore: adBlockStore, tabID: tabID)
+        Coordinator(
+            model: model,
+            adBlockStore: adBlockStore,
+            debugLogStore: debugLogStore,
+            tabID: tabID
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -1292,6 +1319,21 @@ private struct BrowserWebView: UIViewRepresentable {
                 messageHandler: context.coordinator
             )
         )
+#if DEBUG
+        securityController.add(
+            context.coordinator,
+            contentWorld: BrowserDebugLogStore.contentWorld,
+            name: BrowserDebugLogStore.messageName
+        )
+        securityController.addUserScript(
+            WKUserScript(
+                source: BrowserDebugLogStore.userScriptSource,
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false,
+                in: BrowserDebugLogStore.contentWorld
+            )
+        )
+#endif
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -1329,6 +1371,12 @@ private struct BrowserWebView: UIViewRepresentable {
         webView.uiDelegate = nil
         webView.scrollView.delegate = nil
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "aitransPageMutation")
+#if DEBUG
+        webView.configuration.userContentController.removeScriptMessageHandler(
+            forName: BrowserDebugLogStore.messageName,
+            contentWorld: BrowserDebugLogStore.contentWorld
+        )
+#endif
         coordinator.stopObserving()
     }
 
@@ -1336,15 +1384,22 @@ private struct BrowserWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, WKScriptMessageHandler {
         fileprivate let model: BrowserModel
         fileprivate let adBlockStore: AdBlockStore
+        fileprivate let debugLogStore: BrowserDebugLogStore
         fileprivate let tabID: UUID
         fileprivate let attachmentID = UUID()
         private var observations: [NSKeyValueObservation] = []
         private var lastScrollOffsetY: CGFloat?
         private weak var observedWebView: WKWebView?
 
-        init(model: BrowserModel, adBlockStore: AdBlockStore, tabID: UUID) {
+        init(
+            model: BrowserModel,
+            adBlockStore: AdBlockStore,
+            debugLogStore: BrowserDebugLogStore,
+            tabID: UUID
+        ) {
             self.model = model
             self.adBlockStore = adBlockStore
+            self.debugLogStore = debugLogStore
             self.tabID = tabID
         }
 
@@ -1396,10 +1451,12 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            debugLogStore.recordNavigation(tabID: tabID, url: webView.url, detail: ["phase": "start"])
             model.navigationDidStart(url: webView.url, webView: webView, tabID: tabID)
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            debugLogStore.recordNavigation(tabID: tabID, url: webView.url, detail: ["phase": "finish"])
             model.navigationDidFinish(url: webView.url, webView: webView, tabID: tabID)
             guard let offset = model.restorationScrollOffset(for: tabID) else { return }
             DispatchQueue.main.async { [weak webView] in
@@ -1408,14 +1465,29 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            debugLogStore.recordNavigation(
+                tabID: tabID,
+                url: webView.url,
+                detail: ["phase": "failure", "error": error.localizedDescription]
+            )
             model.navigationDidFail(error, webView: webView, tabID: tabID)
         }
 
         func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            debugLogStore.recordNavigation(
+                tabID: tabID,
+                url: webView.url,
+                detail: ["phase": "provisional-failure", "error": error.localizedDescription]
+            )
             model.navigationDidFail(error, webView: webView, tabID: tabID)
         }
 
         func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            debugLogStore.recordNavigation(
+                tabID: tabID,
+                url: webView.url,
+                detail: ["phase": "content-process-terminated"]
+            )
             model.webContentProcessDidTerminate(webView: webView, tabID: tabID)
         }
 
@@ -1429,6 +1501,12 @@ private struct BrowserWebView: UIViewRepresentable {
                 return
             }
             if !allows(navigationAction: navigationAction, url: url, in: webView) {
+                debugLogStore.recordNavigation(
+                    .blockedNavigation,
+                    tabID: tabID,
+                    url: url,
+                    detail: ["reason": "redirect"]
+                )
                 adBlockStore.send(.recordBlockedNavigation(url))
                 decisionHandler(.cancel)
                 return
@@ -1436,6 +1514,12 @@ private struct BrowserWebView: UIViewRepresentable {
             if adBlockStore.state.preferences.effectiveScriptProtection,
                isExternalNavigation(url),
                navigationAction.navigationType != .linkActivated {
+                debugLogStore.recordNavigation(
+                    .blockedNavigation,
+                    tabID: tabID,
+                    url: url,
+                    detail: ["reason": "external-navigation"]
+                )
                 adBlockStore.send(.recordBlockedNavigation(url))
                 decisionHandler(.cancel)
                 return
@@ -1468,9 +1552,21 @@ private struct BrowserWebView: UIViewRepresentable {
             guard navigationAction.targetFrame == nil,
                   let url = navigationAction.request.url else { return nil }
             if adBlockStore.state.preferences.effectivePopupBlocking {
+                debugLogStore.recordNavigation(
+                    .popup,
+                    tabID: tabID,
+                    url: url,
+                    detail: ["reason": "popup-blocked"]
+                )
                 adBlockStore.send(.recordBlockedNavigation(url))
                 return nil
             }
+            debugLogStore.recordNavigation(
+                .popup,
+                tabID: tabID,
+                url: url,
+                detail: ["reason": "popup-allowed"]
+            )
             if !model.handleExternalNavigationIfNeeded(url) { model.load(url: url) }
             return nil
         }
@@ -1479,13 +1575,22 @@ private struct BrowserWebView: UIViewRepresentable {
             _ userContentController: WKUserContentController,
             didReceive message: WKScriptMessage
         ) {
-            guard message.frameInfo.isMainFrame else { return }
             switch message.name {
             case AdBlockWebScript.elementRuleMessageName:
+                guard message.frameInfo.isMainFrame else { return }
                 guard let selector = message.body as? String else { return }
                 adBlockStore.send(.rememberElementSelector(selector))
             case "aitransPageMutation":
+                guard message.frameInfo.isMainFrame else { return }
                 model.pageContentDidChange(layoutChanged: message.body as? String == "layout")
+#if DEBUG
+            case BrowserDebugLogStore.messageName:
+                debugLogStore.recordScriptMessage(
+                    message.body,
+                    tabID: tabID,
+                    isMainFrame: message.frameInfo.isMainFrame
+                )
+#endif
             default:
                 break
             }
@@ -1557,6 +1662,7 @@ private struct BrowserWebView: UIViewRepresentable {
 #Preview {
     MangaBrowserView(selectedTab: .constant(.manga))
         .environment(AdBlockStore())
+        .environment(BrowserDebugLogStore())
         .environmentObject(
             TranslationSessionStore(
                 modelService: MockGemmaService(),

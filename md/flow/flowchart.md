@@ -16,6 +16,9 @@ flowchart TD
   BMODEL --> WEB["唯一活动 WKWebView<br/>后台标签释放 / 不持久化"]
   BROWSER --> BCAP["稳定内容区抓图<br/>排除原生导航与安全区"]
   BCAP --> C
+  BROWSER -. "DEBUG only" .-> BLOG["BrowserDebugLogStore<br/>Resource Timing / DOM / media / navigation metadata"]
+  BLOG --> BEXPORT["停止后持久化<br/>资料库查看 / JSON 导出 / 删除"]
+  BLOG -. "不进入拦截、翻译或历史" .-> END_DEBUG["诊断旁路"]
   DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
   TWB["TextWorkspaceBackground<br/>静态网格 / 导向线路 / 文本页专属"] --> B
   SH["文本页顶部 safe-area inset<br/>页头 + 模型状态"] --> B

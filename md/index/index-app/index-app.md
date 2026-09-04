@@ -13,6 +13,7 @@
 | App 入口与 Store 注入 | [`AITRANS/App/AITRANSApp.swift`](../../../AITRANS/App/AITRANSApp.swift) | `AITRANSApp` |
 | 七个工作区、Phone/iPad 路由 | [`AITRANS/Views/ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | `AppTab`、`ContentView`、`AppTabRouter` |
 | 漫画内嵌浏览器 | [`AITRANS/Models/BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift)、[`AITRANS/Views/MangaBrowserView.swift`](../../../AITRANS/Views/MangaBrowserView.swift) | `BrowserModel`、`MangaBrowserView`、`BrowserWebView` |
+| DEBUG 浏览器日志 | [`AITRANS/Services/BrowserDebugLogStore.swift`](../../../AITRANS/Services/BrowserDebugLogStore.swift)、[`AITRANS/Views/BrowserDebugLogView.swift`](../../../AITRANS/Views/BrowserDebugLogView.swift) | `BrowserDebugLogStore`、`BrowserDebugLogView` |
 | 独立 OCR 检测工作台 | [`AITRANS/Views/ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift) | `ImageOCRDetectionView`、输入/overlay/结果/诊断/导出 |
 | 统一运行时状态/任务调度 | [`AITRANS/Services/TranslationSessionStore.swift`](../../../AITRANS/Services/TranslationSessionStore.swift) | `TranslationSessionStore` |
 | 会话、图片 block、持久化模型 | [`AITRANS/Models/TranscriptModels.swift`](../../../AITRANS/Models/TranscriptModels.swift) | `TranscriptLine`、`ImageTranslationBlock`、`ImageTranslationPersistenceSnapshot`、`TranslationSessionRecord` |
@@ -36,6 +37,8 @@ AITRANSApp
 图片与音频生产翻译都走统一的 Apple Translation / Gemma / 预留引擎路由。音频在 Speech run 开始时冻结引擎、语言、prompt 和采样，最终 transcript 才进入翻译且请求不携带历史或参考 transcript；配置变化先取消旧图片/音频任务，避免一次结果混用两套配置。
 
 `BrowserModel` 是漫画浏览器唯一网页状态持有者，拥有 tabs、`activeTabID`、每页阶段、URL、页面/视口世代、缩略图、滚动位置与导航能力，并直接接收 View 的 load/back/forward/reload/new/switch/close、收藏和安全意图；Coordinator 只把当前 WKWebView delegate/KVO/DOM 变化回写给活动标签。后台标签只保留值快照，不持有 WKWebView。浏览器翻译由 `TranslationSessionStore` 拥有：稳定内容区/框选抓图、Vision OCR、受身份门禁的 Apple/Gemma 批翻译、覆盖快照、LRU 缓存与诊断投影均不进入图片/OCR-only/历史持久化；菜单展开、分段选择和球拖拽位置仍是非持久化 View 状态。
+
+`BrowserDebugLogStore` 是独立的 DEBUG 诊断旁路。它只接收当前活动 tab 的命名 Content World 消息与导航 delegate 元数据，采集 Resource Timing、资源错误、DOM 插入、媒体、弹窗和阻断导航，不接触请求/响应正文；停止后才保存有界会话，资料库提供详情、JSON 导出与删除。
 
 OCR 检测工作台使用独立的 `imageOCRDetection*` 状态和 task，不调用图片翻译/LLM；它只把已整理的 OCR `ImageTranslationBlock` 投影到原图框选、结果复查和导出。
 

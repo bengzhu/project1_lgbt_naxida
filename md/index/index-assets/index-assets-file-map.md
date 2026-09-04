@@ -27,6 +27,7 @@
 | 文件 | 主题 |
 | --- | --- |
 | [`AppleTranslationService.swift`](../../../AITRANS/Services/AppleTranslationService.swift) | Apple Translation 适配、语言映射、批量请求与生命周期 |
+| [`BrowserDebugLogStore.swift`](../../../AITRANS/Services/BrowserDebugLogStore.swift) | DEBUG-only 漫画 WKWebView 元数据录制、持久化、导出与删除 |
 | [`ComicTextBubbleDetectorService.swift`](../../../AITRANS/Services/ComicTextBubbleDetectorService.swift) | bundled Core ML 漫画文字区域检测 |
 | [`GemmaLocalService.swift`](../../../AITRANS/Services/GemmaLocalService.swift) | 本地 GGUF 翻译/总结 service |
 | [`ImageOCRLayoutEngine.swift`](../../../AITRANS/Services/ImageOCRLayoutEngine.swift) | OCR geometry、融合、阅读顺序 |
@@ -50,6 +51,7 @@
 | [`AppPreviewSupport.swift`](../../../AITRANS/Views/AppPreviewSupport.swift) | Preview/UI evidence scenario |
 | [`AppTheme.swift`](../../../AITRANS/Views/AppTheme.swift) | 主题与布局常量 |
 | [`AudioTranslationView.swift`](../../../AITRANS/Views/AudioTranslationView.swift) | 音频 UI |
+| [`BrowserDebugLogView.swift`](../../../AITRANS/Views/BrowserDebugLogView.swift) | DEBUG-only 浏览器诊断日志管理、详情与导出 |
 | [`ContentView.swift`](../../../AITRANS/Views/ContentView.swift) | 根路由/tab |
 | [`DeveloperConsoleView.swift`](../../../AITRANS/Views/DeveloperConsoleView.swift) | 开发者诊断 UI |
 | [`HistoryView.swift`](../../../AITRANS/Views/HistoryView.swift) | 历史会话 UI |

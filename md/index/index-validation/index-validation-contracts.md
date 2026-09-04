@@ -23,6 +23,7 @@
 - Koharu/artifact/探针：`test-v32*`、`test-v19*`、`test-v20*` 及 `koharu`/`manga`/`artifact` 命名合同；真实外部 artifact 只走 cloud-only gate。
 - Speech：`scripts/test-speech-quality-contract.py`、`scripts/test-speech-recognition-contract.py`、`scripts/test-speech-quality-evaluator.swift`、`scripts/validate-speech-corpus.py`。
 - 漫画浏览器与 Apple 媒体：`scripts/test-v3404-manga-browser-ui-contract.py`、`scripts/test-v3405-browser-translation-contract.py`、`scripts/test-v3406-apple-media-translation-contract.py`。
+- DEBUG 浏览器诊断日志：`scripts/test-v3409-browser-debug-log-contract.py`，覆盖命名 Content World、Resource Timing/DOM/媒体/导航元数据、tab/subframe 门控、录制停止后的导出/删除和资料库入口。
 - 浏览器广告规则底座：`scripts/test-v3407-adblock-foundation-contract.py` + 两个 `test-adblock-rule-*.swift`，覆盖 Intent/任务门禁、ETag/304/清理缓存、保守转换、双原生列表和工程接入。
 - benchmark/schema：`scripts/test-v3280-japanese-benchmark-contract.py`、`scripts/test-v3282*`–`test-v3294*` 以及 `scripts/evaluate-japanese-*.py`。
 
@@ -37,7 +38,7 @@
 7. `workflow_changed`、版本号相近、合同文件名相似或泛化 UI 标签都不是直接依赖；历史合同全量必须由显式 full-regression/nightly/release 或失败调查触发。
 8. OCR overlay、普通图片翻译和通用 UI 截图分别选择 runtime 入口；不要为了生成 OCR overlay 而启动 LLM 翻译或通用 UI evidence。
 
-浏览器广告规则底座还包括 scripts/test-v3408-adblock-runtime-contract.py 和两个 test-adblock-rule-*.swift smoke，覆盖 Intent/任务门禁、ETag/304/清理缓存、保守转换、双原生列表、命名 Content World 和实时接线。
+浏览器广告规则底座还包括 scripts/test-v3408-adblock-runtime-contract.py 和两个 test-adblock-rule-*.swift smoke，覆盖 Intent/任务门禁、ETag/304/清理缓存、保守转换、双原生列表、命名 Content World 和实时接线；DEBUG 诊断旁路由 `test-v3409-browser-debug-log-contract.py` 单独验证。
 
 ## 何时更新本索引
 

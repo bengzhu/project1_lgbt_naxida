@@ -17,13 +17,13 @@
 - 重绘使用同一窗口坐标基准映射截图矩形与 SwiftUI overlay；无目标设备证据时只报告合同/编译通过并保留人工测试页流程。
 - 每个候选均运行 task-scoped 浏览器合同与当前 SHA 云端 iOS build；通过后 PR 合入 `smalldata_test` 并清理分支。
 
-### 规划小目标（1/4）
+### 规划小目标（2/4）
 
 | 小目标 | 状态 |
 | --- | --- |
 | M1 `AdBlockStore`、ETag/版本缓存、保守规则转换与原生双列表编译 | 已合入 `smalldata_test`（PR #468，merge `f3eb639d`；exact-SHA CI success） |
-| M2 WKWebView 网络/隔离 JS/cosmetic 接线，设置与悬浮球实时联动 | 实现完成，待提交并跑 exact-SHA CI |
-| M3 `#if DEBUG` 浏览器诊断录制、导出、删除与资料库入口 | 待开始 |
+| M2 WKWebView 网络/隔离 JS/cosmetic 接线，设置与悬浮球实时联动 | 已合入 `smalldata_test`（PR #469，merge `1273f59c`；exact-SHA full CI success） |
+| M3 `#if DEBUG` 浏览器诊断录制、导出、删除与资料库入口 | 实现完成，待 exact-SHA CI |
 | M4 窗口坐标重绘修复、目标站手测流程、架构/索引/许可和总体验收 | 待开始 |
 
 ### 已确认事实
@@ -36,9 +36,10 @@
 
 ### 当前分支/状态
 
-- 当前分支：`codeb/v3.408-adblock-runtime`；工作树包含 M2 代码、合同和索引改动，尚未提交。
-- M2 已通过本地 v3408 运行时合同（5/5）、既有浏览器合同与 AdBlock Swift smoke/typecheck；完整 App build 交给候选 SHA 云端 CI。
+- 当前分支：`codeb/v3.409-browser-debug-log`；工作树包含 M3 代码、合同和文档改动，尚未提交。
+- M2 exact-SHA `0aecc4e3` 的 full CI [33837493336](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33837493336) 成功，Xcode 26.6、浏览器合同、Speech 合同与静态检查均通过；PR #469 已合入并清理分支。
+- M3 本地 v3409 合同 5/5、v3408 回归 5/5、Swift parse 和 `git diff --check` 已通过；本机完整 Xcode build 受 SDK/CommandLineTools 不匹配阻塞，交给 exact-SHA 云端 CI。
 
 ### 下一步
 
-提交并 push M2，触发 exact-SHA `[browser-only]` full CI；核对 artifact 与 Xcode build 后创建 PR、合并并清理候选，再进入 M3 DEBUG 诊断日志模块。
+提交并 push M3，触发 exact-SHA `[browser-only]` full CI；核对 artifact 与 Xcode build 后创建 PR、合并并清理候选，再进入 M4 坐标重绘修复。

@@ -5,9 +5,11 @@ import SwiftUI
 struct AITRANSApp: App {
     @StateObject private var store: TranslationSessionStore
     @State private var adBlockStore: AdBlockStore
+    @State private var browserDebugLogStore: BrowserDebugLogStore
 
     init() {
         _adBlockStore = State(initialValue: AdBlockStore())
+        _browserDebugLogStore = State(initialValue: BrowserDebugLogStore())
 #if DEBUG
         if let scenarioName = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"],
            let scenario = AppPreviewScenario(rawValue: scenarioName) {
@@ -30,6 +32,7 @@ struct AITRANSApp: App {
             ContentView()
                 .environmentObject(store)
                 .environment(adBlockStore)
+                .environment(browserDebugLogStore)
                 .task { adBlockStore.send(.bootstrap) }
         }
     }

@@ -13,6 +13,7 @@
 | 浏览器翻译会话 | 同上、[`AITRANS/Models/BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift) | `updateBrowserPageIdentity`、`translateBrowserCapture`、`invalidateBrowserTranslation` |
 | 浏览器广告规则状态 | [`AITRANS/Services/AdBlockStore.swift`](../../../AITRANS/Services/AdBlockStore.swift)、[`AdBlockModels.swift`](../../../AITRANS/Models/AdBlockModels.swift) | `AdBlockStore.send(_:)`、`AdBlockState`、`AdBlockPreferences` |
 | 广告规则缓存/转换 | [`AdBlockRuleRepository.swift`](../../../AITRANS/Services/AdBlockRuleRepository.swift)、[`AdBlockRuleCompiler.swift`](../../../AITRANS/Services/AdBlockRuleCompiler.swift) | `refresh(force:)`、`AdBlockRuleCompiler.compile(_:)` |
+| DEBUG 浏览器诊断录制 | [`BrowserDebugLogStore.swift`](../../../AITRANS/Services/BrowserDebugLogStore.swift) | `BrowserDebugLogStore.send(_:)`、`recordScriptMessage`、`recordNavigation`、`exportData(for:)` |
 | 音频翻译配置身份 | 同上 | `SpeechTranslationConfiguration`、`beginSpeechRecognitionRun`、`invalidateTranslationRunsForConfigurationChange` |
 | 图片单块操作 | 同上 | `retryImageTranslationBlock`、`rerecognizeImageTranslationBlock`、`correctImageTranslationBlock`、`cancelImageTranslationBlockRetry`、`cancelImageTranslationBlockRerecognition` |
 | 图片结构/复查 | 同上 | `splitImageTranslationBlock`、`mergeImageTranslationBlocks`、`moveImageTranslationBlock`、`markImageTranslationBlockReviewed`、`ignoreImageTranslationBlock` |
@@ -58,6 +59,10 @@
 - 设置页与翻译悬浮球只发送 AdBlockStore Intent；开关即时更新且不重建 WKWebView。
 
 对应测试：scripts/test-v3408-adblock-runtime-contract.py。
+
+DEBUG 浏览器日志链路由 `BrowserDebugLogStore` 独立持有：命名 `WKContentWorld` 只上报 Resource Timing、资源错误、DOM 插入、媒体、弹窗和导航元数据；当前 tab identity 门控事件，限制每会话 2,000 条、最多 20 个会话，停止后才落盘并允许 JSON 导出/删除。脚本与悬浮球/资料库入口均在 `#if DEBUG` 下，永不进入广告拦截或翻译状态。
+
+对应测试：`scripts/test-v3409-browser-debug-log-contract.py`。
 
 ## 何时必须更新本索引
 
