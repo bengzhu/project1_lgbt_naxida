@@ -11059,3 +11059,10 @@ CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` �
 新增独立于翻译状态的 `AdBlockStore`，以状态机、Intent 和 operation identity 管理偏好、缓存载入、刷新、编译、错误与清理；View/WebView 接线留到下一小目标。规则仓库并行拉取 AdGuard Chinese、Mobile Ads、Popups、Base 与可失败的 OISD Small，支持 ETag/Last-Modified、12 小时刷新、SHA-256、原子 manifest、缓存回退、版本和响应/规则数量上限。自研 Swift 转换器只接收可保守映射的域名锚定网络规则、有限 modifier、域名限定基础 cosmetic selector；未知 redirect/scriptlet/ExtendedCSS、generic cosmetic、正文根节点及 `[class*=]`/`[id*=]` 宽泛选择器全部跳过并计数。网络和 cosmetic 分别异步编译成版本化 `WKContentRuleList`，内置 12 个广告域名在远端不可用时兜底。
 
 本轮不引入 Swift Package、二进制或第三方 converter 代码。AdGuard Filters/OISD 仅作为用户明确允许的 GPL-3.0 规则文本远端来源，不把规则或 GPL 实现提交仓库。本地 v3.407 静态合同 `5/5`、转换行为 smoke（network 3 / cosmetic 1 / skipped 6）、仓库 200→ETag 304→损坏缓存修复→清理 smoke、Swift 6 strict-concurrency typecheck、既有浏览器/媒体合同、工程/plist/YAML/Markdown 链接和 `git diff --check` 均通过；本机未执行 App build，候选精确 SHA 的云端 iOS build 与 artifact 待触发。
+## v3.409：DEBUG 浏览器请求/DOM 诊断日志（候选验证中）
+
+- 新增独立 `BrowserDebugLogStore`，以 Intent 驱动开始/停止/清空/删除，按当前 tab identity 接收元数据；停止后才将最多 2,000 条事件写入 Application Support，最多保留 20 个会话，并通过 `ShareLink` 导出 JSON。
+- 漫画 `WKWebView` 在命名 `WKContentWorld` 注入轻量 Resource Timing、资源错误、动态脚本/iframe/媒体/图片插入和全屏/播放监听；Coordinator 另记导航、弹窗与阻断原因。只保留 URL、标签、尺寸、时长和传输大小等元数据，不读取请求/响应正文、cookie 或页面文本，也不进入 AdBlockStore/TranslationSessionStore。
+- DEBUG 翻译悬浮球增加录制按钮，资料库增加浏览器诊断会话查看/导出/删除入口；Release 构建不注入脚本且 store 记录方法由编译开关禁用。
+- 新增 `scripts/test-v3409-browser-debug-log-contract.py`（5/5），更新浏览器 task-scoped workflow、索引与 flow 文档。Swift parse、v3408 回归和 `git diff --check` 通过；本机完整 Xcode build 因 SDK/CommandLineTools 不匹配未执行，候选 exact-SHA 云端验证待提交。
+- 本轮无第三方依赖；继续仅消费既有 AdGuard/OISD 规则文本，未引入 GPL-3.0 库或代码。

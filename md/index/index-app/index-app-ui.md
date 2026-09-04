@@ -12,6 +12,7 @@
 | 文本翻译 | [`AITRANS/Views/TextTranslationView.swift`](../../../AITRANS/Views/TextTranslationView.swift) | `TextTranslationView`、`TranslationInputPane`、`TranslationOutputPane`、`TextSessionUtilityBar` |
 | 图片翻译主屏 | [`AITRANS/Views/ImageTranslationViews.swift`](../../../AITRANS/Views/ImageTranslationViews.swift) | `ImageTranslationView`、`ImageTranslationPanel`、`ImageTranslationPreview` |
 | 漫画内嵌浏览器 | [`AITRANS/Views/MangaBrowserView.swift`](../../../AITRANS/Views/MangaBrowserView.swift)、[`AITRANS/Models/BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift) | `MangaBrowserView`、`BrowserWebView`、`BrowserModel` |
+| DEBUG 浏览器诊断日志 | [`AITRANS/Views/BrowserDebugLogView.swift`](../../../AITRANS/Views/BrowserDebugLogView.swift)、[`AITRANS/Services/BrowserDebugLogStore.swift`](../../../AITRANS/Services/BrowserDebugLogStore.swift) | 录制/停止、会话详情、JSON 导出与删除 |
 | OCR 检测工作台 | [`AITRANS/Views/ImageOCRDetectionView.swift`](../../../AITRANS/Views/ImageOCRDetectionView.swift) | `ImageOCRDetectionView`、`ImageOCRDetectionCanvas`、`ImageOCRDetectionResultRow`、`OCRDetectionDiagnostics` |
 | 图片结果行/局部预览/编辑 | 同上 | `ImageTranslationBlockRow`、`ImageTranslationFocusPreview`、`ImageOCRCorrectionSheet` |
 | 图片 overlay/竖排显示 | 同上 | `ImageTranslationOverlayBlock`、`ImageTranslationVerticalText` |
@@ -35,6 +36,8 @@ iPhone `TabView` 增加“漫画”，一级项为文本、图片、漫画、OCR
 
 漫画浏览器隐藏 Phone `TabView` 底栏，WKWebView 以白色浅色页面通铺屏幕，并通过顶部 content inset 避开状态栏；左上退出、Safari 式三胶囊底栏和 48pt 翻译球均是覆盖层。下滑时底栏收成 36pt 域名胶囊并同步收起退出/翻译球，上滑或到顶恢复。`BrowserModel` 以 `activeTabID` 管理独立标签值状态；切换前保存缩略图、URL 与滚动位置，后台标签释放 WKWebView，返回时只重建当前实例。稳定可视内容区支持一键/框选翻译，底部工具条和安全区不进入 OCR；Store 通过页面/任务/配置世代门禁发布原文/译文覆盖，进度、失败重试、字体/字号、性能诊断和五项安全开关均有可见反馈。翻译菜单、选择框与拖拽仍是非持久化展示状态。
 
+DEBUG 构建的翻译悬浮球菜单增加 Debug 日志按钮；它只绑定当前活动 tab 的 WKWebView。资料库增加“浏览器诊断”入口，用于停止录制、查看会话、导出 JSON 或删除记录。Resource Timing、资源错误、动态插入的脚本/iframe/媒体/图片和导航元数据均不读取正文，并且不会写入翻译历史。
+
 重点页面采用渐进呈现：文本页只保留输入、译文和会话工具条，不重复展示最近翻译；手机音频页通过分段选择一次显示实时或文件工作区，iPad 保留双栏；历史导入/导出/清理归入操作菜单；设置的 Pro 能力说明和开发解锁归入“高级与开发”折叠区。低频入口收起时不得移除原有 Store action、破坏确认流程或仅靠颜色表达状态。
 
 OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进入 OCR，原图显示编号框和质量颜色，结果行点击后高亮对应区域；语言与版式分开选择，显式日语竖排才开启 90°/270° 方向复读。取消/重试、单块复读、手动编辑、复制全部和 TXT/JSON 导出都只作用于 OCR 检测状态。
@@ -56,6 +59,7 @@ OCR 检测页是独立的一页式流程：图片/相册/拍照/粘贴自动进�
 - [`test-v3400-immersive-ui-contract.py`](../../../scripts/test-v3400-immersive-ui-contract.py)、[`test-v3401-focused-workspaces-contract.py`](../../../scripts/test-v3401-focused-workspaces-contract.py)、[`test-v3402-compact-header-settings-contract.py`](../../../scripts/test-v3402-compact-header-settings-contract.py)：功能视觉身份、聚焦工作区、紧凑顶栏、资料库/设置导航所有权和 visual-task CI 路由。
 - [`test-v3404-manga-browser-ui-contract.py`](../../../scripts/test-v3404-manga-browser-ui-contract.py)：漫画 tab、BrowserModel/tab ownership、单 WKWebView 生命周期、安全区/浅色页面、Safari 胶囊、失败 UI 与翻译占位菜单的直接静态合同。
 - [`test-v3405-browser-translation-contract.py`](../../../scripts/test-v3405-browser-translation-contract.py)：浏览器抓图/OCR/翻译身份门禁、缓存/释放、覆盖切换、安全开关、收藏与诊断隔离合同。
+- [`test-v3409-browser-debug-log-contract.py`](../../../scripts/test-v3409-browser-debug-log-contract.py)：DEBUG 浏览器元数据录制、命名 Content World、tab/subframe 门控、导出/删除与资料库入口合同。
 - [`test-v313-image-block-focus-contract.py`](../../../scripts/test-v313-image-block-focus-contract.py)、[`test-v3150-image-focus-restore-action-contract.py`](../../../scripts/test-v3150-image-focus-restore-action-contract.py)：图片焦点和恢复动作。
 - [`test-v3247-image-ocr-rerecognition-review-focus-contract.py`](../../../scripts/test-v3247-image-ocr-rerecognition-review-focus-contract.py)、[`test-v3248-image-ocr-rerecognition-failure-focus-contract.py`](../../../scripts/test-v3248-image-ocr-rerecognition-failure-focus-contract.py)：重识别完成/失败焦点。
 - [`test-v3289-image-ocr-block-structure-editor-contract.py`](../../../scripts/test-v3289-image-ocr-block-structure-editor-contract.py)、[`test-v3289-image-ocr-geometry-editor-contract.py`](../../../scripts/test-v3289-image-ocr-geometry-editor-contract.py)：结构/几何编辑。

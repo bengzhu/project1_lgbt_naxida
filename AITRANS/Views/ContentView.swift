@@ -242,6 +242,9 @@ private struct AppTabRouter: View {
 private enum LibraryDestination: Hashable {
     case history
     case settings
+#if DEBUG
+    case browserDebugLogs
+#endif
 }
 
 private struct LibraryHubView: View {
@@ -280,6 +283,10 @@ private struct LibraryHubView: View {
                         selectedTab: $selectedTab,
                         isEmbeddedInNavigationStack: true
                     )
+#if DEBUG
+                case .browserDebugLogs:
+                    BrowserDebugLogView()
+#endif
                 }
             }
         }
@@ -302,6 +309,16 @@ private struct LibraryHubView: View {
             accent: AppFeature.settings.accent(for: colorScheme),
             destination: .settings
         )
+#if DEBUG
+        LibraryDestinationCard(
+            title: "浏览器诊断",
+            detail: "导出广告资源、媒体与 DOM 元数据",
+            metric: "DEBUG",
+            systemImage: "ladybug.fill",
+            accent: AppFeature.library.accent(for: colorScheme),
+            destination: .browserDebugLogs
+        )
+#endif
     }
 }
 
@@ -362,9 +379,11 @@ private struct LibraryDestinationCard: View {
 #Preview("iPhone") {
     ContentView()
         .environmentObject(TranslationSessionStore(modelService: MockGemmaService()))
+        .environment(BrowserDebugLogStore())
 }
 
 #Preview("iPad", traits: .fixedLayout(width: 1_024, height: 768)) {
     ContentView()
         .environmentObject(TranslationSessionStore(modelService: MockGemmaService()))
+        .environment(BrowserDebugLogStore())
 }
