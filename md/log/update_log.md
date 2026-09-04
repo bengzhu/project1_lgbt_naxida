@@ -11071,3 +11071,5 @@ CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` �
 - `BrowserModel` 的截图矩形明确保持 WKWebView bounds-local 点坐标；`MangaBrowserView` 通过命名 `browserRoot` coordinate space 读取实际 WebView frame，在 SwiftUI 绘制时加上 frame origin，框选结束时反向减去同一 origin。
 - overlay 不再把 WebView-local `captureRectInView` 直接当作 SwiftUI ZStack 坐标，修复 edge-to-edge WebView 与安全区造成的固定向下偏移；OCR bounding box、CSS 文档坐标和缩放不被重复变换。
 - 新增 `scripts/test-v3410-browser-overlay-coordinate-contract.py`（5/5），更新 flow/index 与浏览器 task-scoped workflow。目标页面 `https://comic.dragonballcn.com/list/gain_1.php?did=0-0-0&fpp=5&fid=41` 尚未在真实目标设备手测，本轮只报告静态合同与云端编译结果。
+
+M4 候选 `0cf4807ea6e3d2e5bb87e4876c3202706a986351` 的 exact-SHA full CI [33840230520](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33840230520) 成功，Xcode 26.6 build、v3.410/v3.405/v3.404 浏览器合同和未加密 artifact manifest 均通过并绑定该 SHA；PR [#471](https://github.com/bengzhu/project1_lgbt_naxida/pull/471) 已合入 `smalldata_test`，merge SHA `aa4b58f77ab1f034ced31fd1d0bdd9ee532cfea6`，候选分支已清理。PR 事件额外历史 Japanese benchmark 失败与本轮浏览器改动无关；真实目标网页仍待人工设备复核。
