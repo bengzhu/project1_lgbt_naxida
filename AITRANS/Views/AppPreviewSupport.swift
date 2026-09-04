@@ -254,16 +254,19 @@ enum AppPreviewScenario: String {
 
 private struct PreviewContainer<Content: View>: View {
     @State private var store: TranslationSessionStore
+    @State private var adBlockStore: AdBlockStore
     @ViewBuilder let content: Content
 
     init(scenario: AppPreviewScenario, @ViewBuilder content: () -> Content) {
         _store = State(initialValue: scenario.makeStore())
+        _adBlockStore = State(initialValue: AdBlockStore())
         self.content = content()
     }
 
     var body: some View {
         content
             .environmentObject(store)
+            .environment(adBlockStore)
     }
 }
 

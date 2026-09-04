@@ -2012,6 +2012,7 @@ jobs:
             python3 -B scripts/test-v3405-browser-translation-contract.py
             python3 -B scripts/test-v3406-apple-media-translation-contract.py
             python3 -B scripts/test-v3407-adblock-foundation-contract.py
+            python3 -B scripts/test-v3408-adblock-runtime-contract.py
             python3 -B scripts/test-v3400-immersive-ui-contract.py
             xcrun --sdk macosx swiftc \
               AITRANS/Models/AdBlockModels.swift \

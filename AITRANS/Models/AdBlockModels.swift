@@ -167,14 +167,25 @@ struct AdBlockState: Equatable, Sendable {
     var phase: AdBlockPhase
     var preferences: AdBlockPreferences
     var ruleSummary: AdBlockRuleSummary?
+    var isWebViewAttached: Bool
+    var rememberedElementRuleCount: Int
+    var blockedNavigationCount: Int
+    var lastBlockedURL: String?
     var message: String
     var lastError: String?
 
-    static func initial(preferences: AdBlockPreferences) -> Self {
+    static func initial(
+        preferences: AdBlockPreferences,
+        rememberedElementRuleCount: Int
+    ) -> Self {
         Self(
             phase: .idle,
             preferences: preferences,
             ruleSummary: nil,
+            isWebViewAttached: false,
+            rememberedElementRuleCount: rememberedElementRuleCount,
+            blockedNavigationCount: 0,
+            lastBlockedURL: nil,
             message: "广告防护尚未初始化",
             lastError: nil
         )

@@ -37,6 +37,8 @@
 7. `workflow_changed`、版本号相近、合同文件名相似或泛化 UI 标签都不是直接依赖；历史合同全量必须由显式 full-regression/nightly/release 或失败调查触发。
 8. OCR overlay、普通图片翻译和通用 UI 截图分别选择 runtime 入口；不要为了生成 OCR overlay 而启动 LLM 翻译或通用 UI evidence。
 
+浏览器广告规则底座还包括 scripts/test-v3408-adblock-runtime-contract.py 和两个 test-adblock-rule-*.swift smoke，覆盖 Intent/任务门禁、ETag/304/清理缓存、保守转换、双原生列表、命名 Content World 和实时接线。
+
 ## 何时更新本索引
 
 新增合同命名域、测试层、runtime harness 入口或静态跳过规则时更新；单个合同内容变化通常不改索引。

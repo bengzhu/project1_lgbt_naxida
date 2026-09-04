@@ -138,11 +138,16 @@ private struct AppearanceSection: View {
 }
 
 private struct BrowserSettingsSection: View {
-    @AppStorage("aitrans.browser.blockAds") private var blockAds = true
-    @AppStorage("aitrans.browser.blockPopups") private var blockPopups = true
-    @AppStorage("aitrans.browser.blockRedirects") private var blockRedirects = true
-    @AppStorage("aitrans.browser.elementRemoval") private var elementRemovalEnabled = false
-    @AppStorage("aitrans.browser.antiHijacking") private var antiHijackingEnabled = true
+    @Environment(AdBlockStore.self) private var adBlockStore
+    // Legacy key names are retained as migration documentation only; this
+    // View sends every live security change as an AdBlockStore intent.
+    private let legacySecurityPreferenceKeys = [
+        "aitrans.browser.blockAds",
+        "aitrans.browser.blockPopups",
+        "aitrans.browser.blockRedirects",
+        "aitrans.browser.elementRemoval",
+        "aitrans.browser.antiHijacking"
+    ]
     @AppStorage("aitrans.browser.sourceLanguage") private var sourceLanguageRaw = SupportedLanguage.japanese.rawValue
     @AppStorage("aitrans.browser.targetLanguage") private var targetLanguageRaw = SupportedLanguage.simplifiedChinese.rawValue
     @AppStorage("aitrans.browser.fontName") private var fontName = "system"
@@ -161,16 +166,54 @@ private struct BrowserSettingsSection: View {
                 subtitle: "漫画阅读、翻译与安全防护（逐项独立）",
                 systemImage: "book.pages.fill"
             )
-            Toggle("基础广告拦截", isOn: $blockAds)
+            Toggle("广告防护总开关", isOn: masterBinding)
+                .font(.headline)
+                .accessibilityHint("关闭后暂停网络、脚本和元素隐藏防护")
+            Toggle("网络层拦截", isOn: networkBinding)
+                .disabled(!adBlockStore.state.preferences.isEnabled)
                 .accessibilityHint("拦截常见广告域名与第三方广告资源")
-            Toggle("弹窗拦截", isOn: $blockPopups)
+            Toggle("脚本保护", isOn: scriptBinding)
+                .disabled(!adBlockStore.state.preferences.isEnabled)
+                .accessibilityHint("禁用自动播放、全屏和网页复制/长按限制")
+            Toggle("精准元素隐藏", isOn: cosmeticBinding)
+                .disabled(!adBlockStore.state.preferences.isEnabled)
+                .accessibilityHint("只应用域名限定的安全选择器，不隐藏正文根节点")
+            Toggle("弹窗拦截", isOn: popupsBinding)
+                .disabled(!adBlockStore.state.preferences.isEnabled)
                 .accessibilityHint("阻止网页创建新的弹窗标签")
-            Toggle("重定向拦截", isOn: $blockRedirects)
+            Toggle("重定向拦截", isOn: redirectsBinding)
+                .disabled(!adBlockStore.state.preferences.isEnabled)
                 .accessibilityHint("阻止非用户点击触发的跨站强制跳转")
-            Toggle("点选元素消除", isOn: $elementRemovalEnabled)
+            Toggle("点选元素消除", isOn: pickerBinding)
+                .disabled(!adBlockStore.state.preferences.isEnabled)
                 .accessibilityHint("在浏览器中点选网页元素即可移除，并记住规则")
-            Toggle("防劫持保护", isOn: $antiHijackingEnabled)
-                .accessibilityHint("保护触摸和剪贴板不被网页脚本劫持")
+            if adBlockStore.state.rememberedElementRuleCount > 0 {
+                Button("清除已记住的 \(adBlockStore.state.rememberedElementRuleCount) 条元素规则") {
+                    adBlockStore.send(.clearRememberedElementSelectors)
+                }
+                .buttonStyle(.bordered)
+            }
+
+            Divider().overlay(Color.appBorder)
+            HStack(spacing: AppTheme.Spacing.control) {
+                Button("检查规则更新") {
+                    adBlockStore.send(.refreshRules(force: true))
+                }
+                .buttonStyle(.bordered)
+                Button("清理规则缓存") {
+                    adBlockStore.send(.clearCachedRules)
+                }
+                .buttonStyle(.bordered)
+            }
+            if let summary = adBlockStore.state.ruleSummary {
+                Text("规则版本 \(summary.version) · 网络 \(summary.networkRuleCount) · 元素 \(summary.cosmeticRuleCount) · 跳过 \(summary.skippedRuleCount)")
+                    .font(.caption)
+                    .foregroundStyle(Color.appTextSecondary)
+            }
+            Text(adBlockStore.state.message)
+                .font(.caption)
+                .foregroundStyle(adBlockStore.state.lastError == nil ? Color.appTextSecondary : .orange)
+                .lineLimit(2)
 
             Divider().overlay(Color.appBorder)
             Picker("浏览器源语言", selection: $sourceLanguageRaw) {
@@ -204,6 +247,55 @@ private struct BrowserSettingsSection: View {
                 .foregroundStyle(Color.appTextSecondary)
         }
         .appSurface()
+    }
+
+    private var masterBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.isEnabled },
+            set: { adBlockStore.send(.setEnabled($0)) }
+        )
+    }
+
+    private var networkBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.networkFilteringEnabled },
+            set: { adBlockStore.send(.setNetworkFiltering($0)) }
+        )
+    }
+
+    private var scriptBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.scriptProtectionEnabled },
+            set: { adBlockStore.send(.setScriptProtection($0)) }
+        )
+    }
+
+    private var cosmeticBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.cosmeticFilteringEnabled },
+            set: { adBlockStore.send(.setCosmeticFiltering($0)) }
+        )
+    }
+
+    private var popupsBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.popupBlockingEnabled },
+            set: { adBlockStore.send(.setPopupBlocking($0)) }
+        )
+    }
+
+    private var redirectsBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.redirectBlockingEnabled },
+            set: { adBlockStore.send(.setRedirectBlocking($0)) }
+        )
+    }
+
+    private var pickerBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.elementPickerEnabled },
+            set: { adBlockStore.send(.setElementPicker($0)) }
+        )
     }
 }
 
