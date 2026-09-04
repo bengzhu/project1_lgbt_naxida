@@ -804,7 +804,7 @@ struct MangaBrowserView: View {
 
                 Text(adBlockStore.state.message)
                     .font(.caption2)
-                    .foregroundStyle(adBlockStore.state.lastError == nil ? .secondary : .orange)
+                    .foregroundStyle(adBlockStore.state.lastError == nil ? Color.secondary : Color.orange)
                     .lineLimit(2)
 
                 if let performance = store.browserPerformanceSample {
