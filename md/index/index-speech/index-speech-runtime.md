@@ -20,7 +20,7 @@ microphone / audio URL
   -> authorization + SFSpeechRecognizer
   -> current run ID guarded callbacks
   -> final transcript
-  -> GemmaLocalService translation
+  -> run 开始时冻结的 Apple Translation / Gemma / 预留引擎配置
   -> Store transcript/audio state
   -> AudioTranslationView
 ```
@@ -29,12 +29,14 @@ microphone / audio URL
 
 - Store 拥有 `isCapturingProSpeech`、recognition state、run summary、live transcript 和错误消息；View 不拥有识别事实。
 - 新 run 先失效旧 run，再接受回调；取消必须清理当前 request/task，但不能清除不相关历史会话。
+- 引擎、语言、prompt、术语或采样变化会取消活动 run；最终 transcript 的翻译请求不携带历史 transcript，参考 transcript 只供独立质量 probe 事后评估。
 - Speech 质量 probe 是诊断 task，与产品 live/file recognition 的 run state 分开。
 
 ## 相关测试
 
 - [`test-speech-recognition-contract.py`](../../../scripts/test-speech-recognition-contract.py)：授权、run-id、回调隔离。
 - [`test-speech-quality-contract.py`](../../../scripts/test-speech-quality-contract.py)：质量 probe 接线。
+- [`test-v3406-apple-media-translation-contract.py`](../../../scripts/test-v3406-apple-media-translation-contract.py)：Apple 图片/音频路由、冻结配置、模拟器回退和取消竞态。
 - [`test-v203-image-cancel-retry-contract.py`](../../../scripts/test-v203-image-cancel-retry-contract.py) 等图片合同仅在变更跨越 Store 取消基础设施时才联动，不作为 Speech 专项替代。
 
 ## 何时更新本索引

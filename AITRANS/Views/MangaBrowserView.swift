@@ -21,6 +21,7 @@ struct MangaBrowserView: View {
     private let compactToolbarHeight: CGFloat = 36
 
     @Binding private var selectedTab: AppTab
+    @EnvironmentObject private var store: TranslationSessionStore
     @State private var model = BrowserModel()
     @State private var addressDraft = ""
     @State private var isEditingAddress = false
@@ -31,6 +32,18 @@ struct MangaBrowserView: View {
     @State private var translationBallY: CGFloat?
     @State private var translationBallDragOriginY: CGFloat?
     @State private var translationBallDragX: CGFloat = 0
+    @State private var isSelectingRegion = false
+    @State private var selectionStart: CGPoint?
+    @State private var selectionRect: CGRect?
+    @AppStorage("aitrans.browser.sourceLanguage") private var browserSourceLanguageRaw = SupportedLanguage.japanese.rawValue
+    @AppStorage("aitrans.browser.targetLanguage") private var browserTargetLanguageRaw = SupportedLanguage.simplifiedChinese.rawValue
+    @AppStorage("aitrans.browser.blockAds") private var blockAds = true
+    @AppStorage("aitrans.browser.blockPopups") private var blockPopups = true
+    @AppStorage("aitrans.browser.blockRedirects") private var blockRedirects = true
+    @AppStorage("aitrans.browser.elementRemoval") private var elementRemovalEnabled = false
+    @AppStorage("aitrans.browser.antiHijacking") private var antiHijackingEnabled = true
+    @AppStorage("aitrans.browser.fontName") private var browserFontName = "system"
+    @AppStorage("aitrans.browser.fontScale") private var browserFontScale = 1.0
     @FocusState private var isAddressFieldFocused: Bool
 
     init(selectedTab: Binding<AppTab>) {
@@ -43,10 +56,25 @@ struct MangaBrowserView: View {
                 BrowserWebView(
                     model: model,
                     tabID: model.activeTabID,
-                    topSafeAreaInset: proxy.safeAreaInsets.top
+                    topSafeAreaInset: proxy.safeAreaInsets.top,
+                    captureExclusionInsets: captureExclusionInsets(in: proxy),
+                    securityConfiguration: browserSecurityConfiguration
                 )
                 .id(model.activeTabID)
                 .ignoresSafeArea(.container, edges: .all)
+
+                if isSelectingRegion {
+                    selectionOverlay(in: proxy)
+                        .zIndex(8)
+                }
+
+                if displayMode == .translated,
+                   let overlay = store.browserTranslationOverlay,
+                   overlay.identity == model.pageIdentity,
+                   model.phase == .loaded {
+                    browserTranslationOverlays(overlay)
+                        .zIndex(2)
+                }
 
                 phaseOverlay
 
@@ -114,6 +142,19 @@ struct MangaBrowserView: View {
                 return
             }
         }
+        .onAppear { syncBrowserIdentity() }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+            model.handleMemoryWarning()
+            store.handleBrowserMemoryWarning()
+        }
+        .onChange(of: model.pageIdentityRevision) { _, _ in syncBrowserIdentity() }
+        .onChange(of: model.pageIdentity) { _, _ in syncBrowserIdentity() }
+        .onChange(of: browserSourceLanguageRaw) { _, _ in
+            store.browserTranslationConfigurationDidChange()
+        }
+        .onChange(of: browserTargetLanguageRaw) { _, _ in
+            store.browserTranslationConfigurationDidChange()
+        }
         .onChange(of: model.showsExpandedChrome) { _, expanded in
             if !expanded { isTranslationMenuPresented = false }
         }
@@ -134,6 +175,18 @@ struct MangaBrowserView: View {
             try? await Task.sleep(for: .seconds(2.6))
             guard !Task.isCancelled else { return }
             model.clearNotice(revision: revision)
+        }
+        .task(id: automaticTranslationIdentity) {
+            guard let identity = automaticTranslationIdentity else { return }
+            do {
+                try await Task.sleep(for: .milliseconds(500))
+            } catch {
+                return
+            }
+            guard !Task.isCancelled,
+                  automaticTranslationIdentity == identity,
+                  !store.browserTranslationStatus.phase.isRunning else { return }
+            captureAndTranslate(selection: nil)
         }
     }
 
@@ -166,12 +219,67 @@ struct MangaBrowserView: View {
     private var startPage: some View {
         Color.white
             .ignoresSafeArea()
-            .overlay(alignment: .top) {
-                addressEntryField(isStartPage: true)
+            .overlay {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("漫画阅读器")
+                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                            Text("一键翻译 · 沉浸阅读 · 本地安全")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        addressEntryField(isStartPage: true)
+                        if !model.bookmarks.isEmpty {
+                            Text("我的收藏").font(.headline)
+                            ForEach(model.bookmarks.prefix(8)) { bookmark in
+                                startPageBookmark(bookmark)
+                            }
+                        }
+                        Text("漫画站点快捷入口")
+                            .font(.headline)
+                            .padding(.top, 4)
+                        HStack(spacing: 10) {
+                            ForEach(BrowserModel.recommendedBookmarks) { bookmark in
+                                Button { model.openBookmark(bookmark) } label: {
+                                    Text(bookmark.title)
+                                        .font(.subheadline.weight(.semibold))
+                                        .frame(maxWidth: .infinity, minHeight: 42)
+                                }
+                                .buttonStyle(.bordered)
+                            }
+                        }
+                    }
                     .frame(maxWidth: 620)
                     .padding(.horizontal, 24)
-                    .padding(.top, 120)
+                    .padding(.top, 90)
+                    .padding(.bottom, 24)
+                }
             }
+    }
+
+    private func startPageBookmark(_ bookmark: BrowserBookmark) -> some View {
+        HStack(spacing: 10) {
+            Button { model.openBookmark(bookmark) } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "bookmark.fill").foregroundStyle(.blue)
+                    Text(bookmark.title).font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text(bookmark.url?.host ?? "").font(.caption).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            Button {
+                model.removeBookmark(bookmark)
+            } label: {
+                Image(systemName: "trash")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("删除收藏")
+        }
     }
 
     private func browserToolbar(in proxy: GeometryProxy) -> some View {
@@ -239,6 +347,14 @@ struct MangaBrowserView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(model.phase == .loading ? "正在载入" : "刷新")
+
+                Button(action: model.toggleActiveBookmark) {
+                    Image(systemName: model.isActivePageBookmarked ? "bookmark.fill" : "bookmark")
+                        .foregroundStyle(model.isActivePageBookmarked ? .blue : .primary)
+                        .frame(width: 34, height: 40)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(model.isActivePageBookmarked ? "取消收藏" : "收藏此页面")
             }
             .padding(.leading, 14)
             .padding(.trailing, 5)
@@ -575,16 +691,64 @@ struct MangaBrowserView: View {
 
         return ScrollView {
             VStack(alignment: .leading, spacing: 11) {
-                Button("翻译本页") {}
+                Button {
+                    captureAndTranslate(selection: nil)
+                } label: {
+                    Label(
+                        store.browserTranslationStatus.phase.isRunning ? "翻译中…" : "一键翻译本页",
+                        systemImage: store.browserTranslationStatus.phase.isRunning
+                            ? "hourglass"
+                            : "text.viewfinder"
+                    )
+                }
                     .buttonStyle(.borderedProminent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity)
-                    .accessibilityHint("界面占位，当前不会开始翻译")
+                    .disabled(store.browserTranslationStatus.phase.isRunning)
+                    .accessibilityHint("截取当前可视内容区并翻译，浏览器导航栏不会进入识别")
+
+                Button {
+                    beginRegionSelection()
+                } label: {
+                    Label("框选翻译", systemImage: "crop")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .disabled(store.browserTranslationStatus.phase.isRunning)
 
                 HStack {
                     Text("翻译进度").font(.subheadline.weight(.semibold))
                     Spacer()
-                    Text("暂无任务").font(.caption).foregroundStyle(.secondary)
+                    if store.browserTranslationStatus.phase.isRunning {
+                        Text("\(Int(store.browserTranslationStatus.fractionCompleted * 100))%")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text(store.browserTranslationStatus.message)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                if store.browserTranslationStatus.phase.isRunning {
+                    ProgressView(value: store.browserTranslationStatus.fractionCompleted)
+                        .tint(.blue)
+                    TimelineView(.periodic(from: .now, by: 1)) { _ in
+                        Text(browserTranslationETA)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if store.browserTranslationStatus.phase == .failed
+                    || store.browserTranslationStatus.phase == .partial {
+                    Button("重试") { captureAndTranslate(selection: nil) }
+                        .buttonStyle(.bordered)
+                }
+                if store.browserTranslationStatus.phase.isRunning {
+                    Button("取消翻译") { store.cancelBrowserTranslation() }
+                        .buttonStyle(.bordered)
                 }
 
                 Picker("翻译模式", selection: $translationMode) {
@@ -592,23 +756,66 @@ struct MangaBrowserView: View {
                 }
                 .pickerStyle(.segmented)
 
-                Button(action: {}) {
+                Menu {
+                    Section("源语言") {
+                        ForEach(SupportedLanguage.allCases) { language in
+                            Button {
+                                browserSourceLanguageRaw = language.rawValue
+                            } label: {
+                                if language == browserSourceLanguage {
+                                    Label(language.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(language.rawValue)
+                                }
+                            }
+                        }
+                    }
+                    Section("目标语言") {
+                        ForEach(SupportedLanguage.allCases) { language in
+                            Button {
+                                browserTargetLanguageRaw = language.rawValue
+                            } label: {
+                                if language == browserTargetLanguage {
+                                    Label(language.rawValue, systemImage: "checkmark")
+                                } else {
+                                    Text(language.rawValue)
+                                }
+                            }
+                        }
+                    }
+                } label: {
                     HStack {
                         Text("语言对")
                         Spacer()
-                        Text("日  →  中").fontWeight(.semibold)
+                        Text("\(browserSourceLanguage.shortName)  →  \(browserTargetLanguage.shortName)")
+                            .fontWeight(.semibold)
                         Image(systemName: "chevron.right").font(.caption.bold()).foregroundStyle(.secondary)
                     }
                     .frame(minHeight: 36)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
-                .accessibilityHint("界面占位，当前不可更改")
+                .accessibilityHint("直接选择浏览器翻译的源语言与目标语言")
 
                 Picker("显示内容", selection: $displayMode) {
                     ForEach(DisplayMode.allCases) { mode in Text(mode.rawValue).tag(mode) }
                 }
                 .pickerStyle(.segmented)
+
+                Label(
+                    "防护 \(enabledSecurityFeatureCount)/5 已开启",
+                    systemImage: "shield.lefthalf.filled"
+                )
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
+                if let performance = store.browserPerformanceSample {
+                    Label(
+                        "诊断：温度 \(performance.thermalState) · CPU \(performance.activeProcessorCount)/\(performance.processorCount) · 内存 \(formattedBytes(performance.residentMemoryBytes))",
+                        systemImage: "gauge.with.dots.needle.67percent"
+                    )
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                }
             }
             .padding(16)
         }
@@ -621,8 +828,177 @@ struct MangaBrowserView: View {
         .accessibilityElement(children: .contain)
     }
 
+    private func formattedBytes(_ value: UInt64) -> String {
+        ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .memory)
+    }
+
     private func resolvedTranslationBallY(in proxy: GeometryProxy) -> CGFloat {
         clampedTranslationBallY(translationBallY ?? proxy.size.height / 2, in: proxy)
+    }
+
+    private var browserSourceLanguage: SupportedLanguage {
+        SupportedLanguage(rawValue: browserSourceLanguageRaw) ?? .japanese
+    }
+
+    private var browserTargetLanguage: SupportedLanguage {
+        SupportedLanguage(rawValue: browserTargetLanguageRaw) ?? .simplifiedChinese
+    }
+
+    private var browserSecurityConfiguration: BrowserSecurityConfiguration {
+        BrowserSecurityConfiguration(
+            blockAds: blockAds,
+            blockPopups: blockPopups,
+            blockRedirects: blockRedirects,
+            elementRemovalEnabled: elementRemovalEnabled,
+            antiHijackingEnabled: antiHijackingEnabled
+        )
+    }
+
+    private var enabledSecurityFeatureCount: Int {
+        [blockAds, blockPopups, blockRedirects, elementRemovalEnabled, antiHijackingEnabled]
+            .count(where: { $0 })
+    }
+
+    private var browserTranslationETA: String {
+        guard let startedAt = store.browserTranslationStatus.startedAt,
+              let estimate = store.browserTranslationStatus.estimatedDurationMilliseconds else {
+            return "正在估算剩余时间…"
+        }
+        let elapsed = Int(Date().timeIntervalSince(startedAt) * 1_000)
+        let remaining = max(0, estimate - elapsed)
+        if remaining < 1_000 { return "即将完成" }
+        return "预计还需约 \(max(1, remaining / 1_000)) 秒"
+    }
+
+    private var automaticTranslationIdentity: BrowserPageSnapshotIdentity? {
+        guard translationMode == .automatic,
+              model.phase == .loaded,
+              model.pageIdentity.isStable else { return nil }
+        return model.pageIdentity
+    }
+
+    private func captureExclusionInsets(in proxy: GeometryProxy) -> UIEdgeInsets {
+        let bottomChrome = model.showsExpandedChrome ? expandedToolbarHeight : compactToolbarHeight
+        return UIEdgeInsets(
+            top: max(proxy.safeAreaInsets.top, 0),
+            left: max(proxy.safeAreaInsets.leading, 0),
+            bottom: max(proxy.safeAreaInsets.bottom, 8) + bottomChrome + 6,
+            right: max(proxy.safeAreaInsets.trailing, 0)
+        )
+    }
+
+    private func syncBrowserIdentity() {
+        store.updateBrowserPageIdentity(model.pageIdentity)
+    }
+
+    private func captureAndTranslate(selection: CGRect?) {
+        isTranslationMenuPresented = false
+        let requestedSelection = selection.map(BrowserCaptureSelection.init(rectInView:))
+        Task { @MainActor in
+            do {
+                let capture = try await model.captureVisibleContent(selection: requestedSelection)
+                store.updateBrowserPageIdentity(capture.identity)
+                store.translateBrowserCapture(
+                    capture,
+                    sourceLanguage: browserSourceLanguage,
+                    targetLanguage: browserTargetLanguage
+                )
+                displayMode = .translated
+            } catch {
+                store.reportBrowserTranslationFailure(error.localizedDescription)
+            }
+        }
+    }
+
+    private func beginRegionSelection() {
+        isTranslationMenuPresented = false
+        isSelectingRegion = true
+        selectionStart = nil
+        selectionRect = nil
+        model.setChromeAutoHideSuspended(true)
+    }
+
+    private func finishRegionSelection() {
+        guard let selectionRect,
+              selectionRect.width >= 24,
+              selectionRect.height >= 24 else {
+            store.reportBrowserTranslationFailure("框选区域太小，请重新拖动选择文字")
+            isSelectingRegion = false
+            model.setChromeAutoHideSuspended(false)
+            return
+        }
+        isSelectingRegion = false
+        selectionStart = nil
+        model.setChromeAutoHideSuspended(false)
+        captureAndTranslate(selection: selectionRect)
+    }
+
+    private func selectionOverlay(in proxy: GeometryProxy) -> some View {
+        ZStack {
+            Color.black.opacity(0.14)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            if let selectionRect {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Color.white.opacity(0.08))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .stroke(Color.blue, style: StrokeStyle(lineWidth: 2, dash: [7, 4]))
+                    }
+                    .frame(width: selectionRect.width, height: selectionRect.height)
+                    .position(x: selectionRect.midX, y: selectionRect.midY)
+                    .allowsHitTesting(false)
+            }
+            VStack {
+                HStack {
+                    Label("拖动框选文字区域", systemImage: "viewfinder")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .background(.ultraThinMaterial, in: Capsule())
+                    Spacer()
+                    Button("取消") {
+                        isSelectingRegion = false
+                        selectionStart = nil
+                        selectionRect = nil
+                        model.setChromeAutoHideSuspended(false)
+                    }
+                    .buttonStyle(.bordered)
+                }
+                .padding(.top, max(proxy.safeAreaInsets.top, 10) + 8)
+                .padding(.horizontal, 14)
+                Spacer()
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(minimumDistance: 3, coordinateSpace: .local)
+                .onChanged { value in
+                    let start = selectionStart ?? value.startLocation
+                    selectionStart = start
+                    let rect = CGRect(
+                        x: min(start.x, value.location.x),
+                        y: min(start.y, value.location.y),
+                        width: abs(value.location.x - start.x),
+                        height: abs(value.location.y - start.y)
+                    )
+                    selectionRect = rect
+                }
+                .onEnded { _ in finishRegionSelection() }
+        )
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func browserTranslationOverlays(_ snapshot: BrowserTranslationOverlaySnapshot) -> some View {
+        ForEach(snapshot.regions) { region in
+            BrowserTranslationOverlay(
+                region: region,
+                captureRect: snapshot.captureRectInView,
+                fontName: browserFontName,
+                fontScale: browserFontScale
+            )
+        }
     }
 
     private func clampedTranslationBallY(_ value: CGFloat, in proxy: GeometryProxy) -> CGFloat {
@@ -683,6 +1059,129 @@ struct MangaBrowserView: View {
     }
 }
 
+private struct BrowserTranslationOverlay: View {
+    let region: BrowserTranslationRegion
+    let captureRect: CGRect
+    let fontName: String
+    let fontScale: Double
+
+    var body: some View {
+        let rect = CGRect(
+            x: captureRect.minX + captureRect.width * CGFloat(region.boundingBox.x),
+            y: captureRect.minY + captureRect.height * CGFloat(region.boundingBox.y),
+            width: captureRect.width * CGFloat(region.boundingBox.width),
+            height: captureRect.height * CGFloat(region.boundingBox.height)
+        )
+        let text = region.translation.isEmpty ? region.original : region.translation
+        let vertical = region.sourceDirection == .vertical && textContainsCJK(text)
+        let plan = ImageTranslationTextFitter.fit(text: text, in: rect.size, vertical: vertical)
+        // The slider is a readable-size preference, not permission to escape
+        // the authenticated OCR rectangle. The fitter remains the hard upper
+        // bound while roomy bubbles can grow up to the selected cap.
+        let preferredFontCap = CGFloat(18 * min(max(fontScale, 0.75), 1.35))
+        let adjustedFontSize = min(plan.fontSize, preferredFontCap)
+
+        Group {
+            if vertical {
+                verticalText(text: text, plan: plan, fontSize: adjustedFontSize)
+            } else {
+                Text(text)
+                    .font(resolvedFont(size: adjustedFontSize))
+                    .foregroundStyle(.black)
+                    .lineLimit(plan.lineLimit)
+                    .multilineTextAlignment(.center)
+                    .allowsTightening(true)
+                    .tracking(textContainsCJK(text) ? 0 : -0.12)
+                    .lineSpacing(textContainsCJK(text) ? 0 : max(0, adjustedFontSize * 0.04))
+                    .minimumScaleFactor(0.65)
+                    .frame(width: plan.contentSize.width, height: plan.contentSize.height)
+            }
+        }
+        .frame(width: rect.width, height: rect.height)
+        .background(.white.opacity(region.translationError == nil ? 0.96 : 0.90), in: RoundedRectangle(cornerRadius: 3, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 3)
+                .stroke(
+                    region.translationError == nil ? .black.opacity(0.08) : .orange.opacity(0.82),
+                    lineWidth: region.translationError == nil ? 0.5 : 1
+                )
+        }
+        .clipped()
+        .position(x: rect.midX, y: rect.midY)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            region.translationError == nil
+                ? "译文：\(region.translation.isEmpty ? region.original : region.translation)"
+                : "翻译失败，保留原文：\(region.original)"
+        )
+    }
+
+    @ViewBuilder
+    private func verticalText(text: String, plan: ImageTranslationTextFitter.Plan, fontSize: CGFloat) -> some View {
+        let characters = ImageTranslationVerticalTextLayout.normalizedCharacters(in: text)
+        let drawableCharacters = boundedVerticalCharacters(
+            characters,
+            maximumCharacters: plan.maximumCharacterCount
+        )
+        let columns = verticalColumns(drawableCharacters, rowCapacity: plan.rowCapacity)
+        let cellScale = plan.fontSize > 0 ? fontSize / plan.fontSize : 1
+        let cellWidth = plan.cellWidth * cellScale
+        let cellHeight = plan.cellHeight * cellScale
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(columns.indices.reversed(), id: \.self) { columnIndex in
+                VStack(spacing: 0) {
+                    ForEach(columns[columnIndex].indices, id: \.self) { characterIndex in
+                        let character = columns[columnIndex][characterIndex]
+                        let glyph = ImageTranslationVerticalTextLayout.verticalGlyph(for: character)
+                        let isPunctuation = ImageTranslationVerticalTextLayout
+                            .isFullwidthPunctuation(character)
+                        Text(glyph)
+                            .font(resolvedFont(size: fontSize))
+                            .foregroundStyle(.black)
+                            .lineLimit(1)
+                            .frame(
+                                width: cellWidth,
+                                height: cellHeight,
+                                alignment: isPunctuation ? .center : .top
+                            )
+                    }
+                }
+            }
+        }
+        .frame(width: plan.contentSize.width, height: plan.contentSize.height, alignment: .topTrailing)
+        .clipped()
+    }
+
+    private func verticalColumns(_ characters: [String], rowCapacity: Int) -> [[String]] {
+        guard !characters.isEmpty else { return [[]] }
+        return stride(from: 0, to: characters.count, by: rowCapacity).map { start in
+            Array(characters[start..<min(start + rowCapacity, characters.count)])
+        }
+    }
+
+    private func boundedVerticalCharacters(
+        _ characters: [String],
+        maximumCharacters: Int
+    ) -> [String] {
+        guard characters.count > maximumCharacters else { return characters }
+        return Array(characters.prefix(max(maximumCharacters - 1, 1))) + ["…"]
+    }
+
+    private func resolvedFont(size: CGFloat) -> Font {
+        switch fontName {
+        case "kaiti": return .custom("STKaitiSC-Regular", size: size, relativeTo: .body)
+        case "rounded": return .system(size: size, weight: .semibold, design: .rounded)
+        default: return .system(size: size, weight: .semibold, design: .default)
+        }
+    }
+
+    private func textContainsCJK(_ text: String) -> Bool {
+        text.unicodeScalars.contains {
+            (0x3040...0x30FF).contains($0.value) || (0x4E00...0x9FFF).contains($0.value)
+        }
+    }
+}
+
 private extension View {
     func browserCapsule() -> some View {
         background(.ultraThinMaterial, in: Capsule())
@@ -694,6 +1193,8 @@ private struct BrowserWebView: UIViewRepresentable {
     let model: BrowserModel
     let tabID: UUID
     let topSafeAreaInset: CGFloat
+    let captureExclusionInsets: UIEdgeInsets
+    let securityConfiguration: BrowserSecurityConfiguration
 
     func makeCoordinator() -> Coordinator {
         Coordinator(model: model, tabID: tabID)
@@ -702,6 +1203,26 @@ private struct BrowserWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        let securityController = configuration.userContentController
+        securityController.add(context.coordinator, name: "aitransElementRule")
+        securityController.add(context.coordinator, name: "aitransPageMutation")
+        securityController.addUserScript(
+            WKUserScript(
+                source: BrowserSecurityScript.make(
+                    configuration: securityConfiguration,
+                    rememberedSelectors: model.rememberedElementSelectors
+                ),
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false
+            )
+        )
+        securityController.addUserScript(
+            WKUserScript(
+                source: BrowserSecurityScript.pageMutationObserverSource,
+                injectionTime: .atDocumentEnd,
+                forMainFrameOnly: true
+            )
+        )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.navigationDelegate = context.coordinator
@@ -717,6 +1238,9 @@ private struct BrowserWebView: UIViewRepresentable {
         webView.overrideUserInterfaceStyle = .light
 
         context.coordinator.updateTopSafeAreaInset(topSafeAreaInset, in: webView)
+        model.updateCaptureExclusionInsets(captureExclusionInsets)
+        model.applySecurityConfiguration(securityConfiguration)
+        context.coordinator.installSecurity(configuration: securityConfiguration, in: webView)
         context.coordinator.observe(webView)
         model.attach(webView: webView, to: tabID)
         return webView
@@ -724,6 +1248,10 @@ private struct BrowserWebView: UIViewRepresentable {
 
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.updateTopSafeAreaInset(topSafeAreaInset, in: webView)
+        model.updateCaptureExclusionInsets(captureExclusionInsets)
+        model.updateViewport(size: webView.bounds.size, webView: webView, tabID: tabID)
+        model.applySecurityConfiguration(securityConfiguration)
+        context.coordinator.updateSecurity(configuration: securityConfiguration, in: webView)
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
@@ -731,16 +1259,21 @@ private struct BrowserWebView: UIViewRepresentable {
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.scrollView.delegate = nil
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "aitransElementRule")
+        webView.configuration.userContentController.removeScriptMessageHandler(forName: "aitransPageMutation")
         coordinator.stopObserving()
     }
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, WKScriptMessageHandler {
         fileprivate let model: BrowserModel
         fileprivate let tabID: UUID
         private var observations: [NSKeyValueObservation] = []
         private var lastScrollOffsetY: CGFloat?
         private weak var observedWebView: WKWebView?
+        private var securityConfiguration = BrowserSecurityConfiguration.default
+        private var installedRuleList: WKContentRuleList?
+        private var securityUpdateTask: Task<Void, Never>?
 
         init(model: BrowserModel, tabID: UUID) {
             self.model = model
@@ -755,6 +1288,73 @@ private struct BrowserWebView: UIViewRepresentable {
             webView.scrollView.verticalScrollIndicatorInsets.top = topInset
             if wasAtTop {
                 webView.scrollView.setContentOffset(CGPoint(x: 0, y: -topInset), animated: false)
+            }
+        }
+
+        func installSecurity(configuration: BrowserSecurityConfiguration, in webView: WKWebView) {
+            updateSecurity(configuration: configuration, in: webView)
+            refreshContentRuleList(for: configuration.blockAds, in: webView)
+        }
+
+        func updateSecurity(configuration: BrowserSecurityConfiguration, in webView: WKWebView) {
+            let previous = securityConfiguration
+            securityConfiguration = configuration
+            let payload = """
+            (() => {
+              const next = {
+                ads: \(configuration.blockAds ? "true" : "false"),
+                popups: \(configuration.blockPopups ? "true" : "false"),
+                redirects: \(configuration.blockRedirects ? "true" : "false"),
+                remove: \(configuration.elementRemovalEnabled ? "true" : "false"),
+                hijack: \(configuration.antiHijackingEnabled ? "true" : "false")
+              };
+              if (window.__aitransApplySecurity) {
+                window.__aitransApplySecurity(next);
+              } else {
+                window.__aitransSecurity = next;
+              }
+            })();
+            """
+            webView.evaluateJavaScript(payload, completionHandler: nil)
+            if previous.fingerprint != configuration.fingerprint {
+                if previous.blockAds != configuration.blockAds {
+                    refreshContentRuleList(
+                        for: configuration.blockAds,
+                        in: webView,
+                        reloadAfterUpdate: true
+                    )
+                }
+            }
+        }
+
+        private func refreshContentRuleList(
+            for enabled: Bool,
+            in webView: WKWebView,
+            reloadAfterUpdate: Bool = false
+        ) {
+            securityUpdateTask?.cancel()
+            securityUpdateTask = Task { @MainActor [weak self, weak webView] in
+                guard let self, let webView else { return }
+                if let installedRuleList = self.installedRuleList {
+                    webView.configuration.userContentController.remove(installedRuleList)
+                    self.installedRuleList = nil
+                }
+                guard enabled, !Task.isCancelled else {
+                    if reloadAfterUpdate, !Task.isCancelled { webView.reload() }
+                    return
+                }
+                let compiled = await withCheckedContinuation { continuation in
+                    WKContentRuleListStore.default().compileContentRuleList(
+                        forIdentifier: "aitrans-browser-ad-rules",
+                        encodedContentRuleList: BrowserSecurityScript.contentRuleListJSON
+                    ) { ruleList, _ in
+                        continuation.resume(returning: ruleList)
+                    }
+                }
+                guard !Task.isCancelled, let compiled else { return }
+                webView.configuration.userContentController.add(compiled)
+                self.installedRuleList = compiled
+                if reloadAfterUpdate, !Task.isCancelled { webView.reload() }
             }
         }
 
@@ -789,6 +1389,8 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         func stopObserving() {
+            securityUpdateTask?.cancel()
+            securityUpdateTask = nil
             observations.forEach { $0.invalidate() }
             observations.removeAll()
             observedWebView = nil
@@ -827,6 +1429,18 @@ private struct BrowserWebView: UIViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
+            if !allows(navigationAction: navigationAction, url: url, in: webView) {
+                model.reportBrowserSecurityBlock(url: url)
+                decisionHandler(.cancel)
+                return
+            }
+            if securityConfiguration.antiHijackingEnabled,
+               isExternalNavigation(url),
+               navigationAction.navigationType != .linkActivated {
+                model.reportBrowserSecurityBlock(url: url)
+                decisionHandler(.cancel)
+                return
+            }
             decisionHandler(model.handleExternalNavigationIfNeeded(url) ? .cancel : .allow)
         }
 
@@ -854,12 +1468,49 @@ private struct BrowserWebView: UIViewRepresentable {
         ) -> WKWebView? {
             guard navigationAction.targetFrame == nil,
                   let url = navigationAction.request.url else { return nil }
+            if securityConfiguration.blockPopups {
+                model.reportBrowserSecurityBlock(url: url)
+                return nil
+            }
             if !model.handleExternalNavigationIfNeeded(url) { model.load(url: url) }
             return nil
         }
 
+        func userContentController(
+            _ userContentController: WKUserContentController,
+            didReceive message: WKScriptMessage
+        ) {
+            guard message.frameInfo.isMainFrame else { return }
+            switch message.name {
+            case "aitransElementRule":
+                guard let selector = message.body as? String else { return }
+                model.rememberElementSelector(selector)
+            case "aitransPageMutation":
+                model.pageContentDidChange(layoutChanged: message.body as? String == "layout")
+            default:
+                break
+            }
+        }
+
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
             lastScrollOffsetY = scrollView.contentOffset.y
+            model.scrollViewWillBeginInteraction()
+        }
+
+        func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+            if !decelerate { model.scrollViewDidEndInteraction() }
+        }
+
+        func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+            model.scrollViewDidEndInteraction()
+        }
+
+        func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
+            model.scrollViewWillBeginInteraction()
+        }
+
+        func scrollViewDidEndZooming(_ scrollView: UIScrollView, with scale: CGFloat) {
+            model.scrollViewDidEndInteraction()
         }
 
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -882,9 +1533,36 @@ private struct BrowserWebView: UIViewRepresentable {
             }
             model.updateChromePresentation(isScrollingDown: delta > 0, isAtTop: isAtTop)
         }
+
+        private func allows(navigationAction: WKNavigationAction, url: URL, in webView: WKWebView) -> Bool {
+            guard securityConfiguration.blockRedirects,
+                  model.phase == .loaded,
+                  let current = webView.url,
+                  current != url,
+                  navigationAction.navigationType == .other else { return true }
+            // A URL entered by the user or requested by BrowserModel is
+            // already reflected in its intent state; do not misclassify that
+            // deliberate cross-site load as a hostile redirect.
+            if model.currentURL == url { return true }
+            return current.host?.lowercased() == url.host?.lowercased()
+        }
+
+        private func isExternalNavigation(_ url: URL) -> Bool {
+            let scheme = url.scheme?.lowercased() ?? ""
+            if scheme != "http" && scheme != "https" { return true }
+            return url.host?.lowercased() == "apps.apple.com"
+        }
     }
 }
 
 #Preview {
     MangaBrowserView(selectedTab: .constant(.manga))
+        .environmentObject(
+            TranslationSessionStore(
+                modelService: MockGemmaService(),
+                persistenceURL: FileManager.default.temporaryDirectory
+                    .appending(path: "aitrans-browser-preview.json"),
+                performsStartupWork: false
+            )
+        )
 }

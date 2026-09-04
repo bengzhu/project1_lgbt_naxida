@@ -33,14 +33,16 @@ AITRANSApp
 
 `TranslationSessionStore` 拥有当前 transcript、history、model 状态、图片 task、图片 blocks、翻译/复查进度、取消 generation、导出状态和持久化入口。View 的 `@State` 只保存导航、筛选、焦点、sheet 等展示状态；`ImageTranslationBlock` 是产品层 block，OCR 的 candidate/provenance/owner ledger 不应直接写入其中。
 
-`BrowserModel` 是漫画浏览器唯一网页状态持有者，拥有 tabs、`activeTabID`、每页阶段、URL、缩略图、滚动位置与导航能力，并直接接收 View 的 load/back/forward/reload/new/switch/close 意图；Coordinator 只把当前 WKWebView delegate/KVO 状态回写给活动标签。后台标签只保留值快照，不持有 WKWebView；菜单展开、分段选择和球拖拽位置是非持久化 View 状态。
+图片与音频生产翻译都走统一的 Apple Translation / Gemma / 预留引擎路由。音频在 Speech run 开始时冻结引擎、语言、prompt 和采样，最终 transcript 才进入翻译且请求不携带历史或参考 transcript；配置变化先取消旧图片/音频任务，避免一次结果混用两套配置。
+
+`BrowserModel` 是漫画浏览器唯一网页状态持有者，拥有 tabs、`activeTabID`、每页阶段、URL、页面/视口世代、缩略图、滚动位置与导航能力，并直接接收 View 的 load/back/forward/reload/new/switch/close、收藏和安全意图；Coordinator 只把当前 WKWebView delegate/KVO/DOM 变化回写给活动标签。后台标签只保留值快照，不持有 WKWebView。浏览器翻译由 `TranslationSessionStore` 拥有：稳定内容区/框选抓图、Vision OCR、受身份门禁的 Apple/Gemma 批翻译、覆盖快照、LRU 缓存与诊断投影均不进入图片/OCR-only/历史持久化；菜单展开、分段选择和球拖拽位置仍是非持久化 View 状态。
 
 OCR 检测工作台使用独立的 `imageOCRDetection*` 状态和 task，不调用图片翻译/LLM；它只把已整理的 OCR `ImageTranslationBlock` 投影到原图框选、结果复查和导出。
 
 ## 高风险边界
 
 - UI 不直接调用模型、OCR、Speech 或 `persist()`；新增动作先确认是否应成为 Store API。
-- 漫画浏览器不得调用翻译/OCR/LLM 或 Store；ATS 保持系统默认，外部协议、下载、加载失败与网页进程终止必须显式处理。
+- `BrowserModel` 不得调用翻译/OCR/LLM；浏览器翻译必须通过 `TranslationSessionStore`，Coordinator 只适配 WKWebView 抓图、安全脚本和导航事件。ATS 保持系统默认，外部协议、下载、加载失败与网页进程终止必须显式处理。
 - 图片整图 task、单 block retry、单 block rerecognition 和 correction 使用不同的 task/generation；局部取消不得清除整图结果或复查进度。
 - 新图、清空、整图取消和过期回调必须隔离 `imageTranslationTaskID`；旧异步结果不得覆盖新会话。
 - 复查焦点、筛选和局部预览是 View 投影；reviewed/ignored/corrected 的真实集合由 Store 管理。

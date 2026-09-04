@@ -631,17 +631,10 @@ struct ImageTranslationPanel: View {
                 )
             }
 
-            Picker("覆盖方式", selection: overlayModeBinding) {
-                ForEach(ImageTranslationOverlayMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .disabled(!canModifyImageTranslation)
-            .accessibilityHint(
-                canModifyImageTranslation
-                    ? "选择译文以旁贴或覆盖方式呈现"
-                    : imageModificationUnavailableDetail
+            AppStatusRow(
+                title: "OCR 原位覆盖",
+                detail: "译文会在 OCR 识别框内自适应排版，并以白底盖住原文。",
+                tone: .neutral
             )
 
             if let renderSafety = store.imageTranslationRenderSafetyReport,
@@ -912,13 +905,6 @@ struct ImageTranslationPanel: View {
         }
         .appSurface()
         .id(Self.inspectorScrollID)
-    }
-
-    private var overlayModeBinding: Binding<ImageTranslationOverlayMode> {
-        Binding(
-            get: { store.imageOverlayMode },
-            set: { store.setImageOverlayMode($0) }
-        )
     }
 
     private var isRestoreConfirmationPresented: Binding<Bool> {
@@ -2456,7 +2442,6 @@ private struct ImageTranslationPreview: View {
                         ForEach(store.imageTranslationBlocks) { block in
                             ImageTranslationOverlayBlock(
                                 block: block,
-                                mode: store.imageOverlayMode,
                                 imageOrigin: origin,
                                 imageSize: fittedSize,
                                 isSelected: selectedBlockID == block.id,
@@ -3457,7 +3442,6 @@ private struct ImageFocusPreviewNavigationAccessibilityModifier: ViewModifier {
 
 private struct ImageTranslationOverlayBlock: View {
     let block: ImageTranslationBlock
-    let mode: ImageTranslationOverlayMode
     let imageOrigin: CGPoint
     let imageSize: CGSize
     let isSelected: Bool
@@ -3468,91 +3452,58 @@ private struct ImageTranslationOverlayBlock: View {
     var body: some View {
         Group {
             if let rect = displayRect {
-                overlayContent(for: rect)
+                Button(action: select) {
+                    replacementContent(for: rect)
+                }
+                .buttonStyle(.plain)
+                // Keep the interaction target accessible without enlarging the
+                // visible replacement beyond the OCR rectangle.
+                .frame(
+                    width: max(rect.width, AppTheme.Layout.minimumTarget),
+                    height: max(rect.height, AppTheme.Layout.minimumTarget)
+                )
+                .contentShape(.rect)
+                .position(x: rect.midX, y: rect.midY)
+                .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
+                .accessibilityValue(accessibilityValue)
+                .accessibilityHint(accessibilityHint)
             }
         }
-        .foregroundStyle(.white)
     }
 
     @ViewBuilder
-    private func overlayContent(for rect: CGRect) -> some View {
-        switch diagnosticDisplayMode {
-        case .adjacent:
-            Button(action: select) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(primaryOverlayText)
-                        .font(.caption.bold())
-                        .lineLimit(4)
-                    Text(displayOCRText)
-                        .font(.caption2)
-                        .lineLimit(2)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(5)
-                .frame(width: bubbleWidth(for: rect), alignment: .leading)
-                .background(Color.black.opacity(0.88), in: .rect(cornerRadius: 4))
-                .overlay(alignment: .leading) { Rectangle().fill(Color.appAccent).frame(width: 3) }
-                .overlay { selectionBorder }
+    private func replacementContent(for rect: CGRect) -> some View {
+        let text = block.translation.isEmpty ? displayOCRText : block.translation
+        let plan = ImageTranslationTextFitter.fit(
+            text: text,
+            in: rect.size,
+            vertical: block.prefersVerticalWriting
+        )
+
+        Group {
+            if block.prefersVerticalWriting {
+                ImageTranslationVerticalText(text: text, plan: plan)
+            } else {
+                Text(text)
+                    .font(.system(size: plan.fontSize, weight: .semibold))
+                    .foregroundStyle(.black)
+                    .lineLimit(plan.lineLimit)
+                    .multilineTextAlignment(.center)
+                    .allowsTightening(true)
+                    .minimumScaleFactor(0.8)
+                    .frame(width: plan.contentSize.width, height: plan.contentSize.height)
             }
-            .buttonStyle(.plain)
-            .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
-            .position(
-                x: adjacentCenterX(for: rect, bubbleWidth: bubbleWidth(for: rect)),
-                y: rect.midY
-            )
-            .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
-            .accessibilityValue(accessibilityValue)
-            .accessibilityHint(accessibilityHint)
-        case .replace:
-            Button(action: select) {
-                let text = primaryOverlayText
-                Group {
-                    if block.prefersVerticalWriting {
-                        ImageTranslationVerticalText(text: text)
-                    } else {
-                        Text(text)
-                            .font(.caption.bold())
-                            .lineLimit(4)
-                            .multilineTextAlignment(.center)
-                    }
-                }
-                .padding(3)
-                .frame(width: max(rect.width, 44), height: max(rect.height, 24))
-                    .background(Color.appAccentStrong.opacity(0.94), in: .rect(cornerRadius: 4))
-                    .overlay { selectionBorder }
-            }
-            .buttonStyle(.plain)
-            .frame(minWidth: AppTheme.Layout.minimumTarget, minHeight: AppTheme.Layout.minimumTarget)
-            .position(x: rect.midX, y: rect.midY)
-            .accessibilityLabel("图片文字块 \(accessibilityOriginalText)")
-            .accessibilityValue(accessibilityValue)
-            .accessibilityHint(accessibilityHint)
         }
-    }
-
-    private var diagnosticDisplayMode: ImageTranslationOverlayMode {
-        isOCRDiagnosticPreview ? .replace : mode
-    }
-
-    private var primaryOverlayText: String {
-        if isOCRDiagnosticPreview {
-            return displayOCRText
-        }
-        return block.translation.isEmpty ? displayOCRText : block.translation
-    }
-
-    private var isOCRDiagnosticPreview: Bool {
-#if DEBUG
-        ProcessInfo.processInfo.environment["AITRANS_IMAGE_TRANSLATION_UI_FOCUS"] == "ocr"
-#else
-        false
-#endif
+        .frame(width: rect.width, height: rect.height)
+        .background(Color.white.opacity(0.97))
+        .overlay { selectionBorder }
+        .clipped()
     }
 
     @ViewBuilder private var selectionBorder: some View {
         if isSelected {
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color.white, lineWidth: 3)
+            Rectangle()
+                .stroke(Color.appAccent, lineWidth: 3)
         }
     }
 
@@ -3568,10 +3519,6 @@ private struct ImageTranslationOverlayBlock: View {
             width: imageSize.width * box.width,
             height: imageSize.height * box.height
         ).intersection(CGRect(origin: imageOrigin, size: imageSize))
-    }
-
-    private func bubbleWidth(for rect: CGRect) -> CGFloat {
-        min(max(rect.width * 1.45, 78), max(imageSize.width * 0.46, 92))
     }
 
     private var accessibilityValue: String {
@@ -3619,63 +3566,49 @@ private struct ImageTranslationOverlayBlock: View {
         isSelected ? "取消此文字块在图片中的定位" : "在图片预览中定位此文字块"
     }
 
-    private func adjacentCenterX(for rect: CGRect, bubbleWidth: CGFloat) -> CGFloat {
-        let rightCenter = rect.maxX + 6 + bubbleWidth / 2
-        let rightLimit = imageOrigin.x + imageSize.width - bubbleWidth / 2
-        if rightCenter <= rightLimit { return rightCenter }
-        return max(imageOrigin.x + bubbleWidth / 2, rect.minX - 6 - bubbleWidth / 2)
-    }
 }
 
 /// Small, bounded VerticalRl-style preview for CJK replacement overlays.
 /// Columns are emitted right-to-left while glyphs advance top-to-bottom.
 private struct ImageTranslationVerticalText: View {
     let text: String
+    let plan: ImageTranslationTextFitter.Plan
 
     var body: some View {
-        GeometryReader { geometry in
-            let characters = ImageTranslationVerticalTextLayout.normalizedCharacters(in: text)
-            let rowHeight: CGFloat = 18
-            let rowCapacity = max(Int(geometry.size.height / rowHeight), 1)
-            let columnCapacity = max(
-                Int(geometry.size.width / max(rowHeight * 0.9, 1)),
-                1
-            )
-            let maximumCharacters = max(rowCapacity * columnCapacity, 1)
-            let drawableCharacters = boundedCharacters(
-                characters,
-                maximumCharacters: maximumCharacters
-            )
-            let columns = makeColumns(drawableCharacters, rowCapacity: rowCapacity)
-            let columnWidth = max(
-                geometry.size.width / CGFloat(max(columns.count, 1)),
-                1
-            )
+        let characters = ImageTranslationVerticalTextLayout.normalizedCharacters(in: text)
+        let drawableCharacters = boundedCharacters(
+            characters,
+            maximumCharacters: plan.maximumCharacterCount
+        )
+        let columns = makeColumns(drawableCharacters, rowCapacity: plan.rowCapacity)
 
-            HStack(alignment: .top, spacing: 0) {
-                ForEach(Array(columns.indices.reversed()), id: \.self) { columnIndex in
-                    VStack(spacing: 0) {
-                        ForEach(Array(columns[columnIndex].indices), id: \.self) { characterIndex in
-                            let character = columns[columnIndex][characterIndex]
-                            let glyph = ImageTranslationVerticalTextLayout.verticalGlyph(for: character)
-                            let isFullwidthPunctuation = ImageTranslationVerticalTextLayout
-                                .isFullwidthPunctuation(character)
-                            Text(glyph)
-                                .font(.caption.bold())
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.65)
-                                .frame(
-                                    width: columnWidth,
-                                    height: rowHeight,
-                                    alignment: isFullwidthPunctuation ? .center : .top
-                                )
-                        }
+        HStack(alignment: .top, spacing: 0) {
+            ForEach(columns.indices.reversed(), id: \.self) { columnIndex in
+                VStack(spacing: 0) {
+                    ForEach(columns[columnIndex].indices, id: \.self) { characterIndex in
+                        let character = columns[columnIndex][characterIndex]
+                        let glyph = ImageTranslationVerticalTextLayout.verticalGlyph(for: character)
+                        let isFullwidthPunctuation = ImageTranslationVerticalTextLayout
+                            .isFullwidthPunctuation(character)
+                        Text(glyph)
+                            .font(.system(size: plan.fontSize, weight: .semibold))
+                            .foregroundStyle(.black)
+                            .lineLimit(1)
+                            .frame(
+                                width: plan.cellWidth,
+                                height: plan.cellHeight,
+                                alignment: isFullwidthPunctuation ? .center : .top
+                            )
                     }
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            .clipped()
         }
+        .frame(
+            width: plan.contentSize.width,
+            height: plan.contentSize.height,
+            alignment: .topTrailing
+        )
+        .clipped()
     }
 
     private func makeColumns(

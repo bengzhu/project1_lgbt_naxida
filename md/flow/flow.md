@@ -7,14 +7,14 @@
 | 层 | 主要职责 | 关键入口 |
 | --- | --- | --- |
 | App/UI | 页面、用户输入、状态展示和无障碍语义 | `AITRANSApp`、`ContentView`、`Views/` |
-| 网页浏览状态 | tabs/activeTabID、漫画页阶段、URL、内存缩略图、滚动位置、导航能力与 WKWebView 意图 | `BrowserModel`、`MangaBrowserView` |
+| 网页浏览状态 | tabs/activeTabID、漫画页阶段、URL、页面/视口世代、内存缩略图、滚动位置、导航能力与 WKWebView 意图 | `BrowserModel`、`MangaBrowserView` |
 | 状态与调度 | 唯一业务状态、异步任务、持久化、导出和服务编排 | `TranslationSessionStore` |
 | OCR 与布局 | Vision OCR、漫画区域、Manga OCR、几何融合和阅读顺序 | `VisionOCRService`、`ComicTextBubbleDetectorService`、`MangaOCRService`、`ImageOCRLayoutEngine` |
 | 翻译引擎 | Apple Translation、本地 GGUF、预留路由、prompt、采样、输出清洗和 QA | `AppleTranslationService`、`GemmaLocalService`、`LlamaRuntime` |
 | Speech | 授权、录音/文件识别、取消隔离和事后质量评估 | Store、`SpeechQualityProbeService`、`SpeechQualityEvaluator` |
 | 诊断与验证 | 漫画覆盖探针、benchmark、合同和机器可读报告 | `MangaOverlayProbeService`、`scripts/`、`benchmarks/`、`output/` |
 
-`TranslationSessionStore` 是唯一翻译业务中心。View 不直接调用模型、OCR、Speech 或持久化；服务不直接拥有 SwiftUI 页面状态。漫画浏览器不属于翻译业务链路，由非持久化 `BrowserModel` 独立持有网页状态。
+`TranslationSessionStore` 是唯一翻译业务中心。View 不直接调用模型、OCR、Speech 或持久化；服务不直接拥有 SwiftUI 页面状态。漫画网页状态仍由非持久化 `BrowserModel` 独立持有，但浏览器翻译的 OCR、翻译任务、缓存、身份门禁和诊断投影统一归 `TranslationSessionStore`，不进入普通图片、OCR-only 或历史状态。
 
 ## 2. App 入口与界面
 
@@ -22,7 +22,7 @@
 
 - 文本：输入、粘贴、翻译和摘要。
 - 图片：OCR、逐块翻译、复查、定位、修正和导出。
-- 漫画：内嵌 WKWebView、网页导航与纯 UI 翻译悬浮球，不调用翻译链路。
+- 漫画：内嵌 WKWebView、网页导航、可视区/框选 OCR 翻译、原文/译文覆盖层与安全防护。
 - OCR 检测：OCR-only 工作台，不进入翻译或 LLM。
 - 音频：Apple Speech 实时/文件识别和后续翻译。
 - 历史：查看和恢复已保存会话。
@@ -30,21 +30,26 @@
 
 UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业务结果、历史或任务生命周期的动作必须调用 Store。
 
-漫画浏览器例外地把非业务网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新、重试与标签操作意图，WKWebView Coordinator 只回写当前标签的页面阶段、URL、进度、滚动与导航能力。`activeTabID` 是唯一活动源；切换前抓取缩略图并保存 URL/滚动位置，后台标签只留值快照且释放 WKWebView，切回才重建。地址编辑、菜单展开和球拖拽是 View 私有展示状态；浏览器仍不做磁盘持久化。
+漫画浏览器仍把网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新、重试、标签与收藏意图，WKWebView Coordinator 只回写当前标签的页面阶段、URL、进度、滚动、内容/布局变化与导航能力。`activeTabID` 是唯一活动源；切换前抓取缩略图并保存 URL/滚动位置，后台标签只留值快照且释放 WebView，切回才重建。稳定的可视区或框选抓图形成不可变页面快照，再由 `TranslationSessionStore` 串行执行 Vision OCR、Apple/Gemma 翻译和有界内存缓存；覆盖层只消费通过身份门禁的快照。地址编辑、菜单展开和球拖拽是非持久化展示状态，收藏与元素规则仅写入沙盒 UserDefaults。
 
 ## 3. 漫画网页浏览
 
 ```text
 标签选择 -> BrowserModel.activeTabID -> 唯一活动 WKWebView
   -> 地址输入与 http(s) 规范化 -> WKNavigation/UI/scroll delegate + KVO
-  -> 当前标签页面/进度/滚动/导航状态
+  -> 当前标签页面/进度/滚动/页面世代/导航状态
   -> 切换前缩略图 + URL + scrollOffset，后台释放 WebView
-  -> WebView 上层 Safari 胶囊 + 标签切换器 + 翻译球占位 UI
+  -> 稳定可视区/框选抓图 -> TranslationSessionStore -> Vision OCR -> Apple/Gemma
+  -> 身份校验后的覆盖快照 -> 原文/译文切换
+  -> WebView 上层 Safari 胶囊 + 标签切换器 + 翻译球
 ```
 
 - 无 scheme 自动补 `https://`；ATS 保持系统默认，HTTP 被拦截时显示明确原因。
 - `_blank` 在当前页加载；非 http(s) 与 App Store 链接尝试交系统，无法处理和下载响应显示提示。
 - 加载失败与网页内容进程终止各有独立恢复 UI；只有成功加载后显示翻译球。
+- 一键翻译只截取排除安全区和原生底部工具条的稳定内容区；滚动、导航、布局/DOM 变化会取消旧任务并隐藏旧覆盖。框选区域会裁切到内容区并拒绝过小选择。
+- 浏览器翻译状态、失败重试、批次进度、性能诊断和 LRU 缓存由 Store 管理；截图在 OCR 完成后释放，诊断不写入历史或持久化。
+- 浏览器安全开关分别控制广告资源、弹窗、重定向、点选元素记忆和触摸/剪贴板防劫持；收藏与规则仅保留在沙盒。
 - WKWebView 白色浅色背景铺满屏幕，顶部 content inset 避开状态栏；主 TabView 在漫画页隐藏。
 - 下滑将三胶囊收成域名小胶囊并同步收起退出按钮/翻译球，上滑或回到顶部 spring 恢复，不改变 WebView 尺寸。
 
@@ -109,12 +114,13 @@ UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业�
   -> Store 建立 speech run ID
   -> Apple Speech 授权与 on-device recognition
   -> 最终 transcript
-  -> 当前翻译引擎
+  -> 任务开始时冻结的翻译配置（Apple Translation / Gemma / 预留）
   -> transcript / 译文 / 运行摘要
 ```
 
 - checking、recognizing 和 translating 都必须可取消。
-- Speech callback 和翻译 Task 必须核对当前 run ID；取消或重试后的旧回调直接丢弃。
+- Speech callback 和翻译 Task 必须核对当前 run ID；引擎、语言、prompt、术语或采样变化会取消旧任务，旧回调直接丢弃。
+- Apple Translation 与 Gemma 复用统一适配边界；音频生产翻译请求不携带历史 transcript，参考 transcript 永远只进入事后质量评估。
 - 质量探针是独立事后评估：Apple Speech 返回最终文本后，参考 transcript 才进入 evaluator。
 - Speech 语料和报告规则见 [`md/test/test.md`](../test/test.md)。
 

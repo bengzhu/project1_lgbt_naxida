@@ -11,9 +11,11 @@ flowchart TD
   NAV -->|"iPad"| SPLIT["NavigationSplitView"]
   TAB --> B["拆分的 SwiftUI feature views<br/>文本 / 图片 / 漫画 / OCR / 音频 / 资料库"]
   SPLIT --> B
-  B --> BROWSER["MangaBrowserView<br/>Safari 胶囊 / 标签切换 / 翻译球占位"]
-  BROWSER --> BMODEL["BrowserModel<br/>tabs / activeTabID / 页面快照"]
+  B --> BROWSER["MangaBrowserView<br/>Safari 胶囊 / 标签切换 / 一键与框选翻译"]
+  BROWSER --> BMODEL["BrowserModel<br/>tabs / activeTabID / 页面与视口世代"]
   BMODEL --> WEB["唯一活动 WKWebView<br/>后台标签释放 / 不持久化"]
+  BROWSER --> BCAP["稳定内容区抓图<br/>排除原生导航与安全区"]
+  BCAP --> C
   DS["AppTheme + AppComponents<br/>语义 token / 状态 / 44pt / 响应式布局"] --> B
   TWB["TextWorkspaceBackground<br/>静态网格 / 导向线路 / 文本页专属"] --> B
   SH["文本页顶部 safe-area inset<br/>页头 + 模型状态"] --> B
@@ -111,7 +113,7 @@ flowchart TD
   %% 音频分支：Apple 本机语音识别
   C --> LR["Speech run ID + store-owned translation Task<br/>取消 / 重试使旧回调失效"]
   LR --> L["音频识别<br/>Apple Speech on-device / requiresOnDeviceRecognition"]
-  L --> LA{"授权 / 模型 await 后<br/>run ID 仍匹配且 Task 未取消?"}
+  L --> LA{"授权 / 翻译 await 后<br/>run ID 与冻结配置仍有效?"}
   LA -->|否| LD["丢弃旧回调<br/>不写 state / transcript / summary"]
   LA -->|是| D
   L --> LV["speechRecognitionRunSummary<br/>输入 / locale / 耗时 / 词数 / 片段 / 置信度 / 失败原因"]
@@ -217,7 +219,8 @@ flowchart TD
   APP["AITRANSApp"] --> UI["SwiftUI Views\n七个功能入口"]
   UI --> STORE["TranslationSessionStore\n唯一翻译业务状态与调度中心"]
   UI --> BROWSER2["MangaBrowserView\nBrowserModel tabs -> 当前 WKWebView"]
-  BROWSER2 -. "不进入翻译 / OCR / 持久化" .-> END_BROWSER["网页浏览与纯 UI 翻译占位"]
+  BROWSER2 --> BCAP2["可视区/框选抓图 -> Store OCR/翻译 -> 覆盖层"]
+  BCAP2 -. "不进入普通图片 / OCR-only / 历史持久化" .-> END_BROWSER["浏览器翻译与安全独立链路"]
 
   STORE --> TEXT["文本翻译"]
   STORE --> IMAGE["图片翻译"]
@@ -277,7 +280,7 @@ flowchart TD
   RECOGNIZE --> CHECK{"run ID 仍有效?"}
   CHECK -- "否" --> DROP["丢弃旧回调"]
   CHECK -- "是" --> TRANSCRIPT["最终 transcript"]
-  TRANSCRIPT --> TRANSLATE["当前本地翻译引擎"]
+  TRANSCRIPT --> TRANSLATE["任务开始时冻结的翻译配置<br/>Apple Translation / Gemma / 预留"]
   TRANSLATE --> RESULT["识别文本 / 译文 / 运行摘要"]
 
   TRANSCRIPT -. "质量探针时，识别完成后才读取" .-> REF["reference transcript"]

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 enum AppTab: Hashable, CaseIterable, Identifiable {
     case text
@@ -116,6 +117,9 @@ struct ContentView: View {
         .preferredColorScheme(appearance.colorScheme)
         .tint(selectedTab.feature.accent(for: colorScheme))
         .environment(\.appReduceMotionOverride, evidenceScenario == .audioRecognizing)
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+            store.handleApplicationDidEnterBackground()
+        }
     }
 
     private var appearance: AppAppearance {

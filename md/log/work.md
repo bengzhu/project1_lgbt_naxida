@@ -2,21 +2,32 @@
 
 > 仅供 Agent X `/goal` 全自动托管使用。这里保存当前事实，不追加历史；长期结论写入 `update_log.md`。
 
-## 2026/09/03
+## 2026/09/04
 
 ### 当前总目标
 
-在 `smalldata_test` 直接修复 Apple 图片翻译结果被 Gemma QA 误拒、图片块停留“等待翻译”，以及文本页粘贴无响应的问题。
+完成漫画浏览器可视区/框选翻译、页面任务契约、浏览器加固与漫画阅读体验；同时让图片和音频在选择 Apple Translation 时走统一系统适配器。主界面 UI 不改，浏览器结果不进入普通图片、OCR-only、Speech 质量参考或历史持久化。
 
-### 规划小目标（完成 1/1）
+### 约束与验收
+
+- `BrowserModel` 只拥有网页/标签/视口状态；Store 统一拥有 OCR、翻译、缓存、任务门禁和诊断投影。
+- 页面身份覆盖 tab/document/navigation/content/layout/scroll generation 与稳定视口；配置、滚动、切页或布局变化先失效旧任务再释放资源。
+- 安全、收藏、元素规则仅留在 App 沙盒；性能采样只进浏览器诊断，不改变翻译路由。
+- 图片/音频复用 Apple Translation / Gemma / 预留路由；音频参考 transcript 只供事后质量评估。
+- 候选 SHA 运行 task-scoped 直接合同与云端 iOS build；通过后再 PR 合并至 `smalldata_test` 并清理分支。
+
+### 规划小目标（实现 4/4，待云端验收）
 
 | 小目标 | 状态 |
 | --- | --- |
-| Apple 图片结果分流与文本粘贴修复 | 已完成 |
+| M1 浏览器翻译、框选、页面身份/缓存/资源契约 | 已实现，本地合同通过 |
+| M2 广告/弹窗/重定向/元素消除/防劫持与收藏 | 已实现，本地合同通过 |
+| M3 字体/字号/中英排版、沉浸 UX、进度与性能诊断 | 已实现，本地合同通过 |
+| M4 图片/音频 Apple Translation、模拟器回退与配置竞态 | 已实现，本地合同通过 |
 
 ### 当前状态
 
-- 基线/分支：`smalldata_test@5e1eb5b4`；按用户授权不建分支、不 push、不运行云端 CI。
-- 实现：Apple 图片批量/单块译文只做系统结果必需的非空校验，不再套用 Gemma prompt/术语/context QA；Gemma 仍保留原 QA。文本粘贴改为 `PasteButton` 明确请求文本 UTI，并通过 `NSItemProvider` 加载字符串后回到 MainActor 更新 Store。
-- 本地证据：Apple/图片 QA/粘贴定向合同通过；Xcode 26.6 针对唯一 `WWIIHexV0 v0.441 iPhone 17 Pro` 构建成功。`test/2.png` 实际 OCR 得到 17 个块并确认选择 Apple Translation，但该模拟器系统仍报告不支持日语→简体中文，因此本机无法生成真实 Apple 译文，不能把编译或合同外推为翻译质量证据。
-- 收口：直接提交到 `smalldata_test`；不 push、不运行云端 CI。模拟器系统语言对限制作为已知验证边界保留。
+- 基线：本地 `smalldata_test` @ `cca327aa`；候选：`codeb/v3.405-browser-translation`，尚未提交/push。
+- 已排雷：浏览器截图/覆盖身份门禁、截图及时释放、有界缓存、部分失败保留、跨站元素规则隔离、静默外部协议拦截、触摸/剪贴板启发式收紧、英文强制横排、竖排右到左、字号不越 OCR 框、滚动/缩放/加载稳定窗口、导航提交后才签发文档身份、标签缩略图限尺寸、内存警告与后台取消、Apple continuation 取消竞态、音频冻结配置与空 transcript context。
+- 本地直接证据：v3.404/v3.405/v3.406、v3.400、Apple 引擎、Speech recognition/quality 合同通过；安全脚本 JS 语法、workflow YAML、plist/project、Markdown 链接与 Swift parse 通过。
+- 未完成证据：本机只有 CommandLineTools，无法提供 iOS typecheck/build 或真机 Apple Translation；下一步提交并 push 候选，核对精确 SHA 的 task-scoped full CI 与 artifact。

@@ -54,7 +54,8 @@
 ```text
 AITRANSApp
   -> ContentView / AppTabRouter
-  -> 漫画浏览器：MangaBrowserView -> BrowserModel tabs/activeTabID -> 当前 WKWebView（不进入翻译/持久化）
+  -> 漫画浏览器：MangaBrowserView -> BrowserModel tabs/activeTabID -> 当前 WKWebView
+     -> 稳定可视区/框选抓图 -> Store OCR/翻译身份门禁 -> 覆盖快照（不进入历史持久化）
   -> TranslationSessionStore（唯一运行时状态与调度边界）
      -> OCR 检测：ImageOCRDetectionView
         -> 图片/相册/拍照/粘贴 -> VisionOCRService
@@ -64,9 +65,9 @@ AITRANSApp
         -> 日语时的 detector / bundled MangaOCR 补充
         -> ImageOCRLayoutEngine
         -> ImageTranslationBlock
-        -> GemmaLocalService / TranslationBatchQualityEvaluator
-     -> 文本/图片翻译：GemmaLocalService -> LlamaRuntime -> Store
-     -> 音频：Apple Speech -> Store -> GemmaLocalService
+        -> AppleTranslationService 或 GemmaLocalService / TranslationBatchQualityEvaluator
+     -> 文本/图片翻译：Apple Translation 或 GemmaLocalService -> LlamaRuntime -> Store
+     -> 音频：Apple Speech -> Store -> Apple Translation 或 GemmaLocalService
   -> SwiftUI Views（只读 Store 投影并调用 Store 方法）
 ```
 

@@ -88,6 +88,7 @@ final class AppleTranslationService: ObservableObject {
     private var continuation: CheckedContinuation<ModelGenerationResult, Error>?
     private var timeoutTask: Task<Void, Never>?
     private var invalidatesNextConfiguration = false
+    private var runningJobID: UUID?
 
     func prepare() async throws {
         guard #available(iOS 18.0, *) else {
@@ -100,6 +101,7 @@ final class AppleTranslationService: ObservableObject {
             throw TranslationEngineRoutingError.unsupportedTask(request.task)
         }
         try await prepare()
+        try Task.checkCancellation()
         guard pendingJob == nil, continuation == nil else {
             throw TranslationEngineRoutingError.requestAlreadyRunning
         }
@@ -120,6 +122,11 @@ final class AppleTranslationService: ObservableObject {
                 self.continuation = continuation
                 pendingJob = job
                 scheduleTimeout(for: job.id)
+                // Close the narrow race where cancellation happens after the
+                // preflight check but before the continuation is installed.
+                if Task.isCancelled {
+                    cancel(jobID: job.id)
+                }
             }
         } onCancel: {
             Task { @MainActor [weak self] in
@@ -151,7 +158,11 @@ final class AppleTranslationService: ObservableObject {
 
     @available(iOS 18.0, *)
     func runPendingJob(with session: sending TranslationSession) async {
-        guard let job = pendingJob else { return }
+        guard let job = pendingJob, runningJobID != job.id else { return }
+        runningJobID = job.id
+        defer {
+            if runningJobID == job.id { runningJobID = nil }
+        }
 
         do {
             let result = try await Self.translate(job: job, with: session)

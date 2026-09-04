@@ -146,9 +146,10 @@ class MangaBrowserUIContractTests(unittest.TestCase):
             "private let translationBallSize: CGFloat = 48",
             "lineWidth: 2",
             "model.phase == .loaded && model.showsExpandedChrome",
-            'Button("翻译本页") {}',
-            'Text("暂无任务")',
-            'Text("日  →  中")',
+            'captureAndTranslate(selection: nil)',
+            'Label("框选翻译", systemImage: "crop")',
+            'ProgressView(value: store.browserTranslationStatus.fractionCompleted)',
+            'Text("\\(browserSourceLanguage.shortName)  →  \\(browserTargetLanguage.shortName)")',
             'case manual = "手动"',
             'case automatic = "自动"',
             'case original = "原文"',
@@ -177,17 +178,13 @@ class MangaBrowserUIContractTests(unittest.TestCase):
             self.assertIn(f"{filename} in Sources", self.project)
             self.assertIn(f"/* {filename} */", self.project)
 
-    def test_browser_does_not_enter_translation_ocr_or_persistence(self) -> None:
-        combined = self.model + self.view
-        for forbidden in (
-            "TranslationSessionStore",
-            "GemmaLocalService",
-            "VisionOCRService",
-            "MangaOCRService",
-            "state.json",
-            "AppStorage",
-        ):
-            self.assertNotIn(forbidden, combined)
+    def test_browser_translation_is_store_owned_and_not_persisted_to_image_history(self) -> None:
+        self.assertIn("TranslationSessionStore", self.view)
+        self.assertNotIn("TranslationSessionStore", self.model)
+        self.assertIn("translateBrowserCapture", read("AITRANS/Services/TranslationSessionStore.swift"))
+        self.assertIn("browserTranslationOverlay", read("AITRANS/Services/TranslationSessionStore.swift"))
+        self.assertNotIn("appendImageTranslationTranscript", read("AITRANS/Services/TranslationSessionStore.swift").split("// MARK: - Browser translation", 1)[1].split("// MARK: - OCR detection workspace", 1)[0])
+        self.assertIn("AppStorage", self.view)
 
     def test_ci_routes_browser_scope_without_unrelated_suites(self) -> None:
         for needle in (

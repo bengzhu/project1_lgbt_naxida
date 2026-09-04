@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract for consuming Koharu source direction in image rendering."""
+"""Contract for consuming OCR geometry in image translation rendering."""
 
 from pathlib import Path
 import re
@@ -67,9 +67,12 @@ class JapaneseVerticalRenderContractTests(unittest.TestCase):
 
     def test_preview_uses_vertical_columns_only_for_replace_mode(self) -> None:
         self.assertIn("if block.prefersVerticalWriting", self.overlay)
-        self.assertIn("ImageTranslationVerticalText(text: text)", self.overlay)
-        self.assertIn("case .adjacent:", self.overlay)
-        self.assertIn("case .replace:", self.overlay)
+        self.assertIn("ImageTranslationVerticalText(text: text, plan: plan)", self.overlay)
+        self.assertIn("ImageTranslationTextFitter.fit(", self.overlay)
+        self.assertIn(".background(Color.white.opacity(0.97))", self.overlay)
+        self.assertIn(".frame(width: rect.width, height: rect.height)", self.overlay)
+        self.assertNotIn("bubbleWidth", self.overlay)
+        self.assertNotIn("adjacentCenterX", self.overlay)
         self.assertIn("columns.indices.reversed()", self.vertical_view)
         self.assertIn("rowCapacity", self.vertical_view)
         self.assertIn("alignment: .topTrailing", self.vertical_view)
@@ -78,21 +81,24 @@ class JapaneseVerticalRenderContractTests(unittest.TestCase):
     def test_export_shares_vertical_mode_and_keeps_horizontal_fallback(self) -> None:
         for marker in [
             "let usesVerticalWriting = mode == .replace && block.prefersVerticalWriting",
-            "overlayRect.width * 0.72",
+            "let overlayRect = imageTranslationOverlayRect(",
+            "context.setFillColor(UIColor.white.withAlphaComponent(0.97).cgColor)",
+            "ImageTranslationTextFitter.fit(",
             "Self.drawImageTranslationText(",
             "vertical: usesVerticalWriting",
         ]:
             self.assertIn(marker, self.renderer)
+        self.assertNotIn("mode == .adjacent && translation != block.original", self.renderer)
         for marker in [
             "guard vertical else {",
             "NSAttributedString(string: text, attributes: attributes).draw(",
             "rect.maxX - CGFloat(column + 1)",
-            "let row = index % rowCapacity",
-            "rect.minY + CGFloat(row) * rowHeight",
+            "let row = index % layout.rowCapacity",
+            "rect.minY + CGFloat(row) * layout.cellHeight",
             "drawableCharacters = Array(characters.prefix(prefixCount)) + [\"…\"]",
         ]:
             self.assertIn(marker, self.draw)
-        self.assertIn("mode == .adjacent && translation != block.original", self.renderer)
+        self.assertIn("layout.fontSize", self.draw)
 
     def test_version_and_ci_route_follow_v3224(self) -> None:
         versions = re.findall(r"MARKETING_VERSION = (3\.\d+);", self.project)
