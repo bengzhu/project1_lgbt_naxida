@@ -762,30 +762,10 @@ struct MangaBrowserView: View {
                 .pickerStyle(.segmented)
 
                 Menu {
-                    Section("源语言") {
-                        ForEach(SupportedLanguage.allCases) { language in
-                            Button {
-                                browserSourceLanguageRaw = language.rawValue
-                            } label: {
-                                BrowserLanguageMenuRow(
-                                    language: language,
-                                    isSelected: language.rawValue == browserSourceLanguageRaw
-                                )
-                            }
-                        }
-                    }
-                    Section("目标语言") {
-                        ForEach(SupportedLanguage.allCases) { language in
-                            Button {
-                                browserTargetLanguageRaw = language.rawValue
-                            } label: {
-                                BrowserLanguageMenuRow(
-                                    language: language,
-                                    isSelected: language.rawValue == browserTargetLanguageRaw
-                                )
-                            }
-                        }
-                    }
+                    BrowserLanguageMenuContent(
+                        sourceLanguageRaw: $browserSourceLanguageRaw,
+                        targetLanguageRaw: $browserTargetLanguageRaw
+                    )
                 } label: {
                     HStack {
                         Text("语言对")
@@ -1244,6 +1224,38 @@ private struct BrowserLanguageMenuRow: View {
                 Label(language.rawValue, systemImage: "checkmark")
             } else {
                 Text(language.rawValue)
+            }
+        }
+    }
+}
+
+private struct BrowserLanguageMenuContent: View {
+    @Binding var sourceLanguageRaw: String
+    @Binding var targetLanguageRaw: String
+
+    var body: some View {
+        Section("源语言") {
+            ForEach(SupportedLanguage.allCases) { language in
+                Button {
+                    sourceLanguageRaw = language.rawValue
+                } label: {
+                    BrowserLanguageMenuRow(
+                        language: language,
+                        isSelected: language.rawValue == sourceLanguageRaw
+                    )
+                }
+            }
+        }
+        Section("目标语言") {
+            ForEach(SupportedLanguage.allCases) { language in
+                Button {
+                    targetLanguageRaw = language.rawValue
+                } label: {
+                    BrowserLanguageMenuRow(
+                        language: language,
+                        isSelected: language.rawValue == targetLanguageRaw
+                    )
+                }
             }
         }
     }
