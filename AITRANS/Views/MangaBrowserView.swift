@@ -764,10 +764,11 @@ struct MangaBrowserView: View {
                 Menu {
                     Section("源语言") {
                         ForEach(SupportedLanguage.allCases) { language in
+                            let isSelected = language == browserSourceLanguage
                             Button {
                                 browserSourceLanguageRaw = language.rawValue
                             } label: {
-                                if language == browserSourceLanguage {
+                                if isSelected {
                                     Label(language.rawValue, systemImage: "checkmark")
                                 } else {
                                     Text(language.rawValue)
@@ -777,10 +778,11 @@ struct MangaBrowserView: View {
                     }
                     Section("目标语言") {
                         ForEach(SupportedLanguage.allCases) { language in
+                            let isSelected = language == browserTargetLanguage
                             Button {
                                 browserTargetLanguageRaw = language.rawValue
                             } label: {
-                                if language == browserTargetLanguage {
+                                if isSelected {
                                     Label(language.rawValue, systemImage: "checkmark")
                                 } else {
                                     Text(language.rawValue)
