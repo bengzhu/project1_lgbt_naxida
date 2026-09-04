@@ -764,21 +764,25 @@ struct MangaBrowserView: View {
                 Menu {
                     Section("源语言") {
                         ForEach(SupportedLanguage.allCases) { language in
-                            let isSelected = language == browserSourceLanguage
                             Button {
                                 browserSourceLanguageRaw = language.rawValue
                             } label: {
-                                languageMenuLabel(language, isSelected: isSelected)
+                                BrowserLanguageMenuRow(
+                                    language: language,
+                                    isSelected: language.rawValue == browserSourceLanguageRaw
+                                )
                             }
                         }
                     }
                     Section("目标语言") {
                         ForEach(SupportedLanguage.allCases) { language in
-                            let isSelected = language == browserTargetLanguage
                             Button {
                                 browserTargetLanguageRaw = language.rawValue
                             } label: {
-                                languageMenuLabel(language, isSelected: isSelected)
+                                BrowserLanguageMenuRow(
+                                    language: language,
+                                    isSelected: language.rawValue == browserTargetLanguageRaw
+                                )
                             }
                         }
                     }
@@ -845,18 +849,6 @@ struct MangaBrowserView: View {
 
     private func formattedBytes(_ value: UInt64) -> String {
         ByteCountFormatter.string(fromByteCount: Int64(value), countStyle: .memory)
-    }
-
-    @ViewBuilder
-    private func languageMenuLabel(
-        _ language: SupportedLanguage,
-        isSelected: Bool
-    ) -> some View {
-        if isSelected {
-            Label(language.rawValue, systemImage: "checkmark")
-        } else {
-            Text(language.rawValue)
-        }
     }
 
     private func resolvedTranslationBallY(in proxy: GeometryProxy) -> CGFloat {
@@ -1239,6 +1231,21 @@ private extension View {
     func browserCapsule() -> some View {
         background(.ultraThinMaterial, in: Capsule())
             .overlay { Capsule().stroke(Color.white.opacity(0.34), lineWidth: 0.5) }
+    }
+}
+
+private struct BrowserLanguageMenuRow: View {
+    let language: SupportedLanguage
+    let isSelected: Bool
+
+    var body: some View {
+        Group {
+            if isSelected {
+                Label(language.rawValue, systemImage: "checkmark")
+            } else {
+                Text(language.rawValue)
+            }
+        }
     }
 }
 
