@@ -30,7 +30,7 @@
 
 UI 私有状态只用于焦点、展开、筛选和暂存输入。会改变业务结果、历史或任务生命周期的动作必须调用 Store。
 
-漫画浏览器仍把网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新、重试、标签与收藏意图，WKWebView Coordinator 只回写当前标签的页面阶段、URL、进度、滚动、内容/布局变化与导航能力。`activeTabID` 是唯一活动源；切换前抓取缩略图并保存 URL/滚动位置，后台标签只留值快照且释放 WebView，切回才重建。稳定的可视区或框选抓图形成不可变页面快照，再由 `TranslationSessionStore` 串行执行 Vision OCR、Apple/Gemma 翻译和有界内存缓存；覆盖层只消费通过身份门禁的快照。地址编辑、菜单展开和球拖拽是非持久化展示状态，收藏与元素规则仅写入沙盒 UserDefaults。
+漫画浏览器仍把网页状态集中在 `BrowserModel`：View 只提交加载、前进、后退、刷新、重试、标签与收藏意图，WKWebView Coordinator 只回写当前标签的页面阶段、URL、进度、滚动、内容/布局变化与导航能力。`activeTabID` 是唯一活动源；切换前抓取缩略图并保存 URL/滚动位置，后台标签只留值快照且释放 WebView，切回才重建。稳定的可视区或框选抓图形成不可变页面快照，再由 `TranslationSessionStore` 串行执行 Vision OCR、Apple/Gemma 翻译和有界内存缓存；覆盖层只消费通过身份门禁的快照。`BrowserModel` 的 `captureRectInView` 始终是 WKWebView bounds-local 点坐标，`MangaBrowserView` 在命名 `browserRoot` 空间读取实际 WebView frame，仅在绘制覆盖层时加上 frame origin，框选输入则反向减去同一 origin；OCR bounding box、CSS 文档坐标和缩放不重复变换。地址编辑、菜单展开和球拖拽是非持久化展示状态，收藏与元素规则仅写入沙盒 UserDefaults。
 
 DEBUG 诊断是旁路链路：`BrowserDebugLogStore` 只接受当前 tab 的 WKWebView 资源/DOM/媒体/导航元数据，脚本运行在命名 `WKContentWorld`，不读取请求或响应正文。录制由悬浮球 Debug 按钮启停，停止后才将有界会话写入 Application Support；资料库页面负责查看、JSON 导出和删除。该链路不调用 `AdBlockStore`，也不写入翻译历史。
 
