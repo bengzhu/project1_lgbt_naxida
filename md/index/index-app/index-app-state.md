@@ -11,6 +11,8 @@
 | 文本翻译 | 同上 | `submitDraft()` |
 | 图片会话 | 同上 | `beginImageTranslationTask`、`runImageTranslationPipeline`、`translateImage`、`translateImageData` |
 | 浏览器翻译会话 | 同上、[`AITRANS/Models/BrowserModel.swift`](../../../AITRANS/Models/BrowserModel.swift) | `updateBrowserPageIdentity`、`translateBrowserCapture`、`invalidateBrowserTranslation` |
+| 浏览器广告规则状态 | [`AITRANS/Services/AdBlockStore.swift`](../../../AITRANS/Services/AdBlockStore.swift)、[`AdBlockModels.swift`](../../../AITRANS/Models/AdBlockModels.swift) | `AdBlockStore.send(_:)`、`AdBlockState`、`AdBlockPreferences` |
+| 广告规则缓存/转换 | [`AdBlockRuleRepository.swift`](../../../AITRANS/Services/AdBlockRuleRepository.swift)、[`AdBlockRuleCompiler.swift`](../../../AITRANS/Services/AdBlockRuleCompiler.swift) | `refresh(force:)`、`AdBlockRuleCompiler.compile(_:)` |
 | 音频翻译配置身份 | 同上 | `SpeechTranslationConfiguration`、`beginSpeechRecognitionRun`、`invalidateTranslationRunsForConfigurationChange` |
 | 图片单块操作 | 同上 | `retryImageTranslationBlock`、`rerecognizeImageTranslationBlock`、`correctImageTranslationBlock`、`cancelImageTranslationBlockRetry`、`cancelImageTranslationBlockRerecognition` |
 | 图片结构/复查 | 同上 | `splitImageTranslationBlock`、`mergeImageTranslationBlocks`、`moveImageTranslationBlock`、`markImageTranslationBlockReviewed`、`ignoreImageTranslationBlock` |
@@ -34,6 +36,7 @@
 ## 权威边界与禁止路径
 
 - `TranslationSessionStore` 是唯一的运行时状态和持久化调度中心；View、Preview 和 evaluator 不可直接写 JSON 或模型状态。
+- `AdBlockStore` 是浏览器防护的独立规则状态中心，不进入翻译持久化；规则仓库 actor 负责 ETag、版本缓存与清理，转换 actor 只接受可安全映射到 WebKit 的保守子集，未知语义显式跳过。
 - `ImageOCRLayoutBlock`、`ImageOCRCandidate`、shadow ledger 是 OCR 内部/诊断数据；不要把 ephemeral owner、candidate ledger 或 external artifact 字段写入产品 snapshot。
 - `CancellationError` 必须经过当前 task/content guard；旧回调只能退出，不能回滚到错误 session。
 - 引擎、语言、prompt、术语或采样变化必须先失效活动中的浏览器、图片和音频翻译；音频最终 transcript 使用 run 开始时冻结的配置并排除历史/参考 transcript。
@@ -45,6 +48,7 @@
 - [`test-v3289-image-translation-session-persistence-contract.py`](../../../scripts/test-v3289-image-translation-session-persistence-contract.py)：快照/图片 session 持久化。
 - [`test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py`](../../../scripts/test-v3263-image-ocr-scoped-rerecognition-cancel-contract.py)：单块取消不扩大到整图。
 - [`test-v3290-image-translation-render-safety-contract.py`](../../../scripts/test-v3290-image-translation-render-safety-contract.py)：保存前的渲染安全边界。
+- [`test-v3407-adblock-foundation-contract.py`](../../../scripts/test-v3407-adblock-foundation-contract.py)、[`test-adblock-rule-compiler.swift`](../../../scripts/test-adblock-rule-compiler.swift) 与 [`test-adblock-rule-repository.swift`](../../../scripts/test-adblock-rule-repository.swift)：广告规则 Store/缓存合同、转换行为和 ETag/304/清理 smoke。
 - 涉及 Store/Swift 的改动默认只做静态合同和 `git diff --check`；本机 build/runtime 按 [`AGENTS.md`](../../../AGENTS.md) 交给云端。
 
 ## 何时必须更新本索引
