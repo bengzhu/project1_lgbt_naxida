@@ -597,8 +597,8 @@ jobs:
           if [ "${{ contains(github.event.head_commit.message, '[browser-only]') }}" = "true" ] \
             || [ "${{ contains(github.event.pull_request.title, '[browser-only]') }}" = "true" ]; then
             browser_task_scoped=true
-          elif grep -E '^AITRANS/(Models/BrowserModel|Services/TranslationSessionStore|Views/MangaBrowserView|Views/SettingsView)\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
-            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AGENTS\.md|README\.md|AITRANS.xcodeproj/project\.pbxproj|AITRANS/Models/BrowserModel\.swift|AITRANS/Services/(AppleTranslationService|TranslationSessionStore)\.swift|AITRANS/Views/(AppTheme|AppleTranslationTaskHost|ContentView|MangaBrowserView|SettingsView)\.swift|scripts/test-speech-recognition-contract\.py|scripts/test-v340(0-immersive|4-manga-browser)-ui-contract\.py|scripts/test-v340(5-browser|6-apple-media)-translation-contract\.py|md/(test/test\.md|index/index\.md|index/index-app/(index-app|index-app-state|index-app-ui)\.md|index/index-assets/index-assets-file-map\.md|index/index-speech/index-speech-runtime\.md|index/index-validation/index-validation-(ci|contracts)\.md|flow/(flow|flowchart)\.md|log/(update_log|work)\.md))$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
+          elif grep -E '^AITRANS/(Models/(AdBlockModels|BrowserModel)|Services/(AdBlockRuleCompiler|AdBlockRuleRepository|AdBlockStore|TranslationSessionStore)|Views/(MangaBrowserView|SettingsView))\.swift$' "$RESULT_ROOT/changed-files.txt" >/dev/null \
+            && ! grep -Ev '^(\.github/workflows/ci-results\.yml|AGENTS\.md|README\.md|AITRANS.xcodeproj/project\.pbxproj|AITRANS/Models/(AdBlockModels|BrowserModel)\.swift|AITRANS/Services/(AdBlockRuleCompiler|AdBlockRuleRepository|AdBlockStore|AppleTranslationService|TranslationSessionStore)\.swift|AITRANS/Views/(AppTheme|AppleTranslationTaskHost|ContentView|MangaBrowserView|SettingsView)\.swift|scripts/test-adblock-rule-(compiler|repository)\.swift|scripts/test-speech-recognition-contract\.py|scripts/test-v340(0-immersive|4-manga-browser)-ui-contract\.py|scripts/test-v340(5-browser|6-apple-media)-translation-contract\.py|scripts/test-v3407-adblock-foundation-contract\.py|md/(test/test\.md|index/index\.md|index/index-app/(index-app|index-app-state|index-app-ui)\.md|index/index-assets/index-assets-file-map\.md|index/index-speech/index-speech-runtime\.md|index/index-validation/index-validation-(ci|contracts)\.md|flow/(flow|flowchart)\.md|log/(update_log|work)\.md))$' "$RESULT_ROOT/changed-files.txt" >/dev/null; then
             browser_task_scoped=true
           fi
           echo "is_scoped=$browser_task_scoped" >> "$GITHUB_OUTPUT"
@@ -2011,7 +2011,20 @@ jobs:
             python3 -B scripts/test-v3404-manga-browser-ui-contract.py
             python3 -B scripts/test-v3405-browser-translation-contract.py
             python3 -B scripts/test-v3406-apple-media-translation-contract.py
+            python3 -B scripts/test-v3407-adblock-foundation-contract.py
             python3 -B scripts/test-v3400-immersive-ui-contract.py
+            xcrun --sdk macosx swiftc \
+              AITRANS/Models/AdBlockModels.swift \
+              AITRANS/Services/AdBlockRuleCompiler.swift \
+              scripts/test-adblock-rule-compiler.swift \
+              -o "$RUNNER_TEMP/adblock-rule-compiler-contract"
+            "$RUNNER_TEMP/adblock-rule-compiler-contract"
+            xcrun --sdk macosx swiftc \
+              AITRANS/Models/AdBlockModels.swift \
+              AITRANS/Services/AdBlockRuleRepository.swift \
+              scripts/test-adblock-rule-repository.swift \
+              -o "$RUNNER_TEMP/adblock-rule-repository-contract"
+            "$RUNNER_TEMP/adblock-rule-repository-contract"
           } 2>&1 | tee "$RESULT_ROOT/v3404-manga-browser-ui-contract.log"
 
       - name: v1.89 paste manual matrix contract

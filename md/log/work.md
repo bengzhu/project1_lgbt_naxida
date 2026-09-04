@@ -6,33 +6,34 @@
 
 ### 当前总目标
 
-完成漫画浏览器可视区/框选翻译、页面任务契约、浏览器加固与漫画阅读体验；同时让图片和音频在选择 Apple Translation 时走统一系统适配器。主界面 UI 不改，浏览器结果不进入普通图片、OCR-only、Speech 质量参考或历史持久化。
+完成漫画内嵌浏览器广告拦截、DEBUG 请求/DOM 日志、规则更新与原生编译、JS/cosmetic 双层防御、设置/悬浮球联动，以及网页截图 OCR 译文重绘坐标修复；不引入 GPL-3.0 库或代码。
 
 ### 约束与验收
 
-- `BrowserModel` 只拥有网页/标签/视口状态；Store 统一拥有 OCR、翻译、缓存、任务门禁和诊断投影。
-- 页面身份覆盖 tab/document/navigation/content/layout/scroll generation 与稳定视口；配置、滚动、切页或布局变化先失效旧任务再释放资源。
-- 安全、收藏、元素规则仅留在 App 沙盒；性能采样只进浏览器诊断，不改变翻译路由。
-- 图片/音频复用 Apple Translation / Gemma / 预留路由；音频参考 transcript 只供事后质量评估。
-- 候选 SHA 运行 task-scoped 直接合同与云端 iOS build；通过后再 PR 合并至 `smalldata_test` 并清理分支。
+- `AdBlockStore` 独立于 `TranslationSessionStore`/`BrowserModel`，以状态机与 Intent 管理规则、任务、错误和 WebView 防护；View 不直接配置拦截器。
+- 网络层只用 `WKContentRuleList`；JS 在命名 `WKContentWorld` 中运行；cosmetic 规则必须可逆、域名限定并禁止正文根节点误杀。
+- 规则文本可消费 AdGuard/OISD；不复制或链接 GPL converter/scriptlet/ExtendedCSS 代码。所有规则源、许可、接受/跳过语法和缓存版本可追溯。
+- DEBUG 日志只观察漫画 WKWebView 的 Resource Timing、资源错误、DOM 插入、媒体、弹窗和导航元数据，不读取请求/响应正文，不进入生产拦截或翻译持久化。
+- 重绘使用同一窗口坐标基准映射截图矩形与 SwiftUI overlay；无目标设备证据时只报告合同/编译通过并保留人工测试页流程。
+- 每个候选均运行 task-scoped 浏览器合同与当前 SHA 云端 iOS build；通过后 PR 合入 `smalldata_test` 并清理分支。
 
-### 规划小目标（实现 4/4，已完成）
+### 规划小目标（0/4）
 
 | 小目标 | 状态 |
 | --- | --- |
-| M1 浏览器翻译、框选、页面身份/缓存/资源契约 | 已实现，本地合同通过 |
-| M2 广告/弹窗/重定向/元素消除/防劫持与收藏 | 已实现，本地合同通过 |
-| M3 字体/字号/中英排版、沉浸 UX、进度与性能诊断 | 已实现，本地合同通过 |
-| M4 图片/音频 Apple Translation、模拟器回退与配置竞态 | 已实现，本地合同通过 |
+| M1 `AdBlockStore`、ETag/版本缓存、保守规则转换与原生双列表编译 | 本地完成，等待 exact-SHA full CI |
+| M2 WKWebView 网络/隔离 JS/cosmetic 接线，设置与悬浮球实时联动 | 待开始 |
+| M3 `#if DEBUG` 浏览器诊断录制、导出、删除与资料库入口 | 待开始 |
+| M4 窗口坐标重绘修复、目标站手测流程、架构/索引/许可和总体验收 | 待开始 |
 
-### 当前状态
+### 已确认事实
 
-- 总目标已完成并合入 `smalldata_test`：merge SHA `df15c006baa42c51c0f6d6593c16d3d43d0ec5f9`，PR [#466](https://github.com/bengzhu/project1_lgbt_naxida/pull/466)。候选 `codeb/v3.405-browser-translation` 已删除本地与远端。
-- 已排雷：浏览器截图/覆盖身份门禁、截图及时释放、有界缓存、部分失败保留、跨站元素规则隔离、静默外部协议拦截、触摸/剪贴板启发式收紧、英文强制横排、竖排右到左、字号不越 OCR 框、滚动/缩放/加载稳定窗口、导航提交后才签发文档身份、标签缩略图限尺寸、内存警告与后台取消、Apple continuation 取消竞态、音频冻结配置与空 transcript context。
-- 本地直接证据：v3.404/v3.405/v3.406、v3.400、Apple 引擎、Speech recognition/quality 合同通过；安全脚本 JS 语法、workflow YAML、plist/project、Markdown 链接与 Swift parse 通过。
-- 云端精确候选 full CI：[33798439127](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33798439127)，SHA `2887dd1959fd82a416a4bc8a9a585a74ca7f8f72`，Xcode 26.6 Simulator build success，JUnit `11/11`，浏览器/媒体/沉浸/Speech 合同通过，artifact 未加密且绑定 branch/SHA/run/profile。PR fast receipt：[33818064416](https://github.com/bengzhu/project1_lgbt_naxida/actions/runs/33818064416) 为同一 SHA 且 status success。实现合入后本地已 fast-forward 至 `smalldata_test@df15c006`。
-- 未执行：本机完整 iOS build（仅 CommandLineTools）、真机 Apple Translation 语言包/视觉效果、真实网页手势与翻译质量探针；因此不把编译/静态合同外推为真机质量提升。下一步由人工在目标设备验收视觉交互与系统翻译语言包。
+- 基线：`smalldata_test@1d4ded92604de130d59fad4eeb02d6952b1d66b7`；开始时本地/远端仅 `main`、`smalldata_test`，工作树干净。
+- 2026-09-04 官方网页核验：AdGuard 知识库仍列出 Base、Chinese、Mobile Ads、Popups/Other Annoyances 的 `FiltersRegistry` 订阅；四个选定 raw URL 均返回 HTTP 200 与 ETag。OISD 搜索结果仍列 `big.oisd.nl`/`small.oisd.nl`，但本环境 TLS 直连失败，故只作可失败补充源。
+- AdGuard 规则仓库文本标注 GPL-3.0；本目标只按用户授权远端消费数据，不提交规则、不引入其 GPL-3.0 代码。App 端转换器为本项目自研 Swift。
+- 现有防护只有两条硬编码域名规则，编译/JS 位于 `BrowserWebView.Coordinator`；`[class*="ad"]` 等宽泛 selector 是页面消失风险，必须拆除。
+- 现有 overlay 直接把 `WKWebView.bounds` 中的截图 rect 当 SwiftUI ZStack 本地 rect；WebView 单独 `ignoresSafeArea` 时可能产生固定安全区偏移。
 
-### 状态
+### 下一步
 
-- `complete`
+复核 M1 diff 后提交/push，触发 exact-SHA full；核对 artifact 与 iOS build 后创建 PR、合并并清理候选。

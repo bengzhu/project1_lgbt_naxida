@@ -68,6 +68,10 @@
 		0A00000100000000000000F5 /* ImageOCRDetectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F4 /* ImageOCRDetectionView.swift */; };
 		0A00000100000000000000F6 /* BrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F7 /* BrowserModel.swift */; };
 		0A00000100000000000000F8 /* MangaBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000F9 /* MangaBrowserView.swift */; };
+		0A0000010000000000000100 /* AdBlockModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000101 /* AdBlockModels.swift */; };
+		0A0000010000000000000102 /* AdBlockRuleRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000103 /* AdBlockRuleRepository.swift */; };
+		0A0000010000000000000104 /* AdBlockRuleCompiler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000105 /* AdBlockRuleCompiler.swift */; };
+		0A0000010000000000000106 /* AdBlockStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A0000010000000000000107 /* AdBlockStore.swift */; };
 		0A00000100000000000000D8 /* ComicTextBubbleDetectorINT8.mlpackage in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D7 /* ComicTextBubbleDetectorINT8.mlpackage */; };
 		0A00000100000000000000DA /* ComicTextDetector-LICENSE-APACHE in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000D9 /* ComicTextDetector-LICENSE-APACHE */; };
 		0A00000100000000000000DC /* ComicTextDetector-NOTICE.md in Resources */ = {isa = PBXBuildFile; fileRef = 0A00000100000000000000DB /* ComicTextDetector-NOTICE.md */; };
@@ -147,6 +151,10 @@
 		0A00000100000000000000F4 /* ImageOCRDetectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRDetectionView.swift; sourceTree = "<group>"; };
 		0A00000100000000000000F7 /* BrowserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserModel.swift; sourceTree = "<group>"; };
 		0A00000100000000000000F9 /* MangaBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MangaBrowserView.swift; sourceTree = "<group>"; };
+		0A0000010000000000000101 /* AdBlockModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBlockModels.swift; sourceTree = "<group>"; };
+		0A0000010000000000000103 /* AdBlockRuleRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBlockRuleRepository.swift; sourceTree = "<group>"; };
+		0A0000010000000000000105 /* AdBlockRuleCompiler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBlockRuleCompiler.swift; sourceTree = "<group>"; };
+		0A0000010000000000000107 /* AdBlockStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBlockStore.swift; sourceTree = "<group>"; };
 		0A00000100000000000000EB /* ImageOCRProvenanceDisclosureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRProvenanceDisclosureView.swift; sourceTree = "<group>"; };
 		0A00000100000000000000ED /* ImageOCRGeometryEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRGeometryEditor.swift; sourceTree = "<group>"; };
 		0A00000100000000000000EF /* ImageOCRBlockStructureEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageOCRBlockStructureEditor.swift; sourceTree = "<group>"; };
@@ -214,6 +222,7 @@
 		0A0000010000000000000034 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				0A0000010000000000000101 /* AdBlockModels.swift */,
 				0A00000100000000000000F7 /* BrowserModel.swift */,
 				0A00000100000000000000E5 /* ImageOCRProvenance.swift */,
 				0A00000100000000000000E7 /* LocalModelPromptProfile.swift */,
@@ -233,6 +242,9 @@
 		0A0000010000000000000035 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				0A0000010000000000000107 /* AdBlockStore.swift */,
+				0A0000010000000000000105 /* AdBlockRuleCompiler.swift */,
+				0A0000010000000000000103 /* AdBlockRuleRepository.swift */,
 				0A0000010000000000000014 /* TranslationSessionStore.swift */,
 				0A00000100000000000000C7 /* ImagePreviewService.swift */,
 				0A00000100000000000000BF /* ImageOCRLayoutEngine.swift */,
@@ -409,6 +421,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0A0000010000000000000100 /* AdBlockModels.swift in Sources */,
+				0A0000010000000000000106 /* AdBlockStore.swift in Sources */,
+				0A0000010000000000000104 /* AdBlockRuleCompiler.swift in Sources */,
+				0A0000010000000000000102 /* AdBlockRuleRepository.swift in Sources */,
 				0A0000010000000000000001 /* AITRANSApp.swift in Sources */,
 				0A00000100000000000000F6 /* BrowserModel.swift in Sources */,
 				0A00000100000000000000F8 /* MangaBrowserView.swift in Sources */,

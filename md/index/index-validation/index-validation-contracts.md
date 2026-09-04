@@ -9,7 +9,7 @@
 | 全部版本 Python 合同 | [`scripts/test-v*.py`](../../../scripts/) | 422 个当前合同；文件名中的 `vX...` 是历史/边界主题，不代表都要重跑 |
 | 非版本 Speech 合同 | [`scripts/test-speech-*.py`](../../../scripts/) | Speech 接线、质量 evaluator |
 | Python evaluator | [`scripts/evaluate-*.py`](../../../scripts/) | benchmark/corpus/report schema 语义 |
-| Swift harness/evaluator | [`scripts/fixtures/`](../../../scripts/fixtures/) 与 `scripts/*evaluator.swift` | 需要编译/运行的 runtime evidence；默认云端 |
+| Swift harness/evaluator | [`scripts/fixtures/`](../../../scripts/fixtures/)、`scripts/*evaluator.swift`、[`test-adblock-rule-compiler.swift`](../../../scripts/test-adblock-rule-compiler.swift) 与 [`test-adblock-rule-repository.swift`](../../../scripts/test-adblock-rule-repository.swift) | 需要编译/运行的 runtime evidence；默认云端 |
 | shell smoke/runtime | [`scripts/run-*.sh`](../../../scripts/) 与 `scripts/test-*-runtime.sh` | 云端模型、Core ML、App 或外部依赖路径 |
 | 版本/指标工具 | [`scripts/resolve-project-version.py`](../../../scripts/resolve-project-version.py)、[`scripts/append-version-metrics.py`](../../../scripts/append-version-metrics.py) | 工程版本和 metrics 记录 |
 | UI/结果工具 | [`scripts/capture-ui-evidence.sh`](../../../scripts/capture-ui-evidence.sh)、[`scripts/capture-bundled-image-translation-ui.sh`](../../../scripts/capture-bundled-image-translation-ui.sh)、[`scripts/export-probe-output.sh`](../../../scripts/export-probe-output.sh) | 云端截图/结果包导出 |
@@ -23,6 +23,7 @@
 - Koharu/artifact/探针：`test-v32*`、`test-v19*`、`test-v20*` 及 `koharu`/`manga`/`artifact` 命名合同；真实外部 artifact 只走 cloud-only gate。
 - Speech：`scripts/test-speech-quality-contract.py`、`scripts/test-speech-recognition-contract.py`、`scripts/test-speech-quality-evaluator.swift`、`scripts/validate-speech-corpus.py`。
 - 漫画浏览器与 Apple 媒体：`scripts/test-v3404-manga-browser-ui-contract.py`、`scripts/test-v3405-browser-translation-contract.py`、`scripts/test-v3406-apple-media-translation-contract.py`。
+- 浏览器广告规则底座：`scripts/test-v3407-adblock-foundation-contract.py` + 两个 `test-adblock-rule-*.swift`，覆盖 Intent/任务门禁、ETag/304/清理缓存、保守转换、双原生列表和工程接入。
 - benchmark/schema：`scripts/test-v3280-japanese-benchmark-contract.py`、`scripts/test-v3282*`–`test-v3294*` 以及 `scripts/evaluate-japanese-*.py`。
 
 ## 测试选择规则
