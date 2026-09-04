@@ -82,13 +82,16 @@ struct BrowserPageSnapshotIdentity: Hashable, Sendable {
 }
 
 struct BrowserCaptureSelection: Equatable, Sendable {
-    /// Coordinates are in the WebView's root view (SwiftUI local) space.
+    /// Coordinates are in the WKWebView bounds-local point space. MangaBrowserView
+    /// reverse-maps its SwiftUI root selection before constructing this value.
     var rectInView: CGRect
 }
 
 struct BrowserPageCaptureMetadata: Equatable, Sendable {
     var identity: BrowserPageSnapshotIdentity
     var captureID: UUID
+    /// WebView bounds-local point space; map through the WebView frame before
+    /// drawing SwiftUI overlays.
     var captureRectInView: CGRect
     var contentRectInView: CGRect
     var visibleDocumentRectCSS: CGRect
@@ -101,6 +104,8 @@ struct BrowserPageCapture: @unchecked Sendable {
     var identity: BrowserPageSnapshotIdentity
     var captureID: UUID
     var imageData: Data
+    /// WebView bounds-local point space; never use as a SwiftUI root position
+    /// without the frame-origin transform owned by MangaBrowserView.
     var captureRectInView: CGRect
     var contentRectInView: CGRect
     var visibleDocumentRectCSS: CGRect

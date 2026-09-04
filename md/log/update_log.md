@@ -11066,3 +11066,8 @@ CI 增加浏览器独立 task scope：候选提交/PR 使用 `[browser-only]` �
 - DEBUG 翻译悬浮球增加录制按钮，资料库增加浏览器诊断会话查看/导出/删除入口；Release 构建不注入脚本且 store 记录方法由编译开关禁用。
 - 新增 `scripts/test-v3409-browser-debug-log-contract.py`（5/5），更新浏览器 task-scoped workflow、索引与 flow 文档。Swift parse、v3408 回归和 `git diff --check` 通过；本机完整 Xcode build 因 SDK/CommandLineTools 不匹配未执行，候选 exact-SHA 云端验证待提交。
 - 本轮无第三方依赖；继续仅消费既有 AdGuard/OISD 规则文本，未引入 GPL-3.0 库或代码。
+## v3.410：浏览器 OCR overlay 坐标系修复（候选验证中）
+
+- `BrowserModel` 的截图矩形明确保持 WKWebView bounds-local 点坐标；`MangaBrowserView` 通过命名 `browserRoot` coordinate space 读取实际 WebView frame，在 SwiftUI 绘制时加上 frame origin，框选结束时反向减去同一 origin。
+- overlay 不再把 WebView-local `captureRectInView` 直接当作 SwiftUI ZStack 坐标，修复 edge-to-edge WebView 与安全区造成的固定向下偏移；OCR bounding box、CSS 文档坐标和缩放不被重复变换。
+- 新增 `scripts/test-v3410-browser-overlay-coordinate-contract.py`（5/5），更新 flow/index 与浏览器 task-scoped workflow。目标页面 `https://comic.dragonballcn.com/list/gain_1.php?did=0-0-0&fpp=5&fid=41` 尚未在真实目标设备手测，本轮只报告静态合同与云端编译结果。

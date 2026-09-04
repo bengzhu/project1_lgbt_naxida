@@ -37,6 +37,7 @@ struct MangaBrowserView: View {
     @State private var isSelectingRegion = false
     @State private var selectionStart: CGPoint?
     @State private var selectionRect: CGRect?
+    @State private var webViewFrameInRoot: CGRect = .zero
     @AppStorage("aitrans.browser.sourceLanguage") private var browserSourceLanguageRaw = SupportedLanguage.japanese.rawValue
     @AppStorage("aitrans.browser.targetLanguage") private var browserTargetLanguageRaw = SupportedLanguage.simplifiedChinese.rawValue
     @AppStorage("aitrans.browser.fontName") private var browserFontName = "system"
@@ -69,6 +70,14 @@ struct MangaBrowserView: View {
                 )
                 .id(model.activeTabID)
                 .ignoresSafeArea(.container, edges: .all)
+                .background {
+                    GeometryReader { webViewProxy in
+                        Color.clear.preference(
+                            key: BrowserWebViewFramePreferenceKey.self,
+                            value: webViewProxy.frame(in: .named("browserRoot"))
+                        )
+                    }
+                }
 
                 if isSelectingRegion {
                     selectionOverlay(in: proxy)
@@ -133,6 +142,11 @@ struct MangaBrowserView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                         .zIndex(12)
                 }
+            }
+            .coordinateSpace(name: "browserRoot")
+            .onPreferenceChange(BrowserWebViewFramePreferenceKey.self) { frame in
+                guard frame.width > 0, frame.height > 0 else { return }
+                webViewFrameInRoot = frame
             }
             .animation(panelAnimation, value: model.chromeMode)
             .animation(panelAnimation, value: isTranslationMenuPresented)
@@ -939,7 +953,9 @@ struct MangaBrowserView: View {
 
     private func captureAndTranslate(selection: CGRect?) {
         isTranslationMenuPresented = false
-        let requestedSelection = selection.map(BrowserCaptureSelection.init(rectInView:))
+        let requestedSelection = selection.map {
+            BrowserCaptureSelection(rectInView: rootRectToWebView($0))
+        }
         Task { @MainActor in
             do {
                 let capture = try await model.captureVisibleContent(selection: requestedSelection)
@@ -954,6 +970,20 @@ struct MangaBrowserView: View {
                 store.reportBrowserTranslationFailure(error.localizedDescription)
             }
         }
+    }
+
+    /// WKWebView is edge-to-edge while SwiftUI overlays live in the named
+    /// `browserRoot` coordinate space. Capture metadata remains WebView-local;
+    /// map it exactly once for drawing and reverse-map user selections before
+    /// handing them to BrowserModel.
+    private func webViewRectInRoot(_ rect: CGRect) -> CGRect {
+        guard !webViewFrameInRoot.isEmpty else { return rect }
+        return rect.offsetBy(dx: webViewFrameInRoot.minX, dy: webViewFrameInRoot.minY)
+    }
+
+    private func rootRectToWebView(_ rect: CGRect) -> CGRect {
+        guard !webViewFrameInRoot.isEmpty else { return rect }
+        return rect.offsetBy(dx: -webViewFrameInRoot.minX, dy: -webViewFrameInRoot.minY)
     }
 
     private func beginRegionSelection() {
@@ -1037,10 +1067,11 @@ struct MangaBrowserView: View {
 
     @ViewBuilder
     private func browserTranslationOverlays(_ snapshot: BrowserTranslationOverlaySnapshot) -> some View {
+        let captureRectInRoot = webViewRectInRoot(snapshot.captureRectInView)
         ForEach(snapshot.regions) { region in
             BrowserTranslationOverlay(
                 region: region,
-                captureRect: snapshot.captureRectInView,
+                captureRect: captureRectInRoot,
                 fontName: browserFontName,
                 fontScale: browserFontScale
             )
@@ -1279,6 +1310,16 @@ private struct BrowserLanguageMenuContent: View {
                 }
             }
         }
+    }
+}
+
+private struct BrowserWebViewFramePreferenceKey: PreferenceKey {
+    static let defaultValue = CGRect.zero
+
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        guard next.width > 0, next.height > 0 else { return }
+        value = next
     }
 }
 
