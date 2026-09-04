@@ -16,12 +16,13 @@ struct MangaBrowserView: View {
 
     private let panelAnimation = Animation.spring(response: 0.3, dampingFraction: 0.8)
     private let translationBallSize: CGFloat = 48
-    private let translationMenuHeight: CGFloat = 284
+    private let translationMenuHeight: CGFloat = 430
     private let expandedToolbarHeight: CGFloat = 48
     private let compactToolbarHeight: CGFloat = 36
 
     @Binding private var selectedTab: AppTab
     @EnvironmentObject private var store: TranslationSessionStore
+    @Environment(AdBlockStore.self) private var adBlockStore
     @State private var model = BrowserModel()
     @State private var addressDraft = ""
     @State private var isEditingAddress = false
@@ -37,13 +38,17 @@ struct MangaBrowserView: View {
     @State private var selectionRect: CGRect?
     @AppStorage("aitrans.browser.sourceLanguage") private var browserSourceLanguageRaw = SupportedLanguage.japanese.rawValue
     @AppStorage("aitrans.browser.targetLanguage") private var browserTargetLanguageRaw = SupportedLanguage.simplifiedChinese.rawValue
-    @AppStorage("aitrans.browser.blockAds") private var blockAds = true
-    @AppStorage("aitrans.browser.blockPopups") private var blockPopups = true
-    @AppStorage("aitrans.browser.blockRedirects") private var blockRedirects = true
-    @AppStorage("aitrans.browser.elementRemoval") private var elementRemovalEnabled = false
-    @AppStorage("aitrans.browser.antiHijacking") private var antiHijackingEnabled = true
     @AppStorage("aitrans.browser.fontName") private var browserFontName = "system"
     @AppStorage("aitrans.browser.fontScale") private var browserFontScale = 1.0
+    // Legacy key names remain documented for migration/diagnostic contracts;
+    // all live security writes go through AdBlockStore intents.
+    private let legacySecurityPreferenceKeys = [
+        "aitrans.browser.blockAds",
+        "aitrans.browser.blockPopups",
+        "aitrans.browser.blockRedirects",
+        "aitrans.browser.elementRemoval",
+        "aitrans.browser.antiHijacking"
+    ]
     @FocusState private var isAddressFieldFocused: Bool
 
     init(selectedTab: Binding<AppTab>) {
@@ -58,7 +63,7 @@ struct MangaBrowserView: View {
                     tabID: model.activeTabID,
                     topSafeAreaInset: proxy.safeAreaInsets.top,
                     captureExclusionInsets: captureExclusionInsets(in: proxy),
-                    securityConfiguration: browserSecurityConfiguration
+                    adBlockStore: adBlockStore
                 )
                 .id(model.activeTabID)
                 .ignoresSafeArea(.container, edges: .all)
@@ -757,32 +762,10 @@ struct MangaBrowserView: View {
                 .pickerStyle(.segmented)
 
                 Menu {
-                    Section("源语言") {
-                        ForEach(SupportedLanguage.allCases) { language in
-                            Button {
-                                browserSourceLanguageRaw = language.rawValue
-                            } label: {
-                                if language == browserSourceLanguage {
-                                    Label(language.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(language.rawValue)
-                                }
-                            }
-                        }
-                    }
-                    Section("目标语言") {
-                        ForEach(SupportedLanguage.allCases) { language in
-                            Button {
-                                browserTargetLanguageRaw = language.rawValue
-                            } label: {
-                                if language == browserTargetLanguage {
-                                    Label(language.rawValue, systemImage: "checkmark")
-                                } else {
-                                    Text(language.rawValue)
-                                }
-                            }
-                        }
-                    }
+                    BrowserLanguageMenuContent(
+                        sourceLanguageRaw: $browserSourceLanguageRaw,
+                        targetLanguageRaw: $browserTargetLanguageRaw
+                    )
                 } label: {
                     HStack {
                         Text("语言对")
@@ -801,12 +784,28 @@ struct MangaBrowserView: View {
                 }
                 .pickerStyle(.segmented)
 
+                Divider()
+
+                Toggle("广告防护", isOn: adBlockMasterBinding)
+                    .font(.subheadline.weight(.semibold))
+                Toggle("网络拦截", isOn: adBlockNetworkBinding)
+                    .disabled(!adBlockStore.state.preferences.isEnabled)
+                Toggle("页面脚本保护", isOn: adBlockScriptBinding)
+                    .disabled(!adBlockStore.state.preferences.isEnabled)
+                Toggle("精准元素隐藏", isOn: adBlockCosmeticBinding)
+                    .disabled(!adBlockStore.state.preferences.isEnabled)
+
                 Label(
-                    "防护 \(enabledSecurityFeatureCount)/5 已开启",
+                    "防护 \(enabledSecurityFeatureCount)/6 已开启",
                     systemImage: "shield.lefthalf.filled"
                 )
                 .font(.caption2)
                 .foregroundStyle(.secondary)
+
+                Text(adBlockStore.state.message)
+                    .font(.caption2)
+                    .foregroundStyle(adBlockStore.state.lastError == nil ? Color.secondary : Color.orange)
+                    .lineLimit(2)
 
                 if let performance = store.browserPerformanceSample {
                     Label(
@@ -844,19 +843,45 @@ struct MangaBrowserView: View {
         SupportedLanguage(rawValue: browserTargetLanguageRaw) ?? .simplifiedChinese
     }
 
-    private var browserSecurityConfiguration: BrowserSecurityConfiguration {
-        BrowserSecurityConfiguration(
-            blockAds: blockAds,
-            blockPopups: blockPopups,
-            blockRedirects: blockRedirects,
-            elementRemovalEnabled: elementRemovalEnabled,
-            antiHijackingEnabled: antiHijackingEnabled
+    private var enabledSecurityFeatureCount: Int {
+        let preferences = adBlockStore.state.preferences
+        return [
+            preferences.effectiveNetworkFiltering,
+            preferences.effectiveScriptProtection,
+            preferences.effectiveCosmeticFiltering,
+            preferences.effectivePopupBlocking,
+            preferences.effectiveRedirectBlocking,
+            preferences.effectiveElementPicker
+        ]
+            .count(where: { $0 })
+    }
+
+    private var adBlockMasterBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.isEnabled },
+            set: { adBlockStore.send(.setEnabled($0)) }
         )
     }
 
-    private var enabledSecurityFeatureCount: Int {
-        [blockAds, blockPopups, blockRedirects, elementRemovalEnabled, antiHijackingEnabled]
-            .count(where: { $0 })
+    private var adBlockNetworkBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.networkFilteringEnabled },
+            set: { adBlockStore.send(.setNetworkFiltering($0)) }
+        )
+    }
+
+    private var adBlockScriptBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.scriptProtectionEnabled },
+            set: { adBlockStore.send(.setScriptProtection($0)) }
+        )
+    }
+
+    private var adBlockCosmeticBinding: Binding<Bool> {
+        Binding(
+            get: { adBlockStore.state.preferences.cosmeticFilteringEnabled },
+            set: { adBlockStore.send(.setCosmeticFiltering($0)) }
+        )
     }
 
     private var browserTranslationETA: String {
@@ -1189,38 +1214,82 @@ private extension View {
     }
 }
 
+private struct BrowserLanguageMenuRow: View {
+    let language: SupportedLanguage
+    let isSelected: Bool
+
+    var body: some View {
+        Group {
+            if isSelected {
+                Label(language.rawValue, systemImage: "checkmark")
+            } else {
+                Text(language.rawValue)
+            }
+        }
+    }
+}
+
+private struct BrowserLanguageMenuContent: View {
+    @Binding var sourceLanguageRaw: String
+    @Binding var targetLanguageRaw: String
+
+    var body: some View {
+        Section("源语言") {
+            ForEach(SupportedLanguage.allCases) { language in
+                Button {
+                    sourceLanguageRaw = language.rawValue
+                } label: {
+                    BrowserLanguageMenuRow(
+                        language: language,
+                        isSelected: language.rawValue == sourceLanguageRaw
+                    )
+                }
+            }
+        }
+        Section("目标语言") {
+            ForEach(SupportedLanguage.allCases) { language in
+                Button {
+                    targetLanguageRaw = language.rawValue
+                } label: {
+                    BrowserLanguageMenuRow(
+                        language: language,
+                        isSelected: language.rawValue == targetLanguageRaw
+                    )
+                }
+            }
+        }
+    }
+}
+
 private struct BrowserWebView: UIViewRepresentable {
     let model: BrowserModel
     let tabID: UUID
     let topSafeAreaInset: CGFloat
     let captureExclusionInsets: UIEdgeInsets
-    let securityConfiguration: BrowserSecurityConfiguration
+    let adBlockStore: AdBlockStore
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(model: model, tabID: tabID)
+        Coordinator(model: model, adBlockStore: adBlockStore, tabID: tabID)
     }
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
         configuration.defaultWebpagePreferences.allowsContentJavaScript = true
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = [.all]
         let securityController = configuration.userContentController
-        securityController.add(context.coordinator, name: "aitransElementRule")
         securityController.add(context.coordinator, name: "aitransPageMutation")
-        securityController.addUserScript(
-            WKUserScript(
-                source: BrowserSecurityScript.make(
-                    configuration: securityConfiguration,
-                    rememberedSelectors: model.rememberedElementSelectors
-                ),
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: false
-            )
-        )
         securityController.addUserScript(
             WKUserScript(
                 source: BrowserSecurityScript.pageMutationObserverSource,
                 injectionTime: .atDocumentEnd,
                 forMainFrameOnly: true
+            )
+        )
+        adBlockStore.send(
+            .prepareWebViewConfiguration(
+                configuration,
+                messageHandler: context.coordinator
             )
         )
 
@@ -1239,9 +1308,8 @@ private struct BrowserWebView: UIViewRepresentable {
 
         context.coordinator.updateTopSafeAreaInset(topSafeAreaInset, in: webView)
         model.updateCaptureExclusionInsets(captureExclusionInsets)
-        model.applySecurityConfiguration(securityConfiguration)
-        context.coordinator.installSecurity(configuration: securityConfiguration, in: webView)
         context.coordinator.observe(webView)
+        adBlockStore.send(.attachWebView(webView, attachmentID: context.coordinator.attachmentID))
         model.attach(webView: webView, to: tabID)
         return webView
     }
@@ -1250,16 +1318,16 @@ private struct BrowserWebView: UIViewRepresentable {
         context.coordinator.updateTopSafeAreaInset(topSafeAreaInset, in: webView)
         model.updateCaptureExclusionInsets(captureExclusionInsets)
         model.updateViewport(size: webView.bounds.size, webView: webView, tabID: tabID)
-        model.applySecurityConfiguration(securityConfiguration)
-        context.coordinator.updateSecurity(configuration: securityConfiguration, in: webView)
     }
 
     static func dismantleUIView(_ webView: WKWebView, coordinator: Coordinator) {
         coordinator.model.detach(webView: webView, from: coordinator.tabID)
+        coordinator.adBlockStore.send(
+            .detachWebView(webView, attachmentID: coordinator.attachmentID)
+        )
         webView.navigationDelegate = nil
         webView.uiDelegate = nil
         webView.scrollView.delegate = nil
-        webView.configuration.userContentController.removeScriptMessageHandler(forName: "aitransElementRule")
         webView.configuration.userContentController.removeScriptMessageHandler(forName: "aitransPageMutation")
         coordinator.stopObserving()
     }
@@ -1267,16 +1335,16 @@ private struct BrowserWebView: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, UIScrollViewDelegate, WKScriptMessageHandler {
         fileprivate let model: BrowserModel
+        fileprivate let adBlockStore: AdBlockStore
         fileprivate let tabID: UUID
+        fileprivate let attachmentID = UUID()
         private var observations: [NSKeyValueObservation] = []
         private var lastScrollOffsetY: CGFloat?
         private weak var observedWebView: WKWebView?
-        private var securityConfiguration = BrowserSecurityConfiguration.default
-        private var installedRuleList: WKContentRuleList?
-        private var securityUpdateTask: Task<Void, Never>?
 
-        init(model: BrowserModel, tabID: UUID) {
+        init(model: BrowserModel, adBlockStore: AdBlockStore, tabID: UUID) {
             self.model = model
+            self.adBlockStore = adBlockStore
             self.tabID = tabID
         }
 
@@ -1288,73 +1356,6 @@ private struct BrowserWebView: UIViewRepresentable {
             webView.scrollView.verticalScrollIndicatorInsets.top = topInset
             if wasAtTop {
                 webView.scrollView.setContentOffset(CGPoint(x: 0, y: -topInset), animated: false)
-            }
-        }
-
-        func installSecurity(configuration: BrowserSecurityConfiguration, in webView: WKWebView) {
-            updateSecurity(configuration: configuration, in: webView)
-            refreshContentRuleList(for: configuration.blockAds, in: webView)
-        }
-
-        func updateSecurity(configuration: BrowserSecurityConfiguration, in webView: WKWebView) {
-            let previous = securityConfiguration
-            securityConfiguration = configuration
-            let payload = """
-            (() => {
-              const next = {
-                ads: \(configuration.blockAds ? "true" : "false"),
-                popups: \(configuration.blockPopups ? "true" : "false"),
-                redirects: \(configuration.blockRedirects ? "true" : "false"),
-                remove: \(configuration.elementRemovalEnabled ? "true" : "false"),
-                hijack: \(configuration.antiHijackingEnabled ? "true" : "false")
-              };
-              if (window.__aitransApplySecurity) {
-                window.__aitransApplySecurity(next);
-              } else {
-                window.__aitransSecurity = next;
-              }
-            })();
-            """
-            webView.evaluateJavaScript(payload, completionHandler: nil)
-            if previous.fingerprint != configuration.fingerprint {
-                if previous.blockAds != configuration.blockAds {
-                    refreshContentRuleList(
-                        for: configuration.blockAds,
-                        in: webView,
-                        reloadAfterUpdate: true
-                    )
-                }
-            }
-        }
-
-        private func refreshContentRuleList(
-            for enabled: Bool,
-            in webView: WKWebView,
-            reloadAfterUpdate: Bool = false
-        ) {
-            securityUpdateTask?.cancel()
-            securityUpdateTask = Task { @MainActor [weak self, weak webView] in
-                guard let self, let webView else { return }
-                if let installedRuleList = self.installedRuleList {
-                    webView.configuration.userContentController.remove(installedRuleList)
-                    self.installedRuleList = nil
-                }
-                guard enabled, !Task.isCancelled else {
-                    if reloadAfterUpdate, !Task.isCancelled { webView.reload() }
-                    return
-                }
-                let compiled = await withCheckedContinuation { continuation in
-                    WKContentRuleListStore.default().compileContentRuleList(
-                        forIdentifier: "aitrans-browser-ad-rules",
-                        encodedContentRuleList: BrowserSecurityScript.contentRuleListJSON
-                    ) { ruleList, _ in
-                        continuation.resume(returning: ruleList)
-                    }
-                }
-                guard !Task.isCancelled, let compiled else { return }
-                webView.configuration.userContentController.add(compiled)
-                self.installedRuleList = compiled
-                if reloadAfterUpdate, !Task.isCancelled { webView.reload() }
             }
         }
 
@@ -1389,8 +1390,6 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         func stopObserving() {
-            securityUpdateTask?.cancel()
-            securityUpdateTask = nil
             observations.forEach { $0.invalidate() }
             observations.removeAll()
             observedWebView = nil
@@ -1430,14 +1429,14 @@ private struct BrowserWebView: UIViewRepresentable {
                 return
             }
             if !allows(navigationAction: navigationAction, url: url, in: webView) {
-                model.reportBrowserSecurityBlock(url: url)
+                adBlockStore.send(.recordBlockedNavigation(url))
                 decisionHandler(.cancel)
                 return
             }
-            if securityConfiguration.antiHijackingEnabled,
+            if adBlockStore.state.preferences.effectiveScriptProtection,
                isExternalNavigation(url),
                navigationAction.navigationType != .linkActivated {
-                model.reportBrowserSecurityBlock(url: url)
+                adBlockStore.send(.recordBlockedNavigation(url))
                 decisionHandler(.cancel)
                 return
             }
@@ -1468,8 +1467,8 @@ private struct BrowserWebView: UIViewRepresentable {
         ) -> WKWebView? {
             guard navigationAction.targetFrame == nil,
                   let url = navigationAction.request.url else { return nil }
-            if securityConfiguration.blockPopups {
-                model.reportBrowserSecurityBlock(url: url)
+            if adBlockStore.state.preferences.effectivePopupBlocking {
+                adBlockStore.send(.recordBlockedNavigation(url))
                 return nil
             }
             if !model.handleExternalNavigationIfNeeded(url) { model.load(url: url) }
@@ -1482,9 +1481,9 @@ private struct BrowserWebView: UIViewRepresentable {
         ) {
             guard message.frameInfo.isMainFrame else { return }
             switch message.name {
-            case "aitransElementRule":
+            case AdBlockWebScript.elementRuleMessageName:
                 guard let selector = message.body as? String else { return }
-                model.rememberElementSelector(selector)
+                adBlockStore.send(.rememberElementSelector(selector))
             case "aitransPageMutation":
                 model.pageContentDidChange(layoutChanged: message.body as? String == "layout")
             default:
@@ -1535,7 +1534,7 @@ private struct BrowserWebView: UIViewRepresentable {
         }
 
         private func allows(navigationAction: WKNavigationAction, url: URL, in webView: WKWebView) -> Bool {
-            guard securityConfiguration.blockRedirects,
+            guard adBlockStore.state.preferences.effectiveRedirectBlocking,
                   model.phase == .loaded,
                   let current = webView.url,
                   current != url,
@@ -1557,6 +1556,7 @@ private struct BrowserWebView: UIViewRepresentable {
 
 #Preview {
     MangaBrowserView(selectedTab: .constant(.manga))
+        .environment(AdBlockStore())
         .environmentObject(
             TranslationSessionStore(
                 modelService: MockGemmaService(),

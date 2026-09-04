@@ -95,7 +95,10 @@ class BrowserTranslationContractTests(unittest.TestCase):
             self.assertIn(key, self.settings)
             self.assertIn(key, self.view)
         for needle in (
-            "BrowserSecurityScript.contentRuleListJSON",
+            # Legacy BrowserSecurityScript remains in BrowserModel for
+            # historical contracts, while production BrowserWebView now
+            # delegates live rule-list installation to AdBlockStore.
+            "static let contentRuleListJSON",
             "BrowserSecurityScript.pageMutationObserverSource",
             "aitransElementRule",
             "aitransPageMutation",

@@ -15,6 +15,12 @@ final class AdBlockStore {
         case bootstrap
         case refreshRules(force: Bool)
         case clearCachedRules
+        case prepareWebViewConfiguration(
+            WKWebViewConfiguration,
+            messageHandler: any WKScriptMessageHandler
+        )
+        case attachWebView(WKWebView, attachmentID: UUID)
+        case detachWebView(WKWebView, attachmentID: UUID)
         case setEnabled(Bool)
         case setNetworkFiltering(Bool)
         case setScriptProtection(Bool)
@@ -22,6 +28,9 @@ final class AdBlockStore {
         case setPopupBlocking(Bool)
         case setRedirectBlocking(Bool)
         case setElementPicker(Bool)
+        case rememberElementSelector(String)
+        case clearRememberedElementSelectors
+        case recordBlockedNavigation(URL)
         case clearError
     }
 
@@ -33,6 +42,15 @@ final class AdBlockStore {
     @ObservationIgnored private var refreshTask: Task<Void, Never>?
     @ObservationIgnored private var operationID = UUID()
     @ObservationIgnored private(set) var compiledRuleLists: AdBlockCompiledRuleLists?
+    @ObservationIgnored private weak var attachedWebView: WKWebView?
+    @ObservationIgnored private var attachmentID: UUID?
+    @ObservationIgnored private var installedNetworkRuleList: WKContentRuleList?
+    @ObservationIgnored private var installedCosmeticRuleList: WKContentRuleList?
+    @ObservationIgnored private var installedNetworkToken: String?
+    @ObservationIgnored private var installedCosmeticToken: String?
+    @ObservationIgnored private var rememberedElementSelectors: [String]
+
+    private static let elementSelectorsKey = "aitrans.browser.elementSelectors"
 
     init(
         repository: AdBlockRuleRepository = AdBlockRuleRepository(),
@@ -42,7 +60,12 @@ final class AdBlockStore {
         self.repository = repository
         self.compilationService = compilationService
         self.userDefaults = userDefaults
-        state = .initial(preferences: Self.loadPreferences(from: userDefaults))
+        let selectors = Self.loadElementSelectors(from: userDefaults)
+        rememberedElementSelectors = selectors
+        state = .initial(
+            preferences: Self.loadPreferences(from: userDefaults),
+            rememberedElementRuleCount: selectors.count
+        )
     }
 
     func send(_ intent: Intent) {
@@ -53,6 +76,12 @@ final class AdBlockStore {
             startRefresh(force: force)
         case .clearCachedRules:
             startCacheClear()
+        case let .prepareWebViewConfiguration(configuration, messageHandler):
+            prepare(configuration: configuration, messageHandler: messageHandler)
+        case let .attachWebView(webView, attachmentID):
+            attach(webView: webView, attachmentID: attachmentID)
+        case let .detachWebView(webView, attachmentID):
+            detach(webView: webView, attachmentID: attachmentID)
         case let .setEnabled(enabled):
             updatePreferences { $0.isEnabled = enabled }
         case let .setNetworkFiltering(enabled):
@@ -67,9 +96,67 @@ final class AdBlockStore {
             updatePreferences { $0.redirectBlockingEnabled = enabled }
         case let .setElementPicker(enabled):
             updatePreferences { $0.elementPickerEnabled = enabled }
+        case let .rememberElementSelector(selector):
+            rememberElementSelector(selector)
+        case .clearRememberedElementSelectors:
+            clearRememberedElementSelectors()
+        case let .recordBlockedNavigation(url):
+            recordBlockedNavigation(url)
         case .clearError:
             state.lastError = nil
         }
+    }
+
+    private var contentWorld: WKContentWorld {
+        .world(name: AdBlockWebScript.contentWorldName)
+    }
+
+    private func prepare(
+        configuration: WKWebViewConfiguration,
+        messageHandler: any WKScriptMessageHandler
+    ) {
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: AdBlockWebScript.bootstrap(
+                    preferences: state.preferences,
+                    rememberedSelectors: rememberedElementSelectors
+                ),
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: false,
+                in: contentWorld
+            )
+        )
+        configuration.userContentController.add(
+            messageHandler,
+            contentWorld: contentWorld,
+            name: AdBlockWebScript.elementRuleMessageName
+        )
+    }
+
+    private func attach(webView: WKWebView, attachmentID: UUID) {
+        if let previousWebView = attachedWebView, previousWebView !== webView {
+            removeInstalledRuleLists(from: previousWebView)
+        }
+        attachedWebView = webView
+        self.attachmentID = attachmentID
+        installedNetworkRuleList = nil
+        installedCosmeticRuleList = nil
+        installedNetworkToken = nil
+        installedCosmeticToken = nil
+        state.isWebViewAttached = true
+        applyProtection(to: webView, reloadIfRuleListsChange: false)
+    }
+
+    private func detach(webView: WKWebView, attachmentID: UUID) {
+        guard self.attachmentID == attachmentID, attachedWebView === webView else { return }
+        removeInstalledRuleLists(from: webView)
+        webView.configuration.userContentController.removeScriptMessageHandler(
+            forName: AdBlockWebScript.elementRuleMessageName,
+            contentWorld: contentWorld
+        )
+        attachedWebView = nil
+        self.attachmentID = nil
+        state.isWebViewAttached = false
     }
 
     private func startBootstrap() {
@@ -216,6 +303,9 @@ final class AdBlockStore {
             ? "内置基础防护已就绪"
             : "广告规则已就绪（\(availableSourceCount)/\(AdBlockRuleSource.recommended.count) 个远端源）"
         state.lastError = nil
+        if let attachedWebView {
+            applyProtection(to: attachedWebView, reloadIfRuleListsChange: true)
+        }
         await removeObsoleteCompiledLists(keeping: Set([networkID, cosmeticID]))
         return true
     }
@@ -279,7 +369,130 @@ final class AdBlockStore {
         guard preferences != state.preferences else { return }
         state.preferences = preferences
         persist(preferences)
+        if let attachedWebView {
+            applyProtection(to: attachedWebView, reloadIfRuleListsChange: true)
+        }
         state.message = preferences.isEnabled ? "广告防护设置已更新" : "广告防护已关闭"
+    }
+
+    private func applyProtection(
+        to webView: WKWebView,
+        reloadIfRuleListsChange: Bool
+    ) {
+        let compiledVersion = compiledRuleLists?.version
+        let desiredNetworkToken = state.preferences.effectiveNetworkFiltering
+            ? compiledVersion.map { "network:\($0)" }
+            : nil
+        let desiredCosmeticToken = state.preferences.effectiveCosmeticFiltering
+            ? compiledVersion.map { "cosmetic:\($0)" }
+            : nil
+        let controller = webView.configuration.userContentController
+        var ruleListsChanged = false
+
+        if installedNetworkToken != desiredNetworkToken {
+            if let installedNetworkRuleList {
+                controller.remove(installedNetworkRuleList)
+            }
+            installedNetworkRuleList = nil
+            installedNetworkToken = nil
+            if let desiredNetworkToken, let network = compiledRuleLists?.network {
+                controller.add(network)
+                installedNetworkRuleList = network
+                installedNetworkToken = desiredNetworkToken
+            }
+            ruleListsChanged = true
+        }
+
+        if installedCosmeticToken != desiredCosmeticToken {
+            if let installedCosmeticRuleList {
+                controller.remove(installedCosmeticRuleList)
+            }
+            installedCosmeticRuleList = nil
+            installedCosmeticToken = nil
+            if let desiredCosmeticToken, let cosmetic = compiledRuleLists?.cosmetic {
+                controller.add(cosmetic)
+                installedCosmeticRuleList = cosmetic
+                installedCosmeticToken = desiredCosmeticToken
+            }
+            ruleListsChanged = true
+        }
+
+        if webView.url != nil {
+            let update = AdBlockWebScript.runtimeUpdate(
+                preferences: state.preferences,
+                rememberedSelectors: rememberedElementSelectors
+            )
+            let currentAttachmentID = attachmentID
+            webView.evaluateJavaScript(
+                update,
+                in: nil,
+                in: contentWorld
+            ) { [weak self, weak webView] result in
+                guard case let .failure(error) = result else { return }
+                Task { @MainActor in
+                    guard let self, let webView,
+                          self.attachmentID == currentAttachmentID,
+                          self.attachedWebView === webView else { return }
+                    self.state.lastError = "页面防护脚本更新失败：\(error.localizedDescription)"
+                }
+            }
+        }
+
+        if reloadIfRuleListsChange, ruleListsChanged, webView.url != nil {
+            webView.reload()
+        }
+    }
+
+    private func removeInstalledRuleLists(from webView: WKWebView) {
+        let controller = webView.configuration.userContentController
+        if let installedNetworkRuleList {
+            controller.remove(installedNetworkRuleList)
+        }
+        if let installedCosmeticRuleList {
+            controller.remove(installedCosmeticRuleList)
+        }
+        installedNetworkRuleList = nil
+        installedCosmeticRuleList = nil
+        installedNetworkToken = nil
+        installedCosmeticToken = nil
+    }
+
+    private func rememberElementSelector(_ selector: String) {
+        let clean = selector.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalized = clean.lowercased()
+        guard !clean.isEmpty,
+              clean.count <= 300,
+              !clean.contains("\n"),
+              !["html", "body", "main", "article", ":root", "*"].contains(normalized),
+              let host = attachedWebView?.url?.host(percentEncoded: false)?.lowercased(),
+              !host.isEmpty else { return }
+        let scopedRule = "\(host)\n\(clean)"
+        rememberedElementSelectors.removeAll { $0 == scopedRule }
+        rememberedElementSelectors.insert(scopedRule, at: 0)
+        rememberedElementSelectors = Array(rememberedElementSelectors.prefix(32))
+        userDefaults.set(rememberedElementSelectors, forKey: Self.elementSelectorsKey)
+        state.rememberedElementRuleCount = rememberedElementSelectors.count
+        if let attachedWebView {
+            applyProtection(to: attachedWebView, reloadIfRuleListsChange: false)
+        }
+        state.message = "已隐藏所选元素并记住此站点规则"
+    }
+
+    private func clearRememberedElementSelectors() {
+        guard !rememberedElementSelectors.isEmpty else { return }
+        rememberedElementSelectors = []
+        userDefaults.removeObject(forKey: Self.elementSelectorsKey)
+        state.rememberedElementRuleCount = 0
+        if let attachedWebView {
+            applyProtection(to: attachedWebView, reloadIfRuleListsChange: false)
+        }
+        state.message = "已清除点选元素规则"
+    }
+
+    private func recordBlockedNavigation(_ url: URL) {
+        state.blockedNavigationCount &+= 1
+        state.lastBlockedURL = url.host(percentEncoded: false) ?? url.scheme ?? "未知地址"
+        state.message = "已阻止网页跳转：\(state.lastBlockedURL ?? "未知地址")"
     }
 
     private func persist(_ preferences: AdBlockPreferences) {
@@ -291,8 +504,8 @@ final class AdBlockStore {
         userDefaults.set(preferences.redirectBlockingEnabled, forKey: AdBlockPreferenceKey.redirects.rawValue)
         userDefaults.set(preferences.elementPickerEnabled, forKey: AdBlockPreferenceKey.elementPicker.rawValue)
 
-        // Maintain compatibility with the previous browser-only keys until
-        // every view has moved to intents in M2.
+        // Preserve existing installations while Store-backed views use the
+        // new preference namespace as their only write path.
         userDefaults.set(preferences.networkFilteringEnabled, forKey: "aitrans.browser.blockAds")
         userDefaults.set(preferences.scriptProtectionEnabled, forKey: "aitrans.browser.antiHijacking")
     }
@@ -323,6 +536,19 @@ final class AdBlockStore {
             popupBlockingEnabled: value(for: .popups, fallback: true),
             redirectBlockingEnabled: value(for: .redirects, fallback: true),
             elementPickerEnabled: value(for: .elementPicker, fallback: false)
+        )
+    }
+
+    private static func loadElementSelectors(from defaults: UserDefaults) -> [String] {
+        let values = defaults.stringArray(forKey: elementSelectorsKey) ?? []
+        return Array(
+            values
+                .filter { value in
+                    value.count <= 500
+                        && value.contains("\n")
+                        && !value.hasPrefix("\n")
+                }
+                .prefix(32)
         )
     }
 }

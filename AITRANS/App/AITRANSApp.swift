@@ -1,10 +1,13 @@
 import SwiftUI
 
 @main
+@MainActor
 struct AITRANSApp: App {
     @StateObject private var store: TranslationSessionStore
+    @State private var adBlockStore: AdBlockStore
 
     init() {
+        _adBlockStore = State(initialValue: AdBlockStore())
 #if DEBUG
         if let scenarioName = ProcessInfo.processInfo.environment["AITRANS_UI_EVIDENCE_SCENARIO"],
            let scenario = AppPreviewScenario(rawValue: scenarioName) {
@@ -26,6 +29,8 @@ struct AITRANSApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(store)
+                .environment(adBlockStore)
+                .task { adBlockStore.send(.bootstrap) }
         }
     }
 }

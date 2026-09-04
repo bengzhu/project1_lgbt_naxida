@@ -51,6 +51,14 @@
 - [`test-v3407-adblock-foundation-contract.py`](../../../scripts/test-v3407-adblock-foundation-contract.py)、[`test-adblock-rule-compiler.swift`](../../../scripts/test-adblock-rule-compiler.swift) 与 [`test-adblock-rule-repository.swift`](../../../scripts/test-adblock-rule-repository.swift)：广告规则 Store/缓存合同、转换行为和 ETag/304/清理 smoke。
 - 涉及 Store/Swift 的改动默认只做静态合同和 `git diff --check`；本机 build/runtime 按 [`AGENTS.md`](../../../AGENTS.md) 交给云端。
 
+浏览器广告运行时接线：
+
+- AdBlockStore.prepareWebViewConfiguration / attachWebView / applyProtection 是唯一的 WKContentRuleList 挂载边界。
+- AdBlockWebScript 使用 AITRANS.AdBlock 命名 WKContentWorld，处理自动播放/全屏、复制限制和明确反广告检测兜底。
+- 设置页与翻译悬浮球只发送 AdBlockStore Intent；开关即时更新且不重建 WKWebView。
+
+对应测试：scripts/test-v3408-adblock-runtime-contract.py。
+
 ## 何时必须更新本索引
 
 新增 `@Published` 权威状态、task/generation、snapshot 字段、Store public action、文件清理或取消/恢复语义时更新；只改 View 的焦点或文案转到 [`UI 路由与复查操作`](index-app-ui.md)。
